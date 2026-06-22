@@ -34,7 +34,7 @@ Contiene la información de presentación inmediata del contacto:
   3. *Interacciones*: Contador de interacciones registradas en el historial.
 - **Botón de Acción Directa**:
   - En prospectos: `🏁 Cerrar lead` (inicia el paso a cliente).
-  - En clientes: `🗑️ Archivar` (mueve a la papelera con undo de 9 segundos). No se permite degradar un cliente a prospecto.
+  - En clientes: `🗑️ Archivar` (mueve a la papelera con undo de 9 segundos).
 
 ### B. Bloque Izquierdo: Historial de la Relación (Timeline)
 Muestra un registro cronológico de todas las interacciones ocurridas con el contacto:

@@ -67,5 +67,5 @@ El objetivo con un Cliente es mantener un contacto continuo para asegurar que si
 | **Enfoque del Mensaje IA** | Captación de interés, propuestas de valor y catálogo | Calidad del servicio, reposición de inventario y renovación |
 | **Opción "Oferta Nueva"** | Permitida (mueve a pendientes del día en 15 días) | No permitida (se asume flujo de recompra directo) |
 | **Comportamiento al Cerrar Trato** | Se transforma en Cliente (inicializa ciclo de 28 días) | Mantiene tipo y calcula próximo toque (+ciclo o +365 días si es anual) |
-| **Transición Inversa en Ficha** | No aplica | No permitida (se mantiene como cliente o se archiva) |
+| Transición Inversa en Ficha | No aplica | No permitida (se mantiene como cliente o se archiva) |
 | **Buscador** | Ubica al contacto, abre acordeones de espera si es necesario y enfoca la atención del usuario | Ubica al contacto, abre acordeones de espera si es necesario y enfoca la atención del usuario |
