@@ -1,6 +1,13 @@
 # Toca v2 - Prototipo Interactivo del Dashboard de Ventas
 
 Este repositorio contiene la versión interactiva terminada del Dashboard de Inicio para **Toca v2**. Es un prototipo de alta fidelidad construido en HTML, CSS y JavaScript vainilla (sin dependencias ni frameworks) diseñado para servir de guía visual y funcional de cara al desarrollo en producción.
+---
+
+## 📖 Documentación de Flujos y Reglas de Negocio
+
+Para asegurar la correcta implementación técnica de los flujos de la aplicación, consulta los siguientes manuales detallados:
+- 📄 **[Manual de Flujo de Inicio (Dashboard)](docs/flujo_inicio.md):** Detalles sobre bandejas de pendientes (clasificadas por niveles de urgencia e inactividad), bandeja de espera con acordeón colapsable, y el flujo de los prospectos y clientes.
+- 📄 **[Manual de Flujo de Clientes y Prospectos](docs/flujo_clientes_prospectos.md):** Detalles sobre el diseño de las tarjetas (insignias, barras de progreso de embudo) y la ficha lateral de contacto con su historial y configuraciones.
 
 ---
 
