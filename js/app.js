@@ -26,7 +26,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  document.getElementById('app-date').innerText = getFormattedDate(TODAY);
+  const tz = businessProfile.timezone || 'America/Lima';
+  const appDateEl = document.getElementById('app-date');
+  if (appDateEl) {
+    appDateEl.innerHTML = `${getFormattedDate(TODAY)} &bull; Zona Horaria: <strong>${tz}</strong>`;
+  }
+
+  // Set up login screen state
+  const loginScreen = document.getElementById('login-screen');
+  if (loginScreen) {
+    loginScreen.style.display = isLoggedIn ? 'none' : 'flex';
+  }
+
   renderAllTabs();
 });
 
@@ -57,7 +68,9 @@ function moveToWaiting(id) {
   };
 
   contact.status = "Esperando respuesta";
-  contact.waitingSince = "hoy a las " + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase();
+  const tz = businessProfile.timezone || 'America/Lima';
+  const timeStr = new Date().toLocaleTimeString('es-ES', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase();
+  contact.waitingSince = "hoy a las " + timeStr;
   contact.daysWaiting = 0;
 
 
@@ -459,6 +472,7 @@ function submitProspectForm(event) {
   const fu1 = document.getElementById('p-fu1').value;
   const fu2 = document.getElementById('p-fu2').value;
   const fu3 = document.getElementById('p-fu3').value;
+  const leadSource = document.getElementById('p-leadsource').value;
 
   const newProspect = {
     id: newId,
@@ -472,7 +486,8 @@ function submitProspectForm(event) {
     fu3: fu3,
     whatsapp: whatsapp,
     suggestedDate: fu1, 
-    lastContacted: "Recién creado"
+    lastContacted: "Recién creado",
+    leadSource: leadSource
   };
 
   contacts.push(newProspect);
@@ -490,6 +505,7 @@ function submitClienteForm(event) {
   const whatsapp = document.getElementById('c-whatsapp').value;
   const company = document.getElementById('c-company').value;
   const context = document.getElementById('c-context').value;
+  const leadSource = document.getElementById('c-leadsource').value;
   
   const followMode = document.getElementById('c-follow-mode').value;
   let cycleDays = null;
@@ -519,7 +535,8 @@ function submitClienteForm(event) {
     whatsapp: whatsapp,
     suggestedDate: suggestedDateStr,
     lastContacted: "Recién creado",
-    cycleDays: cycleDays
+    cycleDays: cycleDays,
+    leadSource: leadSource
   };
 
   contacts.push(newClient);
@@ -588,7 +605,7 @@ function openContactDetailPanel(id) {
   } else if (c.type === 'Prospecto') {
     headerActionButton = `<button class="btn-primary" style="font-size:0.8rem; padding:8px 14px; background:var(--color-accent); color:#0A0A0A; border-radius:8px; font-weight:600; display:flex; align-items:center; gap:6px; box-shadow:none; border:none;" onclick="convertProspectToClient(${c.id})">🏁 Cerrar lead</button>`;
   } else {
-    headerActionButton = `<button class="btn-secondary" style="font-size:0.8rem; padding:8px 14px; border-color:var(--border-color); color:var(--color-text-secondary); background:#ffffff;" onclick="archiveContact(${c.id}); closeContactDetailPanel();">🗑️ Archivar</button>`;
+    headerActionButton = `<button class="btn-secondary" style="font-size:0.8rem; padding:8px 14px; border-color:var(--border-color); color:var(--color-text-secondary); background:#ffffff;" onclick="showArchiveReasonModal(${c.id})">🗑️ Archivar</button>`;
   }
 
   // Left Column: Relationship History timeline
@@ -740,7 +757,7 @@ function openContactDetailPanel(id) {
         
         <div style="margin-top:auto; padding-top:10px; display:flex; gap:8px;">
           <button class="btn-primary" style="flex-grow:1; justify-content:center; padding:8px; font-weight:600;" onclick="saveContactChanges(${c.id})">💾 Guardar</button>
-          <button class="btn-secondary" style="color:var(--color-urgent); border-color:rgba(239, 68, 68, 0.15); padding:8px;" onclick="archiveContact(${c.id}); closeContactDetailPanel();">🗑️ Archivar</button>
+          <button class="btn-secondary" style="color:var(--color-urgent); border-color:rgba(239, 68, 68, 0.15); padding:8px;" onclick="showArchiveReasonModal(${c.id})">🗑️ Archivar</button>
         </div>
       </div>
     `;
@@ -814,14 +831,10 @@ function closeContactDetailPanel() {
 // Close detail panel or modal on Escape key press
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' || event.key === 'Esc') {
-    const panel = document.getElementById('contact-detail-panel');
-    if (panel && panel.classList.contains('open')) {
-      closeContactDetailPanel();
-    }
-    const modal = document.getElementById('new-contact-modal');
-    if (modal && modal.style.display === 'flex') {
-      closeNewContactModal();
-    }
+    closeContactDetailPanel();
+    closeNewContactModal();
+    closeProfileConfigModal();
+    closeArchiveReasonModal();
   }
 });
 
@@ -851,8 +864,12 @@ function saveNewHistoryItem(id) {
   const c = contacts.find(contact => contact.id === id);
   if (c) {
     const now = new Date();
-    const months = ["ENE.", "FEB.", "MAR.", "ABR.", "MAY.", "JUN.", "JUL.", "AGO.", "SEP.", "OCT.", "NOV.", "DIC."];
-    const dateStr = `${now.getDate()} ${months[now.getMonth()]}`;
+    const tz = businessProfile.timezone || 'America/Lima';
+    const formatter = new Intl.DateTimeFormat('es-ES', { timeZone: tz, day: 'numeric', month: 'short' });
+    const parts = formatter.formatToParts(now);
+    const day = parts.find(p => p.type === 'day').value;
+    const monthStr = parts.find(p => p.type === 'month').value.replace(/\./g, '').toUpperCase();
+    const dateStr = `${day} ${monthStr}.`;
 
     if (!c.history) c.history = [];
     c.history.unshift({
@@ -971,6 +988,10 @@ function convertProspectToClient(id) {
 // TAB NAVIGATION CONTROLLER
 // ==========================================================================
 function switchTab(tabId) {
+  if (tabId === 'profile') {
+    openProfileConfigModal();
+    return;
+  }
   currentTab = tabId;
   closeContactDetailPanel();
 
@@ -1009,6 +1030,10 @@ function switchTab(tabId) {
     renderClientesTab();
   } else if (tabId === 'prospectos') {
     renderProspectosTab();
+  } else if (tabId === 'estadisticas') {
+    renderEstadisticasTab();
+  } else if (tabId === 'profile') {
+    renderProfileTab();
   }
 }
 
@@ -1205,7 +1230,7 @@ function performSearch() {
 }
 
 function resolutionNoAgreement(id) {
-  archiveContact(id);
+  showArchiveReasonModal(id);
 }
 
 function resolutionOfferSomethingNew(id) {
@@ -1273,4 +1298,228 @@ function setProspectosFilter(filter) {
   if (activeBtn) activeBtn.classList.add('active');
   renderProspectosTab();
 }
+
+function saveBusinessProfile() {
+  const name = document.getElementById('profile-biz-name').value;
+  const sector = document.getElementById('profile-biz-sector').value;
+  const timezone = document.getElementById('profile-biz-timezone').value;
+  const description = document.getElementById('profile-biz-desc').value;
+  const tone = document.getElementById('profile-biz-tone').value;
+  const promotion = document.getElementById('profile-biz-promo').value;
+
+  businessProfile = {
+    name,
+    sector,
+    timezone,
+    description,
+    tone,
+    promotion
+  };
+
+  localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
+  showToast("Perfil de negocio e instrucciones de IA actualizadas.");
+  
+  const appDateEl = document.getElementById('app-date');
+  if (appDateEl) {
+    appDateEl.innerHTML = `${getFormattedDate(TODAY)} &bull; Zona Horaria: <strong>${timezone}</strong>`;
+  }
+
+  renderAllTabs();
+}
+
+function simulateGoogleLogin() {
+  const loginBtn = document.querySelector('#login-screen button');
+  if (loginBtn) {
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = `
+      <svg class="animate-spin" style="animation: spin 1s linear infinite; margin-right: 8px;" width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity:0.25;"></circle>
+        <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="#000000"></path>
+      </svg>
+      Iniciando sesión...
+    `;
+  }
+  
+  setTimeout(() => {
+    isLoggedIn = true;
+    localStorage.setItem('toca_is_logged_in', 'true');
+    const loginScreen = document.getElementById('login-screen');
+    if (loginScreen) {
+      loginScreen.style.display = 'none';
+    }
+    showToast("Sesión iniciada con Google correctamente.");
+    renderAllTabs();
+  }, 1200);
+}
+
+function logout() {
+  isLoggedIn = false;
+  localStorage.setItem('toca_is_logged_in', 'false');
+  const loginScreen = document.getElementById('login-screen');
+  if (loginScreen) {
+    loginScreen.style.display = 'flex';
+    const loginBtn = document.querySelector('#login-screen button');
+    if (loginBtn) {
+      loginBtn.disabled = false;
+      loginBtn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right: 8px;">
+          <path d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.79 2.7v2.24h2.9c1.69-1.55 2.69-3.84 2.69-6.57z" fill="#4285F4"/>
+          <path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.24c-.8.54-1.84.87-3.06.87-2.35 0-4.34-1.58-5.05-3.71H.95v2.3C2.43 15.98 5.48 18 9 18z" fill="#34A853"/>
+          <path d="M3.95 10.74c-.18-.54-.28-1.12-.28-1.74s.1-1.2.28-1.74V4.96H.95C.35 6.17 0 7.55 0 9s.35 2.83.95 4.04l3-2.3z" fill="#FBBC05"/>
+          <path d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59C13.47 1.03 11.43 0 9 0 5.48 0 2.43 2.02.95 4.96l3 2.3c.71-2.13 2.7-3.71 5.05-3.71z" fill="#EA4335"/>
+        </svg>
+        Iniciar sesión con Google
+      `;
+    }
+  }
+}
+
+// ==========================================================================
+// ARCHIVE MODAL LOGIC & STATISTICS PERIODS
+// ==========================================================================
+let contactIdToArchive = null;
+let selectedLostReason = null;
+
+function showArchiveReasonModal(id) {
+  contactIdToArchive = id;
+  selectedLostReason = null;
+  
+  const pills = document.querySelectorAll('#archive-reason-modal .type-card');
+  pills.forEach(pill => pill.classList.remove('selected'));
+  
+  const confirmBtn = document.getElementById('confirm-archive-btn');
+  if (confirmBtn) confirmBtn.disabled = true;
+  
+  const textDetails = document.getElementById('archive-reason-details');
+  if (textDetails) textDetails.value = '';
+  
+  const label = document.getElementById('archive-details-label');
+  if (label) label.innerText = "Detalles / Notas Adicionales:";
+  
+  const modal = document.getElementById('archive-reason-modal');
+  if (modal) modal.classList.add('open');
+}
+
+function closeArchiveReasonModal() {
+  const modal = document.getElementById('archive-reason-modal');
+  if (modal) modal.classList.remove('open');
+  contactIdToArchive = null;
+  selectedLostReason = null;
+}
+
+function selectLostReason(reason) {
+  selectedLostReason = reason;
+  
+  const pills = document.querySelectorAll('#archive-reason-modal .type-card');
+  pills.forEach(pill => {
+    pill.classList.remove('selected');
+  });
+  
+  let targetId = '';
+  if (reason === 'Precio') targetId = 'lost-reason-precio';
+  else if (reason === 'No respondió') targetId = 'lost-reason-no-respondio';
+  else if (reason === 'Compró a otro') targetId = 'lost-reason-compro-a-otro';
+  else if (reason === 'Sin presupuesto') targetId = 'lost-reason-sin-presupuesto';
+  else if (reason === 'Otro') targetId = 'lost-reason-otro';
+  
+  const selectedPill = document.getElementById(targetId);
+  if (selectedPill) selectedPill.classList.add('selected');
+  
+  const confirmBtn = document.getElementById('confirm-archive-btn');
+  if (confirmBtn) confirmBtn.disabled = false;
+  
+  const label = document.getElementById('archive-details-label');
+  const detailsInput = document.getElementById('archive-reason-details');
+  if (reason === 'Otro') {
+    if (label) label.innerHTML = 'Detalles / Notas Adicionales: <span style="color:var(--color-urgent); font-weight:700;">* Obligatorio</span>';
+    if (detailsInput) detailsInput.placeholder = "Por favor, escribe el motivo específico aquí...";
+  } else {
+    if (label) label.innerText = "Detalles / Notas Adicionales:";
+    if (detailsInput) detailsInput.placeholder = "Escribe detalles adicionales...";
+  }
+}
+
+function confirmArchiveWithReason() {
+  if (!contactIdToArchive) return;
+  if (!selectedLostReason) {
+    showToast("Por favor, selecciona un motivo de pérdida.");
+    return;
+  }
+  
+  const detailsInput = document.getElementById('archive-reason-details');
+  const details = detailsInput ? detailsInput.value.trim() : '';
+  
+  if (selectedLostReason === 'Otro' && !details) {
+    showToast("Por favor, especifica el motivo en los detalles.");
+    return;
+  }
+  
+  const contact = contacts.find(c => c.id === contactIdToArchive);
+  if (contact) {
+    archivedBackup = { ...contact };
+    
+    contact.archived = true;
+    contact.lostReason = selectedLostReason;
+    contact.lostDate = TODAY_STR;
+    contact.lastActivityDate = TODAY_STR;
+    
+    const months = ["ENE.", "FEB.", "MAR.", "ABR.", "MAY.", "JUN.", "JUL.", "AGO.", "SEP.", "OCT.", "NOV.", "DIC."];
+    const now = new Date(TODAY);
+    contact.archivedDate = `${now.getDate()} ${months[now.getMonth()]}`;
+    
+    const reasonText = selectedLostReason === 'Otro' ? `Perdido: ${details}` : `Perdido por: ${selectedLostReason}. ${details ? '(' + details + ')' : ''}`;
+    if (!contact.history) contact.history = [];
+    contact.history.unshift({
+      date: `${now.getDate()} ${months[now.getMonth()]}`,
+      text: `Contacto archivado. Motivo: ${reasonText}`
+    });
+    
+    closeArchiveReasonModal();
+    closeContactDetailPanel();
+    
+    showToastWithAction(
+      `${contact.name} fue archivado con éxito.`,
+      "Deshacer",
+      () => {
+        contact.archived = false;
+        delete contact.lostReason;
+        delete contact.lostDate;
+        delete contact.archivedDate;
+        if (contact.history && contact.history.length > 0) {
+          contact.history.shift();
+        }
+        showToast("Contacto restaurado.");
+        renderAllTabs();
+      }
+    );
+    
+    renderAllTabs();
+  }
+}
+
+function changeStatsPeriod(period) {
+  currentStatsPeriod = period;
+  renderEstadisticasTab();
+}
+
+// Profile Modal State & Controls
+let currentProfileModalTab = 'perfil';
+
+function openProfileConfigModal() {
+  currentProfileModalTab = 'perfil';
+  renderProfileModalContent();
+  const modal = document.getElementById('profile-config-modal');
+  if (modal) modal.classList.add('open');
+}
+
+function closeProfileConfigModal() {
+  const modal = document.getElementById('profile-config-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+function switchProfileModalTab(tabId) {
+  currentProfileModalTab = tabId;
+  renderProfileModalContent();
+}
+
 

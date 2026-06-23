@@ -19,6 +19,34 @@
 <body class="view-desktop">
 
   <!-- ==========================================================================
+       MOCK GOOGLE AUTH LOGIN SCREEN
+       ========================================================================== -->
+  <div id="login-screen" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #F6F6F4; display: flex; align-items: center; justify-content: center; z-index: 99999;">
+    <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); padding: 40px; width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center; gap: 24px; text-align: center;">
+      <div style="width: 64px; height: 64px; background: #FFCC06; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 800; color: #0a0a0a;">T</div>
+      
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.6rem; font-weight: 700; color: #0a0a0a; margin: 0;">Bienvenido a Toca</h2>
+        <p style="font-family: 'Inter', sans-serif; font-size: 0.9rem; color: #6b7280; margin: 0;">Tu panel de control inteligente para WhatsApp Ventas</p>
+      </div>
+
+      <button onclick="simulateGoogleLogin()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; background: #ffffff; border: 1px solid #d1d5db; border-radius: 999px; padding: 12px; font-family: 'Inter', sans-serif; font-size: 0.92rem; font-weight: 600; color: #374151; cursor: pointer; transition: background 0.2s; outline: none; border: 1px solid #d1d5db;">
+        <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right: 8px;">
+          <path d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.79 2.7v2.24h2.9c1.69-1.55 2.69-3.84 2.69-6.57z" fill="#4285F4"/>
+          <path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.24c-.8.54-1.84.87-3.06.87-2.35 0-4.34-1.58-5.05-3.71H.95v2.3C2.43 15.98 5.48 18 9 18z" fill="#34A853"/>
+          <path d="M3.95 10.74c-.18-.54-.28-1.12-.28-1.74s.1-1.2.28-1.74V4.96H.95C.35 6.17 0 7.55 0 9s.35 2.83.95 4.04l3-2.3z" fill="#FBBC05"/>
+          <path d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59C13.47 1.03 11.43 0 9 0 5.48 0 2.43 2.02.95 4.96l3 2.3c.71-2.13 2.7-3.71 5.05-3.71z" fill="#EA4335"/>
+        </svg>
+        Iniciar sesión con Google
+      </button>
+
+      <div style="font-size: 0.72rem; color: #9ca3af; margin-top: 10px;">
+        Al ingresar, aceptas nuestros Términos de Servicio y Políticas de Privacidad.
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
        PROTOTYPE WRAPPER & CONTROL BAR
        ========================================================================== */
   <div class="prototype-bar">
@@ -85,12 +113,17 @@
           </div>
           
           <!-- Profile Widget in Sidebar Bottom -->
-          <div class="profile-widget" onclick="switchTab('profile')">
-            <div class="profile-avatar">J</div>
-            <div class="profile-info">
-              <span class="profile-name">Javier Reyes</span>
-              <span class="profile-role">Vendedor Premium</span>
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 0 4px;">
+            <div class="profile-widget" onclick="openProfileConfigModal()" style="margin-bottom: 0;">
+              <div class="profile-avatar">J</div>
+              <div class="profile-info">
+                <span class="profile-name">Javier Reyes</span>
+                <span class="profile-role">Vendedor Premium</span>
+              </div>
             </div>
+            <button onclick="logout()" class="nav-item" style="background: transparent; border: none; font-size: 0.8rem; padding: 6px 12px; color: var(--color-urgent); width: 100%; text-align: left; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 8px; opacity: 0.8; font-family: var(--font-body);" onmouseover="this.style.background='rgba(239, 68, 68, 0.05)'" onmouseout="this.style.background='transparent'">
+              <span class="nav-icon" style="margin-right: 0;">🚪</span> Cerrar sesión
+            </button>
           </div>
         </aside>
 
@@ -113,7 +146,7 @@
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
                     Nuevo
                   </button>
-                  <div class="mobile-header-profile-btn" onclick="switchTab('profile')">J</div>
+                  <div class="mobile-header-profile-btn" onclick="openProfileConfigModal()">J</div>
                 </div>
               </div>
 
@@ -264,30 +297,13 @@
           </div>
 
           <!-- ==========================================================================
-               TAB CONTENT: ESTADISTICAS (Blank state placeholder)
+               TAB CONTENT: ESTADISTICAS
                ========================================================================== -->
-          <div class="tab-content" id="tab-estadisticas">
-            <h1 style="font-size: 1.5rem; font-weight: 700;">Métricas y Rendimiento</h1>
-            <p style="font-size: 0.9rem; color: var(--color-text-secondary); margin-top: 4px;">Evalúa tus tasas de conversión, efectividad de mensajes IA y cierres.</p>
-            <div class="tab-placeholder">
-              <div class="tab-placeholder-icon">📊</div>
-              <div class="empty-title">Estadísticas de Venta</div>
-              <div class="empty-subtitle">Próximamente tendrás acceso a reportes de conversión de prospectos a clientes, tasas de respuesta de plantillas IA y velocidad de cierre.</div>
-            </div>
+          <div class="tab-content" id="tab-estadisticas" style="padding: 20px;">
+            <!-- Dynamic stats rendered here -->
           </div>
 
-          <!-- ==========================================================================
-               TAB CONTENT: PROFILE (Blank state placeholder)
-               ========================================================================== -->
-          <div class="tab-content" id="tab-profile">
-            <h1 style="font-size: 1.5rem; font-weight: 700;">Mi Perfil</h1>
-            <p style="font-size: 0.9rem; color: var(--color-text-secondary); margin-top: 4px;">Configura tus integraciones de WhatsApp Web y preferencias del modelo de IA.</p>
-            <div class="tab-placeholder">
-              <div class="tab-placeholder-icon">⚙️</div>
-              <div class="empty-title">Configuración de Usuario</div>
-              <div class="empty-subtitle">Hola, <b>Javier Reyes</b>. Aquí podrás enlazar tu extensión de Chrome para WhatsApp Web y ajustar los estilos de redacción de la IA. Sección en desarrollo.</div>
-            </div>
-          </div>
+          <!-- Profile tab content removed as it is now a popup modal -->
 
         </main>
 
@@ -374,6 +390,16 @@
             <input type="text" class="form-input" id="p-context" placeholder="Interesada en catálogo de calzado de invierno.">
           </div>
           <div class="form-group">
+            <label class="form-label">Origen del Lead</label>
+            <select class="form-input form-select" id="p-leadsource" style="padding: 8px 12px; background: #ffffff;">
+              <option value="WhatsApp Directo" selected>WhatsApp Directo</option>
+              <option value="Instagram">Instagram</option>
+              <option value="TikTok">TikTok</option>
+              <option value="Facebook Ads">Facebook Ads</option>
+              <option value="Referido">Referido</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label class="form-label">Fecha de Seguimiento 1 (fu1)</label>
             <input type="date" class="form-input" id="p-fu1" required>
           </div>
@@ -416,6 +442,16 @@
             <input type="text" class="form-input" id="c-context" placeholder="Compró lote de herramientas eléctricas.">
           </div>
           <div class="form-group">
+            <label class="form-label">Origen del Lead</label>
+            <select class="form-input form-select" id="c-leadsource" style="padding: 8px 12px; background: #ffffff;">
+              <option value="WhatsApp Directo" selected>WhatsApp Directo</option>
+              <option value="Instagram">Instagram</option>
+              <option value="TikTok">TikTok</option>
+              <option value="Facebook Ads">Facebook Ads</option>
+              <option value="Referido">Referido</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label class="form-label">Tipo de Seguimiento</label>
             <select class="form-input form-select" id="c-follow-mode" onchange="toggleClientFollowModeModal()">
               <option value="recurrente" selected>Flujo constante (Ciclo Recurrente)</option>
@@ -443,6 +479,80 @@
         </form>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL: "Configuración del Perfil y Plan"
+       ========================================================================== -->
+  <div class="modal-backdrop" id="profile-config-modal">
+    <div class="modal-box" style="max-width: 800px; width: 90%; border-radius: 16px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <span>⚙️ Configuración del Sistema</span>
+        </div>
+        <button class="modal-close" onclick="closeProfileConfigModal()">&times;</button>
+      </div>
+      <!-- Tab Headers inside Modal -->
+      <div class="filters-row" style="padding: 12px 20px 0 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 0; display: flex; gap: 8px;">
+        <button class="filter-btn active" id="btn-profile-tab-perfil" onclick="switchProfileModalTab('perfil')">
+          👤 Perfil del Negocio
+        </button>
+        <button class="filter-btn" id="btn-profile-tab-plan" onclick="switchProfileModalTab('plan')">
+          💼 Plan de Suscripción
+        </button>
+      </div>
+      <div class="modal-body" id="profile-modal-body" style="padding: 20px; max-height: 70vh; overflow-y: auto;">
+        <!-- Dynamic content: Perfil Form or Plan Info -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL: "Confirmar Archivo (Motivo de Pérdida)"
+       ========================================================================== -->
+  <div class="modal-backdrop" id="archive-reason-modal">
+    <div class="modal-box" style="max-width: 420px; border-radius: 16px;">
+      <div class="modal-header">
+        <div class="modal-title">📁 Archivar Contacto</div>
+        <button class="modal-close" onclick="closeArchiveReasonModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.82rem; color: var(--color-text-secondary); line-height: 1.4; margin: 0 0 16px 0;">
+          Selecciona el motivo por el cual no se concretó el trato para registrarlo en las estadísticas e historial de relación.
+        </p>
+        
+        <label class="form-label" style="font-weight: 600; margin-bottom: 8px; font-size: 0.8rem;">Motivo de Pérdida o Baja:</label>
+        
+        <!-- Predefined reasons as selectable pills/cards -->
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px;">
+          <div class="type-card" id="lost-reason-precio" onclick="selectLostReason('Precio')" style="padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border-color); font-size: 0.82rem; font-weight: 600;">
+            💰 Precio
+          </div>
+          <div class="type-card" id="lost-reason-no-respondio" onclick="selectLostReason('No respondió')" style="padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border-color); font-size: 0.82rem; font-weight: 600;">
+            🔇 No respondió
+          </div>
+          <div class="type-card" id="lost-reason-compro-a-otro" onclick="selectLostReason('Compró a otro')" style="padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border-color); font-size: 0.82rem; font-weight: 600;">
+            🤝 Compró a otro
+          </div>
+          <div class="type-card" id="lost-reason-sin-presupuesto" onclick="selectLostReason('Sin presupuesto')" style="padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border-color); font-size: 0.82rem; font-weight: 600;">
+            ❌ Sin presupuesto
+          </div>
+          <div class="type-card" id="lost-reason-otro" onclick="selectLostReason('Otro')" style="grid-column: span 2; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border-color); font-size: 0.82rem; font-weight: 600;">
+            ✏️ Otro (Escribir motivo)
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 12px;">
+          <label class="form-label" style="font-weight: 600; font-size: 0.8rem;" id="archive-details-label">Detalles / Notas Adicionales:</label>
+          <textarea id="archive-reason-details" class="form-input" rows="3" placeholder="Escribe detalles adicionales..." style="padding: 8px 12px; background: #ffffff; resize: vertical; font-family: var(--font-body); font-size: 0.8rem;"></textarea>
+        </div>
+        
+        <div class="modal-footer" style="padding: 12px 0 0 0; margin-top: 16px;">
+          <button class="btn-secondary" onclick="closeArchiveReasonModal()">Cancelar</button>
+          <button class="btn-primary" id="confirm-archive-btn" onclick="confirmArchiveWithReason()" style="background: var(--color-urgent); color: #ffffff; border: none;" disabled>Confirmar Archivo</button>
+        </div>
+      </div>
     </div>
   </div>
 
