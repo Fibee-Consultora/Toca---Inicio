@@ -9,9 +9,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/prototype.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="css/slide-panel.css">
 </head>
-<body>
+<body class="view-desktop">
 
   <!-- ==========================================================================
        PROTOTYPE WRAPPER & CONTROL BAR
@@ -38,7 +43,7 @@
   </div>
 
   <div class="viewport-container" id="viewport-container">
-    <div class="viewport-desktop" id="viewport-frame">
+    <div class="app-shell" id="viewport-frame">
       
       <!-- ==========================================================================
            TOCA MAIN APP START
@@ -462,6 +467,9 @@
   <!-- ==========================================================================
        JAVASCRIPT LOGIC
        ========================================================================== -->
+  <script src="js/data.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/ui.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

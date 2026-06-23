@@ -1,0 +1,142 @@
+/* ==========================================================================
+   PROTOTYPE SHELL — Barra de herramientas y emulador móvil
+   (No forma parte del producto Toca en producción)
+   ========================================================================== */
+
+body {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+}
+
+body.view-desktop {
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.view-mobile {
+  overflow: auto;
+}
+
+/* Barra superior de controles del prototipo */
+.prototype-bar {
+  background: #111827;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  z-index: 1000;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.proto-title {
+  font-family: var(--font-title);
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: var(--color-accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.proto-badge {
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  color: #a78bfa;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.proto-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.proto-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-text-secondary);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.proto-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.proto-btn.active {
+  background: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+}
+
+/* Contenedor entre la barra de prototipo y la app */
+.viewport-container {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+body.view-desktop .viewport-container {
+  flex-direction: column;
+}
+
+body.view-mobile .viewport-container {
+  padding: 20px;
+  justify-content: center;
+  align-items: center;
+  flex: none;
+}
+
+/* Marco del emulador móvil */
+body.view-mobile .app-shell {
+  width: 390px;
+  height: 844px;
+  border: 10px solid #1f2937;
+  border-radius: 40px;
+  background-color: var(--bg-dark);
+  overflow-y: auto;
+  position: relative;
+  box-shadow: var(--shadow-xl), 0 0 0 2px rgba(255, 255, 255, 0.05);
+  flex: none;
+}
+
+body.view-mobile .app-shell::-webkit-scrollbar {
+  width: 4px;
+}
+
+body.view-mobile .app-shell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 25px;
+  background: #1f2937;
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+  z-index: 1001;
+  pointer-events: none;
+}
