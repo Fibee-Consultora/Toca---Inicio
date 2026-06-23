@@ -3,6 +3,17 @@
 Este repositorio contiene la versión interactiva terminada del Dashboard de Inicio para **Toca v2**. Es un prototipo de alta fidelidad construido en HTML, CSS y JavaScript vainilla (sin dependencias ni frameworks) diseñado para servir de guía visual y funcional de cara al desarrollo en producción.
 ---
 
+## 📂 Estructura del Proyecto
+
+El proyecto está organizado de manera modular siguiendo las buenas prácticas de desarrollo web, separando la estructura, estilos y lógica en archivos independientes:
+- 📁 **`css/`**: Contiene los estilos de la aplicación.
+  - 📄 **[styles.css](file:///C:/Users/perro/.gemini/antigravity/scratch/toca-dashboard/css/styles.css)**: Sistema de diseño completo, variables, fuentes, resets, componentes CSS y animaciones.
+- 📁 **`js/`**: Contiene la lógica del prototipo.
+  - 📄 **[app.js](file:///C:/Users/perro/.gemini/antigravity/scratch/toca-dashboard/js/app.js)**: Base de datos semilla, controladores de eventos, lógica de renderizado, atajos de teclado y sugerencias con IA.
+- 📄 **[index.html](file:///C:/Users/perro/.gemini/antigravity/scratch/toca-dashboard/index.html)**: Estructura markup principal que vincula el CSS y JS externos.
+
+---
+
 ## 📖 Documentación de Flujos y Reglas de Negocio
 
 Para asegurar la correcta implementación técnica de los flujos de la aplicación, consulta los siguientes manuales detallados:
