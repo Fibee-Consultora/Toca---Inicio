@@ -61,11 +61,24 @@
       <button class="proto-btn" id="btn-mobile" onclick="setViewport('mobile')">
         📱 Mobile View
       </button>
+      <select class="proto-btn" id="select-role-simulator" onchange="switchSimulatedRole(this.value)" style="background: #ffffff; border: 1px solid var(--border-color); color: var(--color-text-primary); border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; font-family: var(--font-body); font-weight: 600; cursor: pointer; outline: none; height: 28px;">
+        <option value="Administrador" selected>🔑 Simular Dueño (Admin)</option>
+        <option value="Agente">👤 Simular Colaborador (Agente)</option>
+      </select>
+      <select class="proto-btn" id="select-plan-simulator" onchange="switchSimulatedPlan(this.value)" style="background: #ffffff; border: 1px solid var(--border-color); color: var(--color-text-primary); border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; font-family: var(--font-body); font-weight: 600; cursor: pointer; outline: none; height: 28px;">
+        <option value="Néctar">🌸 Simular Plan Néctar</option>
+        <option value="Panal">🍯 Simular Plan Panal</option>
+        <option value="Colmena">🐝 Simular Plan Colmena</option>
+        <option value="Apiario">👑 Simular Plan Apiario</option>
+      </select>
       <button class="proto-btn" onclick="triggerSkeleton()">
         🔄 Skeleton Loader
       </button>
       <button class="proto-btn" onclick="triggerAutoArchiveDemo()">
         ⏰ Simulate Auto-Archive
+      </button>
+      <button class="proto-btn" onclick="triggerDay7RecontactDemo()" style="border-color: var(--color-urgent); color: var(--color-urgent);">
+        ⏰ Simular Recontacto (Día 7)
       </button>
     </div>
   </div>
@@ -81,9 +94,23 @@
         <!-- Sidebar (Desktop View Only) -->
         <aside class="toca-sidebar">
           <div>
-            <div class="brand-section">
-              <div class="brand-logo">T</div>
-              <span class="brand-name">Toca</span>
+            <div class="brand-section" style="margin-bottom: 16px; display: flex; align-items: center; gap: 10px; padding: 0 4px;">
+              <div class="brand-logo" style="background: var(--color-accent-gradient); color: #0a0a0a; font-weight: 800; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">T</div>
+              <span class="brand-name" style="font-family: var(--font-title); font-size: 1.25rem; font-weight: 800; color: #ffffff;">Toca</span>
+            </div>
+            
+            <div style="padding: 0 4px 14px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 16px; position: relative;">
+              <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.4); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px;">Espacio de Trabajo</label>
+              <div class="workspace-switcher-container" style="position: relative; width: 100%;">
+                <button id="workspace-switcher-trigger" class="workspace-switcher-trigger" onclick="toggleWorkspaceDropdown(event)">
+                  <span id="current-workspace-name">Cargando...</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.7; transition: transform 0.2s;" id="workspace-switcher-chevron"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                
+                <div id="workspace-switcher-menu" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; width: 100%; background: #18181b; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -2px rgba(0,0,0,0.3); z-index: 1000; padding: 4px 0; box-sizing: border-box;">
+                  <!-- Dynamically populated -->
+                </div>
+              </div>
             </div>
             
             <nav>
@@ -118,7 +145,7 @@
               <div class="profile-avatar">J</div>
               <div class="profile-info">
                 <span class="profile-name">Javier Reyes</span>
-                <span class="profile-role">Vendedor Premium</span>
+                <span class="profile-role" id="sidebar-profile-role">Plan Panal</span>
               </div>
             </div>
             <button onclick="logout()" class="nav-item" style="background: transparent; border: none; font-size: 0.8rem; padding: 6px 12px; color: var(--color-urgent); width: 100%; text-align: left; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 8px; opacity: 0.8; font-family: var(--font-body);" onmouseover="this.style.background='rgba(239, 68, 68, 0.05)'" onmouseout="this.style.background='transparent'">
@@ -139,7 +166,7 @@
               <div class="header-top">
                 <div class="header-greeting">
                   <h1 id="app-greeting">Hola Javier, hoy tienes ... toques pendientes.</h1>
-                  <p id="app-date">...</p>
+                  <p id="app-date" style="display: none;">...</p>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <button class="btn-new-contact" onclick="openNewContactModal()">
@@ -180,11 +207,11 @@
                 <!-- Section: Toques del Día -->
                 <div>
                   <!-- Urgent Filters Row -->
-                  <div class="filters-row" id="filters-row" style="display: none; margin-top: 12px; margin-bottom: 12px;">
-                    <button class="filter-btn filter-all active" onclick="setFilter('Todos')">
+                  <div class="filters-row has-active" id="filters-row" style="display: none; margin-top: 12px; margin-bottom: 12px;">
+                    <button class="filter-btn filter-all" onclick="setFilter('Todos')">
                       Todos <span class="filter-count" id="count-all">0</span>
                     </button>
-                    <button class="filter-btn filter-urgent" onclick="setFilter('Rojo')">
+                    <button class="filter-btn filter-urgent active" onclick="setFilter('Rojo')">
                       <span class="filter-dot red"></span> urgentes <span class="filter-count" id="count-red">0</span>
                     </button>
                     <button class="filter-btn filter-attention" onclick="setFilter('Amarillo')">
@@ -387,7 +414,8 @@
           </div>
           <div class="form-group">
             <label class="form-label">Necesidad / Contexto Inicial</label>
-            <input type="text" class="form-input" id="p-context" placeholder="Interesada en catálogo de calzado de invierno.">
+            <input type="text" class="form-input" id="p-context" placeholder="Interesada en catálogo de calzado de invierno." oninput="handleContextInput(this.value)">
+            <div id="p-context-ia-suggestion" style="display: none; font-size: 0.72rem; color: #7c3aed; font-weight: 600; margin-top: 4px; padding: 2px 4px; border-left: 2px solid #7c3aed;"></div>
           </div>
           <div class="form-group">
             <label class="form-label">Origen del Lead</label>
@@ -500,6 +528,9 @@
         </button>
         <button class="filter-btn" id="btn-profile-tab-plan" onclick="switchProfileModalTab('plan')">
           💼 Plan de Suscripción
+        </button>
+        <button class="filter-btn" id="btn-profile-tab-equipo" onclick="switchProfileModalTab('equipo')">
+          👥 Equipo / Agentes
         </button>
       </div>
       <div class="modal-body" id="profile-modal-body" style="padding: 20px; max-height: 70vh; overflow-y: auto;">

@@ -1,7 +1,10 @@
 function getFormattedDate(date) {
-  const options = { weekday: 'long', day: 'numeric', month: 'long' };
-  let formatted = date.toLocaleDateString('es-ES', options);
-  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const dayName = days[date.getDay()];
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${dayName}, ${dd}/${mm}/${yyyy}`;
 }
 
 function calculateUrgency(suggestedDateStr) {

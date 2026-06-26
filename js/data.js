@@ -4,9 +4,9 @@ let contacts = [
   {
     id: 1,
     name: "Jorge Ramírez",
-    company: "Importaciones Ramírez SAC",
+    company: "Tienda Urbana Chic",
     type: "Prospecto",
-    context: "Espera cotización de fletes marítimos.",
+    context: "Espera cotización de 5 docenas de polos oversize de algodón.",
     status: "Toque del día",
     fu1: "2026-06-21",
     fu2: "",
@@ -16,14 +16,15 @@ let contacts = [
     lastContacted: "Hace 10 días",
     leadSource: "Instagram",
     createdAt: "2026-06-10",
-    lastActivityDate: "2026-06-15"
+    lastActivityDate: "2026-06-15",
+    businessId: 1
   },
   {
     id: 2,
     name: "Rosa Quispe",
-    company: "Ropa Quispe E.I.R.L.",
+    company: "Boutique Rosa de Gamarra",
     type: "Prospecto",
-    context: "Interesada en catálogo de calzado de invierno.",
+    context: "Interesada en catálogo y precios de polos oversize premium.",
     status: "Toque del día",
     fu1: "2026-06-21",
     fu2: "",
@@ -33,14 +34,15 @@ let contacts = [
     lastContacted: "Hace 7 días",
     leadSource: "TikTok",
     createdAt: "2026-06-12",
-    lastActivityDate: "2026-06-21"
+    lastActivityDate: "2026-06-21",
+    businessId: 1
   },
   {
     id: 3,
     name: "Carlos Mendoza",
-    company: "Ferretería Mendoza",
+    company: "Mendoza Ropa Deportiva",
     type: "Cliente",
-    context: "Hizo recompra de herramientas eléctricas.",
+    context: "Hizo recompra de 100 polos de algodón básico.",
     status: "Toque del día",
     whatsapp: "+51923456789",
     suggestedDate: "2026-06-20", // Vencido ayer (Rojo)
@@ -50,14 +52,15 @@ let contacts = [
     createdAt: "2026-05-10",
     conversionDate: "2026-06-05",
     lastActivityDate: "2026-06-20",
-    recompraCount: 1
+    recompraCount: 1,
+    businessId: 1
   },
   {
     id: 4,
     name: "Marco Reyes",
-    company: "Constructora Reyes",
+    company: "Estilo Reyes E.I.R.L.",
     type: "Prospecto",
-    context: "Licitación de agregados para obra vial.",
+    context: "Pintado de logo personalizado en lote de 50 polos.",
     status: "Toque del día",
     fu1: "2026-06-22",
     fu2: "",
@@ -67,14 +70,15 @@ let contacts = [
     lastContacted: "Hace 5 días",
     leadSource: "Referido",
     createdAt: "2026-06-16",
-    lastActivityDate: "2026-06-18"
+    lastActivityDate: "2026-06-18",
+    businessId: 1
   },
   {
     id: 5,
     name: "Sofía Castro",
-    company: "Distribuidora Castro",
+    company: "Castro Urban Wear",
     type: "Cliente",
-    context: "Próximo lote mensual de abarrotes.",
+    context: "Próximo pedido mensual de polos oversize en colores pastel.",
     status: "Toque del día",
     whatsapp: "+51945678901",
     suggestedDate: "2026-06-24", // Vence en 3 días (Amarillo)
@@ -84,26 +88,28 @@ let contacts = [
     createdAt: "2026-04-15",
     conversionDate: "2026-05-20",
     lastActivityDate: "2026-06-10",
-    recompraCount: 2
+    recompraCount: 2,
+    businessId: 1
   },
   {
     id: 6,
     name: "Andrés Loli",
-    company: "Loli & Asociados",
+    company: "Loli Tienda Multimarca",
     type: "Prospecto",
-    context: "Presentación corporativa de servicios legales enviada.",
+    context: "Enviada cotización de polos oversize blancos con estampado de marca.",
     status: "Toque del día",
     whatsapp: "+51956789012",
     suggestedDate: "2026-07-02", // Vence en 11 días (Verde)
     lastContacted: "Hace 2 días",
     leadSource: "Instagram",
     createdAt: "2026-06-19",
-    lastActivityDate: "2026-06-19"
+    lastActivityDate: "2026-06-19",
+    businessId: 1
   },
   {
     id: 7,
     name: "Lucía Fernández",
-    company: "Inversiones Fernández",
+    company: "Fernández Closet",
     type: "Prospecto",
     context: "", // Empty context to test AI Error state
     status: "Toque del día",
@@ -112,14 +118,15 @@ let contacts = [
     lastContacted: "Hace 15 días",
     leadSource: "TikTok",
     createdAt: "2026-06-05",
-    lastActivityDate: "2026-06-10"
+    lastActivityDate: "2026-06-10",
+    businessId: 1
   },
   {
     id: 8,
     name: "Roberto Gómez",
-    company: "Gómez Repuestos",
+    company: "Gómez Urban Store",
     type: "Cliente",
-    context: "Pedido de repuestos automotrices al por mayor.",
+    context: "Pedido de 120 polos oversize de alta calidad para su nueva tienda.",
     status: "Toque del día",
     whatsapp: "+51991122334",
     suggestedDate: "2026-07-05", // Vence en 14 días (Verde)
@@ -129,28 +136,30 @@ let contacts = [
     createdAt: "2026-05-01",
     conversionDate: "2026-05-28",
     lastActivityDate: "2026-06-14",
-    recompraCount: 1
+    recompraCount: 1,
+    businessId: 1
   },
   {
     id: 9,
     name: "Elena Patiño",
-    company: "Patiño Software Inc.",
+    company: "Elena Tienda de Moda",
     type: "Prospecto",
-    context: "Solicitó demostración del software de facturación.",
+    context: "Solicitó catálogo y cotización de polos oversize por WhatsApp.",
     status: "Toque del día",
     whatsapp: "+51995544332",
     suggestedDate: "2026-06-26", // Vence en 5 días (Amarillo)
     lastContacted: "Hace 5 días",
     leadSource: "Facebook Ads",
     createdAt: "2026-06-15",
-    lastActivityDate: "2026-06-16"
+    lastActivityDate: "2026-06-16",
+    businessId: 1
   },
   {
     id: 10,
     name: "Mateo Salazar",
-    company: "Salazar Consulting",
+    company: "Salazar Concept Store",
     type: "Cliente",
-    context: "Renovación de suscripción de soporte anual.",
+    context: "Renovación de pedido recurrente de polos oversize premium.",
     status: "Toque del día",
     whatsapp: "+51996633221",
     suggestedDate: "2026-06-18", // Vencido hace 3 días (Rojo)
@@ -160,15 +169,16 @@ let contacts = [
     createdAt: "2026-03-01",
     conversionDate: "2026-04-15",
     lastActivityDate: "2026-05-18",
-    recompraCount: 0
+    recompraCount: 0,
+    businessId: 1
   },
   // Contactos Archivados / Perdidos / Bajas para tener métricas de conversión realistas
   {
     id: 11,
     name: "Felipe Soto",
-    company: "Soto Distribuciones",
+    company: "Soto Mayoristas",
     type: "Prospecto",
-    context: "Preguntó por tarifas pero consideró elevado el precio.",
+    context: "Preguntó por polos de algodón de 20 al hilo pero el precio le pareció elevado.",
     status: "Toque del día",
     whatsapp: "+51998822110",
     suggestedDate: "2026-06-05",
@@ -178,14 +188,15 @@ let contacts = [
     createdAt: "2026-05-10",
     lostDate: "2026-06-05",
     leadSource: "Instagram",
-    lastActivityDate: "2026-06-05"
+    lastActivityDate: "2026-06-05",
+    businessId: 1
   },
   {
     id: 12,
     name: "Gabriela Ruiz",
-    company: "Ruiz Boutique",
+    company: "Ruiz Closet Gamarra",
     type: "Prospecto",
-    context: "Se le envió el catálogo pero no volvió a contestar.",
+    context: "Se le envió catálogo de polos oversize de colores pero no volvió a contestar.",
     status: "Toque del día",
     whatsapp: "+51995577889",
     suggestedDate: "2026-06-12",
@@ -195,31 +206,106 @@ let contacts = [
     createdAt: "2026-06-02",
     lostDate: "2026-06-12",
     leadSource: "TikTok",
-    lastActivityDate: "2026-06-12"
+    lastActivityDate: "2026-06-12",
+    businessId: 1
   },
   {
     id: 13,
     name: "Javier Vargas",
-    company: "Vargas Ferreteros",
+    company: "Vargas Moda Urbana",
     type: "Cliente",
-    context: "Se dio de baja por mudanza de local comercial.",
+    context: "Se dio de baja por cierre temporal de su tienda en Gamarra.",
     status: "Toque del día",
     whatsapp: "+51996611335",
     suggestedDate: "2026-06-15",
     lastContacted: "Hace 1 semana",
     archived: true,
-    archivedDate: "15 Jun.",
+    archivedDate: "15/06/2026",
     lostReason: "Compró a otro",
     createdAt: "2026-04-01",
     conversionDate: "2026-05-01",
     lostDate: "2026-06-15",
     leadSource: "Referido",
-    lastActivityDate: "2026-06-15"
+    lastActivityDate: "2026-06-15",
+    businessId: 1
+  },
+  // Coolbox Express (businessId: 2) contacts
+  {
+    id: 14,
+    name: "Julio Tecno",
+    company: "Tecno Store Gamarra",
+    type: "Prospecto",
+    context: "Preguntó por stock de audífonos Bluetooth y cargadores tipo C.",
+    status: "Toque del día",
+    fu1: "2026-06-21",
+    fu2: "",
+    fu3: "",
+    whatsapp: "+51999888777",
+    suggestedDate: "2026-06-21",
+    lastContacted: "Hace 2 días",
+    leadSource: "Facebook Ads",
+    createdAt: "2026-06-18",
+    lastActivityDate: "2026-06-19",
+    businessId: 2
+  },
+  {
+    id: 15,
+    name: "Beatriz Tech",
+    company: "B&B Importaciones",
+    type: "Prospecto",
+    context: "Espera cotización de 10 smartwatches serie 8.",
+    status: "Toque del día",
+    fu1: "2026-06-21",
+    fu2: "",
+    fu3: "",
+    whatsapp: "+51977665544",
+    suggestedDate: "2026-06-21",
+    lastContacted: "Hace 5 días",
+    leadSource: "Instagram",
+    createdAt: "2026-06-15",
+    lastActivityDate: "2026-06-16",
+    businessId: 2
+  },
+  {
+    id: 16,
+    name: "Renato Gadgets",
+    company: "Gadget Shop",
+    type: "Cliente",
+    context: "Recompra mensual de cargadores rápidos para smartphones.",
+    status: "Toque del día",
+    whatsapp: "+51955443322",
+    suggestedDate: "2026-06-20",
+    lastContacted: "Ayer",
+    cycleDays: 28,
+    leadSource: "WhatsApp Directo",
+    createdAt: "2026-05-10",
+    conversionDate: "2026-06-05",
+    lastActivityDate: "2026-06-20",
+    recompraCount: 3,
+    businessId: 2
+  },
+  {
+    id: 17,
+    name: "Valeria Tech",
+    company: "Valeria Store",
+    type: "Cliente",
+    context: "Interesada en parlantes impermeables para campaña de verano.",
+    status: "Toque del día",
+    whatsapp: "+51933221100",
+    suggestedDate: "2026-06-24",
+    lastContacted: "Hace 10 días",
+    cycleDays: 28,
+    leadSource: "Referido",
+    createdAt: "2026-04-15",
+    conversionDate: "2026-05-15",
+    lastActivityDate: "2026-06-14",
+    recompraCount: 1,
+    businessId: 2
   }
 ];
 
 let currentViewport = 'desktop';
-let currentFilter = 'Todos';
+let currentFilter = 'Rojo';
 let currentClientesFilter = 'Todos';
 let currentProspectosFilter = 'Todos';
 let selectedContactId = null;
@@ -229,23 +315,56 @@ let archivedBackup = null; // For Undo Archive
 let isWaitingCollapsed = false;
 let currentTab = 'inicio';
 let currentStatsPeriod = 'mes';
+let currentProfileModalTab = 'perfil';
+let tempExtraAgents = 0;
+const PLAN_LIMITS = {
+  'Néctar': { name: 'Plan Néctar', tag: '🌸', businesses: 1, agents: 1, contacts: 50 },
+  'Panal': { name: 'Plan Panal', tag: '🍯', businesses: 2, agents: 3, contacts: 200 },
+  'Colmena': { name: 'Plan Colmena', tag: '🐝', businesses: 5, agents: 8, contacts: 600 },
+  'Apiario': { name: 'Plan Apiario', tag: '👑', businesses: 999, agents: 999, contacts: 99999 }
+};
+
+let currentActivePlan = localStorage.getItem('toca_current_active_plan') || 'Panal';
+let purchasedExtraAgents = parseInt(localStorage.getItem('toca_extra_agents')) || 0;
+let purchasedExtraPacks = parseInt(localStorage.getItem('toca_extra_packs')) || 0;
+
+let tempExtraPacks = 0;
+let isPricingExpanded = false;
+let currentSimulatedUserRole = localStorage.getItem('toca_current_simulated_role') || 'Administrador';
+
+let businesses = JSON.parse(localStorage.getItem('toca_businesses')) || [
+  {
+    id: 1,
+    name: "Polos Mayoristas Lima",
+    sector: "Venta de ropa al por mayor",
+    description: "Prendas de algodón peruano oversize de alta calidad para marcas independientes.",
+    tone: "Amigable",
+    promotion: "Envío gratis a todo el Perú por compras de 1 docena o más",
+    timezone: "America/Lima"
+  },
+  {
+    id: 2,
+    name: "Coolbox Express",
+    sector: "Otro",
+    description: "Dispositivos tecnológicos, audífonos, parlantes y gadgets para el día a día.",
+    tone: "Directo",
+    promotion: "10% de descuento en tu primera compra online",
+    timezone: "America/Lima"
+  }
+];
+
+let currentBusinessId = parseInt(localStorage.getItem('toca_current_business_id')) || 1;
+let businessProfile = businesses.find(b => b.id === currentBusinessId) || businesses[0];
+
+let teamAgents = JSON.parse(localStorage.getItem('toca_team_agents')) || [
+  { name: "Javier Reyes", email: "javier@poloslima.com", role: "Administrador", status: "Activo" },
+  { name: "Sofía Castro", email: "sofia@poloslima.com", role: "Agente", status: "Activo" }
+];
 
 // Auth State (persisted via localStorage for prototype feel)
 let isLoggedIn = localStorage.getItem('toca_is_logged_in') === 'true';
 
-// Business Profile State (for AI prompt engineering customization)
-let businessProfile = JSON.parse(localStorage.getItem('toca_business_profile')) || {
-  name: "Polos Mayoristas Lima",
-  sector: "Venta de ropa al por mayor",
-  description: "Prendas de algodón peruano oversize de alta calidad para marcas independientes.",
-  tone: "Amigable",
-  promotion: "Envío gratis a todo el Perú por compras de 1 docena o más",
-  timezone: "America/Lima"
-};
 
-if (!businessProfile.timezone) {
-  businessProfile.timezone = "America/Lima";
-}
 
 // Time constant mockup (simulation represents June 21, 2026)
 const TODAY_STR = "2026-06-21";

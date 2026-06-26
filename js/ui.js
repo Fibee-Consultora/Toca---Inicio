@@ -4,7 +4,7 @@ function renderClientesTab() {
   const container = document.getElementById('clientes-list-container');
   if (!container) return;
 
-  const allClients = contacts.filter(c => c.type === 'Cliente');
+  const allClients = contacts.filter(c => c.type === 'Cliente' && (c.businessId || 1) === currentBusinessId);
   const activeClients = allClients.filter(c => !c.archived);
   const archivedClients = allClients.filter(c => c.archived === true);
   
@@ -63,17 +63,20 @@ function renderClientesTab() {
     cardContainer.className = "minimal-card-container";
     cardContainer.id = `card-${c.id}`;
     cardContainer.innerHTML = `
-      <div class="minimal-card" onclick="openContactDetailPanel(${c.id})" style="display: flex; flex-direction: column; justify-content: space-between; padding: 14px 16px; box-sizing: border-box; height: 136px;">
+      <div class="minimal-card${c.starred ? ' card-starred' : ''}" onclick="openContactDetailPanel(${c.id})" style="display: flex; flex-direction: column; justify-content: space-between; padding: 14px 16px; box-sizing: border-box; height: 136px;">
         <!-- Top / Identity Row -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
-          <div style="display: flex; flex-direction: column; overflow: hidden; max-width: calc(100% - 100px);">
+          <div style="display: flex; flex-direction: column; overflow: hidden; max-width: calc(100% - 120px);">
             <div class="minimal-card-name" style="font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name}</div>
             <div class="minimal-card-company" style="font-size: 0.78rem; color: var(--color-text-secondary); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.company || 'Sin Empresa'}</div>
           </div>
           <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
-            <span class="minimal-pill tag-cliente" style="background: ${c.archived ? '#f3f4f6' : 'rgba(16, 185, 129, 0.1)'}; color: ${c.archived ? '#4b5563' : '#047857'}; font-weight: 700; padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.02em;">
-              ${c.archived ? 'Archivado' : 'Cliente'}
-            </span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              ${(!c.archived && c.starred) ? `<button class="btn-star-toggle active" onclick="toggleContactStar(${c.id}, event)" title="Quitar destaque">★</button>` : ''}
+              <span class="minimal-pill tag-cliente" style="background: ${c.archived ? '#f3f4f6' : 'rgba(16, 185, 129, 0.1)'}; color: ${c.archived ? '#4b5563' : '#047857'}; font-weight: 700; padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.02em;">
+                ${c.archived ? 'Archivado' : 'Cliente'}
+              </span>
+            </div>
             ${c.archived ? '' : `
             <span class="detail-badge-pill-styled" style="display: inline-flex; align-items: center; gap: 4px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 999px; padding: 2px 8px; font-size: 0.7rem; color: #4b5563; font-weight: 500;">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -94,7 +97,7 @@ function renderClientesTab() {
             ${c.archived ? '' : `
             <span class="detail-badge-pill-styled" style="display: inline-flex; align-items: center; gap: 4px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 999px; padding: 2px 8px; font-size: 0.72rem; color: #374151; font-weight: 500; width: fit-content; white-space: nowrap;">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-              Próximo: ${c.suggestedDate ? c.suggestedDate.split('-').slice(1).reverse().join('/') : 'Sin fecha'}
+              Próximo: ${c.suggestedDate ? c.suggestedDate.split('-').reverse().join('/') : 'Sin fecha'}
             </span>
             `}
           </div>
@@ -123,7 +126,7 @@ function renderProspectosTab() {
   const container = document.getElementById('prospectos-list-container');
   if (!container) return;
 
-  const allProspects = contacts.filter(c => c.type === 'Prospecto');
+  const allProspects = contacts.filter(c => c.type === 'Prospecto' && (c.businessId || 1) === currentBusinessId);
   const activeProspects = allProspects.filter(c => !c.archived);
   const archivedProspects = allProspects.filter(c => c.archived === true);
 
@@ -193,20 +196,23 @@ function renderProspectosTab() {
     cardContainer.className = "minimal-card-container";
     cardContainer.id = `card-${c.id}`;
     cardContainer.innerHTML = `
-      <div class="minimal-card" onclick="openContactDetailPanel(${c.id})" style="display: flex; flex-direction: column; justify-content: space-between; padding: 14px 16px; box-sizing: border-box; height: 168px;">
+      <div class="minimal-card${c.starred ? ' card-starred' : ''}" onclick="openContactDetailPanel(${c.id})" style="display: flex; flex-direction: column; justify-content: space-between; padding: 14px 16px; box-sizing: border-box; height: 168px;">
         <!-- Top / Identity Row -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
-          <div style="display: flex; flex-direction: column; overflow: hidden; max-width: calc(100% - 110px);">
+          <div style="display: flex; flex-direction: column; overflow: hidden; max-width: calc(100% - 120px);">
             <div class="minimal-card-name" style="font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name}</div>
             <div class="minimal-card-company" style="font-size: 0.78rem; color: var(--color-text-secondary); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.company || 'Sin Empresa'}</div>
           </div>
-          <span class="minimal-pill tag-prospecto" style="background: ${c.archived ? '#f3f4f6' : 'rgba(139, 92, 246, 0.1)'}; color: ${c.archived ? '#4b5563' : '#7c3aed'}; font-weight: 700; padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.02em; flex-shrink: 0;">
-            ${c.archived ? 'Archivado' : 'Prospecto'}
-          </span>
+          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+            ${(!c.archived && c.starred) ? `<button class="btn-star-toggle active" onclick="toggleContactStar(${c.id}, event)" title="Quitar destaque">★</button>` : ''}
+            <span class="minimal-pill tag-prospecto" style="background: ${c.archived ? '#f3f4f6' : 'rgba(139, 92, 246, 0.1)'}; color: ${c.archived ? '#4b5563' : '#7c3aed'}; font-weight: 700; padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.02em; flex-shrink: 0;">
+              ${c.archived ? 'Archivado' : 'Prospecto'}
+            </span>
+          </div>
         </div>
 
         <!-- Context Strip (Full Width) -->
-        <div class="minimal-card-context-strip" style="background: #f3f4f6; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; color: #374151; margin-top: 6px; margin-bottom: 6px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; width: 100%; box-sizing: border-box; border: 1px solid rgba(0,0,0,0.02);">
+        <div class="minimal-card-context-strip" style="background: #f3f4f6; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; color: #374151; margin-top: 4px; margin-bottom: 4px; text-overflow: ellipsis; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; line-height: 1.3; width: 100%; box-sizing: border-box; border: 1px solid rgba(0,0,0,0.02); height: 42px;">
           ${c.context || 'Sin notas ni contexto inicial registrados.'}
         </div>
 
@@ -219,7 +225,7 @@ function renderProspectosTab() {
           ${c.archived ? '' : `
           <span class="detail-badge-pill-styled" style="display: inline-flex; align-items: center; gap: 4px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 999px; padding: 2px 8px; font-size: 0.72rem; color: #374151; font-weight: 500; white-space: nowrap;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-            Próximo: ${c.suggestedDate ? c.suggestedDate.split('-').slice(1).reverse().join('/') : 'Sin fecha'}
+            Próximo: ${c.suggestedDate ? c.suggestedDate.split('-').reverse().join('/') : 'Sin fecha'}
           </span>
           `}
         </div>
@@ -246,10 +252,11 @@ function renderProspectosTab() {
 // RENDERING FUNCTIONS (Dashboard - Inicio)
 // ==========================================================================
 function renderDashboard() {
-  const activeContacts = contacts.filter(c => !c.archived);
+  const activeContacts = contacts.filter(c => !c.archived && (c.businessId || 1) === currentBusinessId);
   const dailyToques = activeContacts.filter(c => c.status === "Toque del día");
   
-  document.getElementById('app-greeting').innerHTML = `Hola Javier, hoy tienes <span style="color:var(--color-accent); font-weight:700;">${dailyToques.length}</span> toques pendientes.`;
+  const greetingName = currentSimulatedUserRole === 'Administrador' ? 'Javier' : 'Sofía';
+  document.getElementById('app-greeting').innerHTML = `Hola ${greetingName}, hoy tienes <span style="color:var(--color-accent); font-weight:700;">${dailyToques.length}</span> toques pendientes.`;
   
   const totalInitialCount = dailyToques.length;
   const filterRow = document.getElementById('filters-row');
@@ -282,6 +289,11 @@ function renderDashboard() {
   });
 
   filteredDaily.sort((a, b) => {
+    // Starred elements always go FIRST
+    const starA = a.starred ? 1 : 0;
+    const starB = b.starred ? 1 : 0;
+    if (starA !== starB) return starB - starA;
+
     const order = { "Rojo": 1, "Amarillo": 2, "Verde": 3 };
     const urgA = order[calculateUrgency(a.suggestedDate)] || 3;
     const urgB = order[calculateUrgency(b.suggestedDate)] || 3;
@@ -364,10 +376,14 @@ function renderDailySection(list, totalUnfilteredCount) {
     return;
   }
 
+  // Filter starred elements
+  const starredList = list.filter(c => c.starred);
+  const unstarredList = list.filter(c => !c.starred);
+
   // Group lists by urgency
-  const redList = list.filter(c => calculateUrgency(c.suggestedDate) === "Rojo");
-  const yellowList = list.filter(c => calculateUrgency(c.suggestedDate) === "Amarillo");
-  const greenList = list.filter(c => calculateUrgency(c.suggestedDate) === "Verde");
+  const redList = unstarredList.filter(c => calculateUrgency(c.suggestedDate) === "Rojo");
+  const yellowList = unstarredList.filter(c => calculateUrgency(c.suggestedDate) === "Amarillo");
+  const greenList = unstarredList.filter(c => calculateUrgency(c.suggestedDate) === "Verde");
 
   // Helper function to render a list into a sub-grid container
   function renderGroupGrid(groupList) {
@@ -387,14 +403,17 @@ function renderDailySection(list, totalUnfilteredCount) {
       cardContainer.id = `card-${c.id}`;
 
       cardContainer.innerHTML = `
-        <div class="minimal-card">
+        <div class="minimal-card${c.starred ? ' card-starred' : ''}">
           <div class="minimal-card-urgency-bar ${urgency.toLowerCase()}"></div>
           <div class="minimal-card-top">
             <div class="minimal-card-identity">
               <a class="minimal-card-name" onclick="openContactDetailPanel(${c.id})">${c.name}</a>
               <div class="minimal-card-company">${c.company || 'Sin Empresa'}</div>
             </div>
-            <span class="minimal-pill tag-${c.type.toLowerCase()}">${c.type}</span>
+            <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+              <button class="btn-star-toggle${c.starred ? ' active' : ''}" onclick="toggleContactStar(${c.id}, event)" title="${c.starred ? 'Quitar destaque' : 'Destacar contacto'}">${c.starred ? '★' : '☆'}</button>
+              <span class="minimal-pill tag-${c.type.toLowerCase()}">${c.type}</span>
+            </div>
           </div>
           <div class="minimal-card-bottom${compactActions ? ' minimal-card-bottom--compact' : ''}">
             <div class="minimal-pill time-pill urgency-${urgency.toLowerCase()}">
@@ -433,6 +452,26 @@ function renderDailySection(list, totalUnfilteredCount) {
   const redGrid = renderGroupGrid(redList);
   const yellowGrid = renderGroupGrid(yellowList);
   const greenGrid = renderGroupGrid(greenList);
+
+  if (starredList.length > 0) {
+    const starredHeader = document.createElement('div');
+    starredHeader.className = "daily-group-header font-title";
+    starredHeader.style.cssText = "display: flex; align-items: center; gap: 8px; margin: 8px 0 12px 0; font-size: 0.85rem; font-weight: 700; color: #b45309; text-transform: uppercase; letter-spacing: 0.05em; width: 100%; grid-column: 1/-1;";
+    starredHeader.innerHTML = `
+      <span>⭐ Prioridades Destacadas</span>
+      <span style="background: rgba(251, 191, 36, 0.15); color: #b45309; border-radius: 999px; padding: 2px 8px; font-size: 0.7rem; font-weight: 800;">${starredList.length}</span>
+    `;
+    container.appendChild(starredHeader);
+    
+    const starredGrid = renderGroupGrid(starredList);
+    if (starredGrid) container.appendChild(starredGrid);
+    
+    if (redGrid || yellowGrid || greenGrid) {
+      const sep = document.createElement('hr');
+      sep.style.cssText = "border: none; border-top: 1px dashed var(--border-color); margin: 8px 0 16px 0; grid-column: 1/-1; width: 100%;";
+      container.appendChild(sep);
+    }
+  }
 
   if (redGrid) container.appendChild(redGrid);
   if (yellowGrid) container.appendChild(yellowGrid);
@@ -529,18 +568,39 @@ function renderProfileModalContent() {
   // Toggle active class on modal tab buttons
   const btnPerfil = document.getElementById('btn-profile-tab-perfil');
   const btnPlan = document.getElementById('btn-profile-tab-plan');
+  const btnEquipo = document.getElementById('btn-profile-tab-equipo');
   
-  if (btnPerfil && btnPlan) {
-    if (currentTab === 'perfil') {
-      btnPerfil.classList.add('active');
-      btnPlan.classList.remove('active');
-    } else {
-      btnPerfil.classList.remove('active');
-      btnPlan.classList.add('active');
-    }
-  }
+  if (btnPerfil) btnPerfil.classList.toggle('active', currentTab === 'perfil');
+  if (btnPlan) btnPlan.classList.toggle('active', currentTab === 'plan');
+  if (btnEquipo) btnEquipo.classList.toggle('active', currentTab === 'equipo');
 
   if (currentTab === 'perfil') {
+    const planLimitInfo = PLAN_LIMITS[currentActivePlan];
+    const bizLimit = planLimitInfo ? planLimitInfo.businesses : 2;
+    const displayLimit = bizLimit === 999 ? 'Ilimitados' : bizLimit;
+    
+    // Generate business list rows for workspace management
+    let bizListHtml = '';
+    businesses.forEach(b => {
+      const isActive = b.id === currentBusinessId;
+      const isMain = b.id === 1;
+      const showDelete = currentSimulatedUserRole === 'Administrador' && !isActive && !isMain;
+      
+      bizListHtml += `
+        <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid ${isActive ? 'var(--color-accent)' : 'var(--border-color)'};">
+          <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; flex-grow: 1;">
+            <span style="font-size: 0.9rem;">🏢</span>
+            <span style="font-size: 0.78rem; font-weight: ${isActive ? '700' : '500'}; color: var(--color-text-primary); text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 180px;">${b.name}</span>
+            ${isActive ? '<span style="font-size: 0.6rem; background: #fef3c7; color: #b45309; padding: 1px 4px; border-radius: 4px; font-weight: 700; border: 1px solid #fde68a; margin-left: 4px;">Activo</span>' : ''}
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+            ${!isActive ? `<button onclick="switchBusinessWorkspace(${b.id})" style="background: #f3f4f6; border: none; font-size: 0.68rem; padding: 3px 6px; border-radius: 4px; color: var(--color-text-secondary); cursor: pointer; font-weight: 600;">Editar</button>` : ''}
+            ${showDelete ? `<button onclick="deleteBusinessWorkspace(${b.id})" style="background: transparent; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 0.9rem; padding: 2px;" title="Eliminar negocio y contactos">🗑️</button>` : ''}
+          </div>
+        </div>
+      `;
+    });
+
     container.innerHTML = `
       <style>
         @media (max-width: 768px) {
@@ -550,10 +610,50 @@ function renderProfileModalContent() {
         }
       </style>
       
-      <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px;" id="profile-columns-layout">
+      <div style="max-width: 600px; margin: 0 auto;" id="profile-columns-layout">
         <!-- Configuration Form -->
         <div class="detail-card" style="background: #ffffff; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px;">
           <h3 style="font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary); margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">⚙️ Configuración de IA y Sistema</h3>
+          
+          <!-- Workspace Switcher & Limits -->
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(255, 204, 6, 0.08); border: 1px solid rgba(255, 204, 6, 0.3); padding: 10px 14px; border-radius: 8px; margin-bottom: 4px;">
+            <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+              <span style="font-size: 0.65rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; letter-spacing: 0.03em;">Negocio en Edición</span>
+              <select id="modal-business-switcher" onchange="switchBusinessWorkspace(parseInt(this.value))" style="background: transparent; border: none; font-family: var(--font-title); font-size: 0.95rem; font-weight: 700; color: var(--color-text-primary); cursor: pointer; outline: none; padding: 0; width: 100%;">
+                ${businesses.map(b => `<option value="${b.id}" ${b.id === currentBusinessId ? 'selected' : ''}>${b.name}</option>`).join('')}
+              </select>
+            </div>
+            <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 110px;">
+              <span style="font-size: 0.72rem; font-weight: 700; color: var(--color-text-primary);">Límite: ${businesses.length}/${displayLimit} Negocios</span>
+              ${bizLimit !== 999 && businesses.length >= bizLimit ? `<span style="font-size: 0.62rem; color: #b45309; font-weight: 600; cursor: pointer; text-decoration: underline;" onclick="switchProfileModalTab('plan')" title="Subir plan para agregar más marcas">📈 Upgrade Plan</span>` : ''}
+            </div>
+          </div>
+          
+          <!-- Workspace Management List -->
+          <div style="background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-size: 0.68rem; font-weight: 700; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.02em;">Gestión de Espacios de Trabajo</span>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              ${bizListHtml}
+            </div>
+            
+            <!-- Add New Workspace button -->
+            ${currentSimulatedUserRole === 'Administrador' ? `
+              ${businesses.length < bizLimit ? `
+                <div style="display: flex; gap: 6px; margin-top: 4px;">
+                  <input type="text" id="new-biz-name-input" placeholder="Nombre de nueva marca (Ej: Lima Growth)" style="flex-grow: 1; font-size: 0.72rem; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff;">
+                  <button onclick="createBusinessWorkspace(document.getElementById('new-biz-name-input').value)" style="background: var(--color-accent); border: none; color: #0a0a0a; font-size: 0.72rem; font-weight: 600; padding: 5px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap;">➕ Agregar</button>
+                </div>
+              ` : `
+                <div style="font-size: 0.7rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px; text-align: center; font-weight: 600; margin-top: 2px;">
+                  🔒 Límite de negocios alcanzado (${businesses.length}/${displayLimit}). <span style="text-decoration: underline; cursor: pointer;" onclick="switchProfileModalTab('plan')">Sube de plan para agregar más.</span>
+                </div>
+              `}
+            ` : `
+              <div style="font-size: 0.68rem; color: var(--color-text-muted); text-align: center; padding: 4px;">
+                🔒 Solo el propietario puede administrar los negocios.
+              </div>
+            `}
+          </div>
           
           <div class="form-group">
             <label class="form-label" style="font-weight: 600;">Nombre del Negocio</label>
@@ -606,67 +706,410 @@ function renderProfileModalContent() {
             </div>
           </div>
 
-          <button class="btn-primary" style="align-self: flex-start; margin-top: 10px; background: var(--color-primary); color: #0a0a0a; font-weight: 600; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;" onclick="saveBusinessProfile()">
+          <button class="btn-primary" style="align-self: flex-start; margin-top: 10px; background: var(--color-accent); color: #0a0a0a; font-weight: 600; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;" onclick="saveBusinessProfile()">
             💾 Guardar Configuración
           </button>
         </div>
-
-        <!-- Prompt Explainer & Demo -->
-        <div class="detail-card" style="background: #ffffff; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 14px;">
-          <h3 style="font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary); margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">🧠 Cómo ve la IA tu negocio</h3>
+      </div>
+    `;
+  } else if (currentTab === 'plan') {
+    const totalExtraCost = (tempExtraAgents * 24.90 + tempExtraPacks * 19.90).toFixed(2);
+    const hasAddons = tempExtraAgents > 0 || tempExtraPacks > 0;
+    
+    container.innerHTML = `
+      <style>
+        .pricing-card {
+          background: #ffffff;
+          border: 1px solid var(--border-color);
+          padding: 16px 12px;
+          border-radius: 12px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          min-height: 250px;
+          position: relative;
+          transition: all 0.2s ease;
+          box-sizing: border-box;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+        }
+        .pricing-card.active {
+          border: 2px solid #fbbf24;
+          box-shadow: 0 4px 12px rgba(251, 191, 36, 0.08);
+          background: rgba(251, 191, 36, 0.01);
+        }
+        .stepper-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
+          border: 1px solid var(--border-color);
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          cursor: pointer;
+          transition: background 0.15s;
+          outline: none;
+        }
+        .stepper-btn:hover:not(:disabled) {
+          background: #f3f4f6;
+        }
+        .stepper-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        @media (max-width: 580px) {
+          #pricing-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .pricing-card {
+            min-height: auto;
+          }
+        }
+      </style>
+      <div style="display: flex; flex-direction: column; gap: 16px; padding: 10px 0;">
+        <div style="text-align: center; margin-bottom: 8px;">
+          <h3 style="font-family: var(--font-title); font-size: 1.15rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 4px 0;">Planes Fibee para Toca</h3>
+          <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin: 0;">Escoge el plan ideal para el tamaño de tu equipo de ventas y tus contactos activos.</p>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%;" id="pricing-grid">
           
-          <p style="font-size: 0.82rem; color: var(--color-text-secondary); line-height: 1.4; margin: 0;">
-            Los datos del perfil se inyectan en el <b>System Prompt</b> del modelo Claude en el backend para adaptar las sugerencias:
-          </p>
-
-          <div style="background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.72rem; color: #374151; line-height: 1.4; white-space: pre-wrap; overflow-x: auto;">
-[SYSTEM PROMPT]
-Eres la IA oficial de <b>${businessProfile.name}</b>.
-Tu rubro es: <b>${businessProfile.sector}</b>.
-Vendes: <b>${businessProfile.description}</b>.
-Tu tono es: <b>${businessProfile.tone}</b>.
-Promoción activa: <b>${businessProfile.promotion || 'Ninguna'}</b>.
-Zona Horaria: <b>${businessProfile.timezone || 'America/Lima'}</b>.
-          </div>
-
-          <div style="background: rgba(124, 58, 237, 0.05); border: 1px dashed rgba(124, 58, 237, 0.2); border-radius: 8px; padding: 12px; margin-top: 6px;">
-            <h4 style="margin: 0 0 6px 0; font-size: 0.8rem; color: #7c3aed; font-weight: 600;">✨ Demostración en Tiempo Real</h4>
-            <p style="margin: 0 0 8px 0; font-size: 0.75rem; color: var(--color-text-secondary);">Escribe un contexto rápido para probar cómo redactaría la IA:</p>
-            <input type="text" id="demo-prompt-context" class="form-input" placeholder="Ej. Rosa quiere cotizar 3 docenas de polos" style="padding: 6px 10px; font-size: 0.75rem; margin-bottom: 8px; background: #ffffff;" oninput="updateProfileDemoMessage()">
-            <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; font-size: 0.76rem; color: var(--color-text-primary); min-height: 50px; font-style: italic;" id="profile-demo-output">
-              Empieza a escribir arriba para ver la respuesta sugerida...
+          <!-- Plan Néctar -->
+          <div class="pricing-card ${currentActivePlan === 'Néctar' ? 'active' : ''}">
+            ${currentActivePlan === 'Néctar' ? '<span style="position: absolute; top: -10px; right: 12px; background: #fbbf24; color: #0a0a0a; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.02em; z-index: 10;">✓ Activo</span>' : ''}
+            <div style="display: flex; flex-direction: column; gap: 4px; height: 100%;">
+              <h4 style="font-family: var(--font-title); font-size: 0.9rem; font-weight: 700; color: ${currentActivePlan === 'Néctar' ? '#b45309' : 'var(--color-text-primary)'}; margin: 0; display: flex; align-items: center; gap: 4px;">Plan Néctar 🌸</h4>
+              <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-text-primary); margin: 4px 0;">S/. 69 <span style="font-size: 0.65rem; font-weight: 500; color: var(--color-text-muted);">/ mes</span></div>
+              <ul style="font-size: 0.72rem; color: var(--color-text-secondary); padding-left: 14px; margin: 6px 0; line-height: 1.4; text-align: left; list-style-type: disc;">
+                <li>1 Agente de ventas</li>
+                <li>Hasta 50 contactos</li>
+                <li>1 Negocio activo</li>
+                <li>Copiloto IA incluido</li>
+                <li>Estadísticas</li>
+              </ul>
             </div>
+            ${currentActivePlan === 'Néctar' ? `
+              <div style="display: flex; gap: 6px; margin-top: 8px;">
+                <button class="btn-primary" disabled style="flex: 1; justify-content: center; font-size: 0.72rem; padding: 6px; background: #f3f4f6; color: #9ca3af; border: none; cursor: default; border-radius: 6px;">Activo</button>
+                <button class="btn-secondary" onclick="togglePricingExpansion()" style="font-size: 0.72rem; padding: 6px; border-color: #fbbf24; color: #b45309; background: ${isPricingExpanded ? '#fef3c7' : '#ffffff'}; font-weight: 600; cursor: pointer; border-radius: 6px;">
+                  ${isPricingExpanded ? 'Ocultar' : 'Expandir'}
+                </button>
+              </div>
+            ` : `
+              <div style="margin-top: 8px;">
+                <button class="btn-secondary" onclick="window.open('https://wa.me/51987654321?text=Hola%20asesor%20de%20Fibee%2C%20quisiera%20cambiar%20mi%20plan%20al%20Plan%20N%C3%A9ctar', '_blank')" style="width: 100%; justify-content: center; font-size: 0.72rem; padding: 6px; border-color: var(--border-color); color: var(--color-text-primary); background: #ffffff; cursor: pointer; border-radius: 6px;">Contratar</button>
+                <div style="text-align: center; margin-top: 4px;"><span style="font-size: 0.6rem; color: #3b82f6; cursor: pointer; text-decoration: underline;" onclick="switchSimulatedPlan('Néctar')">⚡ Simular Activación</span></div>
+              </div>
+            `}
           </div>
+          
+          <!-- Plan Panal (RECOMENDADO/ACTIVO) -->
+          <div class="pricing-card ${currentActivePlan === 'Panal' ? 'active' : ''}">
+            ${currentActivePlan === 'Panal' ? '<span style="position: absolute; top: -10px; right: 12px; background: #fbbf24; color: #0a0a0a; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.02em; z-index: 10;">✓ Activo</span>' : ''}
+            <div style="display: flex; flex-direction: column; gap: 4px; height: 100%;">
+              <h4 style="font-family: var(--font-title); font-size: 0.9rem; font-weight: 700; color: ${currentActivePlan === 'Panal' ? '#b45309' : 'var(--color-text-primary)'}; margin: 0; display: flex; align-items: center; gap: 4px;">Plan Panal 🍯</h4>
+              <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-text-primary); margin: 4px 0;">S/. 119 <span style="font-size: 0.65rem; font-weight: 500; color: var(--color-text-muted);">/ mes</span></div>
+              <div style="font-size: 0.62rem; color: #b45309; font-weight: 700; margin-top: -2px; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.02em;">⭐ El más elegido</div>
+              <ul style="font-size: 0.72rem; color: var(--color-text-secondary); padding-left: 14px; margin: 6px 0; line-height: 1.4; text-align: left; list-style-type: disc;">
+                <li>Hasta 3 agentes</li>
+                <li>Hasta 200 contactos</li>
+                <li>Hasta 2 negocios activos</li>
+                <li>Copiloto IA incluido</li>
+                <li>Estadísticas</li>
+              </ul>
+            </div>
+            ${currentActivePlan === 'Panal' ? `
+              <div style="display: flex; gap: 6px; margin-top: 8px;">
+                <button class="btn-primary" disabled style="flex: 1; justify-content: center; font-size: 0.72rem; padding: 6px; background: #f3f4f6; color: #9ca3af; border: none; cursor: default; border-radius: 6px;">Activo</button>
+                <button class="btn-secondary" onclick="togglePricingExpansion()" style="font-size: 0.72rem; padding: 6px; border-color: #fbbf24; color: #b45309; background: ${isPricingExpanded ? '#fef3c7' : '#ffffff'}; font-weight: 600; cursor: pointer; border-radius: 6px;">
+                  ${isPricingExpanded ? 'Ocultar' : 'Expandir'}
+                </button>
+              </div>
+            ` : `
+              <div style="margin-top: 8px;">
+                <button class="btn-secondary" onclick="window.open('https://wa.me/51987654321?text=Hola%20asesor%20de%20Fibee%2C%20quisiera%20cambiar%20mi%20plan%20al%20Plan%20Panal', '_blank')" style="width: 100%; justify-content: center; font-size: 0.72rem; padding: 6px; border-color: var(--border-color); color: var(--color-text-primary); background: #ffffff; cursor: pointer; border-radius: 6px;">Contratar</button>
+                <div style="text-align: center; margin-top: 4px;"><span style="font-size: 0.6rem; color: #3b82f6; cursor: pointer; text-decoration: underline;" onclick="switchSimulatedPlan('Panal')">⚡ Simular Activación</span></div>
+              </div>
+            `}
+          </div>
+          
+          <!-- Plan Colmena -->
+          <div class="pricing-card ${currentActivePlan === 'Colmena' ? 'active' : ''}">
+            ${currentActivePlan === 'Colmena' ? '<span style="position: absolute; top: -10px; right: 12px; background: #fbbf24; color: #0a0a0a; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.02em; z-index: 10;">✓ Activo</span>' : ''}
+            <div style="display: flex; flex-direction: column; gap: 4px; height: 100%;">
+              <h4 style="font-family: var(--font-title); font-size: 0.9rem; font-weight: 700; color: ${currentActivePlan === 'Colmena' ? '#b45309' : 'var(--color-text-primary)'}; margin: 0; display: flex; align-items: center; gap: 4px;">Plan Colmena 🐝</h4>
+              <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-text-primary); margin: 4px 0;">S/. 199 <span style="font-size: 0.65rem; font-weight: 500; color: var(--color-text-muted);">/ mes</span></div>
+              <ul style="font-size: 0.72rem; color: var(--color-text-secondary); padding-left: 14px; margin: 6px 0; line-height: 1.4; text-align: left; list-style-type: disc;">
+                <li>Hasta 8 agentes</li>
+                <li>Hasta 600 contactos</li>
+                <li>Hasta 5 negocios activos</li>
+                <li>Copiloto IA incluido</li>
+                <li>Estadísticas</li>
+              </ul>
+            </div>
+            ${currentActivePlan === 'Colmena' ? `
+              <div style="display: flex; gap: 6px; margin-top: 8px;">
+                <button class="btn-primary" disabled style="flex: 1; justify-content: center; font-size: 0.72rem; padding: 6px; background: #f3f4f6; color: #9ca3af; border: none; cursor: default; border-radius: 6px;">Activo</button>
+                <button class="btn-secondary" onclick="togglePricingExpansion()" style="font-size: 0.72rem; padding: 6px; border-color: #fbbf24; color: #b45309; background: ${isPricingExpanded ? '#fef3c7' : '#ffffff'}; font-weight: 600; cursor: pointer; border-radius: 6px;">
+                  ${isPricingExpanded ? 'Ocultar' : 'Expandir'}
+                </button>
+              </div>
+            ` : `
+              <div style="margin-top: 8px;">
+                <button class="btn-secondary" onclick="window.open('https://wa.me/51987654321?text=Hola%20asesor%20de%20Fibee%2C%20quisiera%20cambiar%20mi%20plan%20al%20Plan%20Colmena', '_blank')" style="width: 100%; justify-content: center; font-size: 0.72rem; padding: 6px; border-color: var(--border-color); color: var(--color-text-primary); background: #ffffff; cursor: pointer; border-radius: 6px;">Contratar</button>
+                <div style="text-align: center; margin-top: 4px;"><span style="font-size: 0.6rem; color: #3b82f6; cursor: pointer; text-decoration: underline;" onclick="switchSimulatedPlan('Colmena')">⚡ Simular Activación</span></div>
+              </div>
+            `}
+          </div>
+
+          <!-- Plan Apiario -->
+          <div class="pricing-card ${currentActivePlan === 'Apiario' ? 'active' : ''}">
+            ${currentActivePlan === 'Apiario' ? '<span style="position: absolute; top: -10px; right: 12px; background: #fbbf24; color: #0a0a0a; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.02em; z-index: 10;">✓ Activo</span>' : ''}
+            <div style="display: flex; flex-direction: column; gap: 4px; height: 100%;">
+              <h4 style="font-family: var(--font-title); font-size: 0.9rem; font-weight: 700; color: ${currentActivePlan === 'Apiario' ? '#b45309' : 'var(--color-text-primary)'}; margin: 0; display: flex; align-items: center; gap: 4px;">Plan Apiario 👑</h4>
+              <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-text-primary); margin: 4px 0;">A Medida</div>
+              <ul style="font-size: 0.72rem; color: var(--color-text-secondary); padding-left: 14px; margin: 6px 0; line-height: 1.4; text-align: left; list-style-type: disc;">
+                <li>Agentes ilimitados</li>
+                <li>Contactos ilimitados</li>
+                <li>Negocios ilimitados</li>
+                <li>Copiloto IA personalizado</li>
+                <li>Estadísticas</li>
+              </ul>
+            </div>
+            ${currentActivePlan === 'Apiario' ? `
+              <div style="display: flex; gap: 6px; margin-top: 8px;">
+                <button class="btn-primary" disabled style="flex: 1; justify-content: center; font-size: 0.72rem; padding: 6px; background: #f3f4f6; color: #9ca3af; border: none; cursor: default; border-radius: 6px;">Activo</button>
+                <button class="btn-secondary" onclick="togglePricingExpansion()" style="font-size: 0.72rem; padding: 6px; border-color: #fbbf24; color: #b45309; background: ${isPricingExpanded ? '#fef3c7' : '#ffffff'}; font-weight: 600; cursor: pointer; border-radius: 6px;">
+                  ${isPricingExpanded ? 'Ocultar' : 'Expandir'}
+                </button>
+              </div>
+            ` : `
+              <div style="margin-top: 8px;">
+                <button class="btn-primary" onclick="window.open('https://wa.me/51987654321?text=Hola%20asesor%20de%20Fibee%2C%20quisiera%20cotizar%20un%20Plan%20Apiario%20personalizado%20para%20mi%20empresa', '_blank')" style="width: 100%; justify-content: center; font-size: 0.72rem; background: var(--color-accent); color: #0a0a0a; border: none; cursor: pointer; border-radius: 6px; font-weight: 600;">Consultar</button>
+                <div style="text-align: center; margin-top: 4px;"><span style="font-size: 0.6rem; color: #3b82f6; cursor: pointer; text-decoration: underline;" onclick="switchSimulatedPlan('Apiario')">⚡ Simular Activación</span></div>
+              </div>
+            `}
+          </div>
+          
+        </div>
+
+        <!-- Expansion drawer -->
+        <div id="pricing-expansion-drawer" style="display: ${isPricingExpanded ? 'block' : 'none'}; background: #fffbeb; border: 1px solid #fbbf24; border-radius: 12px; padding: 16px; margin-top: 4px; animation: slideDown 0.2s ease-out;">
+          <h4 style="font-family: var(--font-title); font-size: 0.9rem; font-weight: 700; color: #b45309; margin: 0 0 4px 0; display: flex; align-items: center; gap: 6px;">⚙️ Personalizar Expansión del Plan Activo (${currentActivePlan})</h4>
+          <p style="font-size: 0.76rem; color: #78350f; margin: 0 0 14px 0;">Incrementa tus límites de agentes o contactos agregando adicionales a tu suscripción:</p>
+          
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            
+            <!-- Extra Agent seat -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; padding: 10px 14px; border-radius: 8px; border: 1px solid #fde68a;">
+              <div>
+                <div style="font-size: 0.8rem; font-weight: 600; color: var(--color-text-primary);">➕ Agente adicional</div>
+                <div style="font-size: 0.7rem; color: var(--color-text-secondary);">S/. 24.90 / mes por cada agente extra</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <button class="stepper-btn" onclick="adjustExtraAgents(-1)" ${tempExtraAgents <= 0 ? 'disabled' : ''}>-</button>
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--color-text-primary); min-width: 16px; text-align: center;">+${tempExtraAgents}</span>
+                <button class="stepper-btn" onclick="adjustExtraAgents(1)" ${tempExtraAgents >= 2 ? 'disabled' : ''}>+</button>
+              </div>
+            </div>
+
+            <!-- Extra Contacts pack -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; padding: 10px 14px; border-radius: 8px; border: 1px solid #fde68a;">
+              <div>
+                <div style="font-size: 0.8rem; font-weight: 600; color: var(--color-text-primary);">➕ Pack de 50 contactos</div>
+                <div style="font-size: 0.7rem; color: var(--color-text-secondary);">S/. 19.90 / mes por cada pack de 50 contactos extra</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <button class="stepper-btn" onclick="adjustExtraPacks(-1)" ${tempExtraPacks <= 0 ? 'disabled' : ''}>-</button>
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--color-text-primary); min-width: 16px; text-align: center;">+${tempExtraPacks}</span>
+                <button class="stepper-btn" onclick="adjustExtraPacks(1)" ${tempExtraPacks >= 2 ? 'disabled' : ''}>+</button>
+              </div>
+            </div>
+
+            <!-- Total and button row -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; padding-top: 10px; border-top: 1px dashed #fde68a;">
+              <div>
+                <div style="font-size: 0.7rem; color: #78350f;">Costo Adicional Estimado:</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: #b45309;">S/. ${totalExtraCost} <span style="font-size: 0.7rem; font-weight: 500;">/ mes</span></div>
+              </div>
+              <button class="btn-primary" onclick="submitPlanExpansion()" ${!hasAddons ? 'disabled' : ''} style="background: #fbbf24; border: none; color: #0a0a0a; font-weight: 600; padding: 8px 16px; font-size: 0.8rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                💬 Contratar Adicionales
+              </button>
+            </div>
+
+          </div>
+        </div>
+        
+        <div style="background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; font-size: 0.72rem; color: var(--color-text-muted); line-height: 1.4; text-align: center; display: flex; flex-direction: column; gap: 4px;">
+          <div>💡 <strong>Nota de Facturación:</strong> Los pagos y cambios de plan se coordinan por WhatsApp con tu asesor de <strong>Fibee</strong>.</div>
+          ${purchasedExtraAgents > 0 || purchasedExtraPacks > 0 ? `
+            <div style="margin-top: 4px; border-top: 1px solid var(--border-color); padding-top: 4px;">
+              Adicionales Activos: +${purchasedExtraAgents} agentes, +${purchasedExtraPacks} packs de contactos.
+              <span style="color: #ef4444; text-decoration: underline; cursor: pointer; font-weight: 600; margin-left: 6px;" onclick="resetSimulatedAddons()">Restablecer a 0</span>
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
-  } else {
-    // Plan de Suscripción Tab
-    container.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 16px; padding: 10px 0;">
-        <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-          <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 250px;">
-            <h3 style="font-family: var(--font-title); font-size: 1.25rem; font-weight: 700; color: var(--color-text-primary); margin: 0; display:flex; align-items:center; gap:8px;">
-              Plan Pyme
-            </h3>
-            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; color: var(--color-ontrack); margin-top: 4px;">
-              <span style="display: inline-block; width: 8px; height: 8px; background: var(--color-ontrack); border-radius: 50%;"></span>
-              Activo
-            </div>
-            <p style="font-size: 0.88rem; color: var(--color-text-secondary); line-height: 1.5; margin: 8px 0 0 0;">
-              Tu plan lo gestiona <strong>Fibee</strong>. Para cambiarlo o renovar, coordina por WhatsApp con tu asesor.
-            </p>
-          </div>
-          <button class="btn-primary" onclick="window.open('https://wa.me/51987654321?text=Hola%20asesor%20de%20Fibee%2C%20quisiera%20coordinar%20mi%20plan%20de%20Toca', '_blank')" style="background: var(--color-ontrack); color: #ffffff; border: none; padding: 10px 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; border-radius: 8px; white-space: nowrap; cursor: pointer;">
-            <span>💬 Escribir a Fibee</span>
+  } else if (currentTab === 'equipo') {
+    const isAdmin = currentSimulatedUserRole === 'Administrador';
+    const agentLimit = PLAN_LIMITS[currentActivePlan].agents + purchasedExtraAgents;
+    const isLimitReached = teamAgents.length >= agentLimit;
+    
+    // Build agent rows based on currentSimulatedUserRole
+    const agentRows = teamAgents.map(agent => {
+      let actionsHtml = '';
+      
+      if (isAdmin) {
+        // Owner/Admin can delete other agents
+        if (agent.role === 'Administrador' && agent.name === 'Javier Reyes') {
+          // Javier Reyes is the owner/main admin, can't delete self
+          actionsHtml = `<span style="color: var(--color-ontrack); font-weight: 700;">● Propietario</span>`;
+        } else {
+          // Can delete any other agent (active or pending)
+          const deleteBtn = `<button onclick="deleteAgent('${agent.email}')" style="background: transparent; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 0.95rem; padding: 2px 6px; display: inline-flex; align-items: center; justify-content: center; transition: color 0.15s;" onmouseover="this.style.color='var(--color-urgent)'" onmouseout="this.style.color='var(--color-text-muted)'" title="Eliminar agente">🗑️</button>`;
+          if (agent.status === 'Activo') {
+            actionsHtml = `<div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                             <span style="color: var(--color-ontrack); font-weight: 700; font-size: 0.76rem;">● Activo</span>
+                             ${deleteBtn}
+                           </div>`;
+          } else {
+            actionsHtml = `<div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                             <span style="color: var(--color-attention); font-weight: 700; font-size: 0.76rem; animation: blink 2s infinite;">● Pendiente</span>
+                             <button onclick="resendAgentInvitation('${agent.email}')" style="background: #ffffff; border: 1px solid var(--border-color); font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; color: var(--color-text-secondary); cursor: pointer;">Reenviar</button>
+                             ${deleteBtn}
+                           </div>`;
+          }
+        }
+      } else {
+        // Simulated user is Agent (Sofía Castro)
+        if (agent.name === 'Sofía Castro') {
+          // Sofia can delete/unsubscribe herself
+          actionsHtml = `<div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                           <span style="color: var(--color-ontrack); font-weight: 700; font-size: 0.76rem;">● Activo</span>
+                           <button onclick="selfUnsubscribeAgent('${agent.email}')" style="background: #fee2e2; border: 1px solid #fecaca; color: #ef4444; font-size: 0.68rem; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;" title="Dar de baja mi acceso">🚪 Darse de baja</button>
+                         </div>`;
+        } else {
+          // Can only see status of others
+          actionsHtml = agent.status === 'Activo' 
+            ? `<span style="color: var(--color-ontrack); font-weight: 700; font-size: 0.76rem;">● Activo</span>`
+            : `<span style="color: var(--color-attention); font-weight: 700; font-size: 0.76rem;">● Pendiente</span>`;
+        }
+      }
+      
+      return `
+        <tr style="border-bottom: 1px solid var(--border-color);">
+          <td style="padding: 8px; font-weight: 600; color: var(--color-text-primary);">${agent.name}</td>
+          <td style="padding: 8px; color: var(--color-text-secondary);">${agent.email}</td>
+          <td style="padding: 8px;">
+            <span style="font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: ${agent.role === 'Administrador' ? 'rgba(124, 58, 237, 0.1)' : 'rgba(59, 130, 246, 0.1)'}; color: ${agent.role === 'Administrador' ? '#7c3aed' : '#3b82f6'};">
+              ${agent.role}
+            </span>
+          </td>
+          <td style="padding: 8px; text-align: right; white-space: nowrap;">
+            ${actionsHtml}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    let rightColumnHtml = '';
+    if (!isAdmin) {
+      rightColumnHtml = `
+        <!-- Locked message for Agent role -->
+        <div class="detail-card" style="background: #f9fafb; border: 2px dashed var(--border-color); padding: 24px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; height: fit-content; min-height: 250px;">
+          <div style="font-size: 2.2rem; margin-bottom: 4px;">🔒</div>
+          <h3 style="font-family: var(--font-title); font-size: 0.95rem; font-weight: 700; color: var(--color-text-primary); margin: 0;">Sección Propietario</h3>
+          <p style="font-size: 0.76rem; color: var(--color-text-secondary); line-height: 1.5; margin: 0; max-width: 240px;">
+            Solo el administrador propietario de la cuenta (dueño) puede invitar nuevos colaboradores o eliminar miembros del equipo.
+          </p>
+        </div>
+      `;
+    } else if (isLimitReached) {
+      rightColumnHtml = `
+        <!-- Invite Locked due to Limit -->
+        <div class="detail-card" style="background: #fffbeb; border: 2px dashed #fde68a; padding: 24px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; height: fit-content; min-height: 250px;">
+          <div style="font-size: 2.2rem; margin-bottom: 4px;">🔒</div>
+          <h3 style="font-family: var(--font-title); font-size: 0.95rem; font-weight: 700; color: #b45309; margin: 0;">Límite de Agentes Alcanzado</h3>
+          <p style="font-size: 0.76rem; color: #78350f; line-height: 1.5; margin: 0; max-width: 240px;">
+            Has alcanzado el límite de <strong>${agentLimit}</strong> agentes asignados a tu plan actual (Plan ${currentActivePlan}).
+          </p>
+          <button class="btn-primary" style="background: #fbbf24; border: none; color: #0a0a0a; font-weight: 600; padding: 8px 16px; font-size: 0.76rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 100%; text-align: center;" onclick="switchProfileModalTab('plan')">
+            📈 Expandir o Subir Plan
           </button>
         </div>
-        <div style="background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.4;">
-          💡 <strong>Nota:</strong> Los pagos y cambios de plan se realizan por WhatsApp; Toca solo muestra tu plan actual.
+      `;
+    } else {
+      rightColumnHtml = `
+        <!-- Invite Agent Form (Admin only) -->
+        <div class="detail-card" style="background: #ffffff; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 14px; height: fit-content;">
+          <h3 style="font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary); margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">✉️ Invitar Colaborador</h3>
+          
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 600;">Nombre Completo</label>
+            <input type="text" id="invite-agent-name" class="form-input" placeholder="Ej. Roberto Gómez" style="padding: 8px 12px; background: #ffffff;">
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 600;">Correo Electrónico</label>
+            <input type="email" id="invite-agent-email" class="form-input" placeholder="vendedor@empresa.com" style="padding: 8px 12px; background: #ffffff;">
+          </div>
+          
+          <button class="btn-primary" style="background: var(--color-accent); color: #0a0a0a; font-weight: 600; padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; display: flex; justify-content: center; width: 100%; text-align: center; margin-top: 6px;" onclick="submitAgentInvitation()">
+            ✉️ Enviar Invitación
+          </button>
         </div>
+      `;
+    }
+
+    container.innerHTML = `
+      <style>
+        @media (max-width: 768px) {
+          #team-columns-layout {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+      </style>
+      <div style="display: flex; flex-direction: column; gap: 20px; padding: 10px 0;">
+        
+        <div style="display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px;" id="team-columns-layout">
+          
+          <!-- Table of active agents -->
+          <div class="detail-card" style="background: #ffffff; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 14px;">
+            <h3 style="font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary); margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">👥 Equipo Activo (Límite: ${teamAgents.length}/${agentLimit})</h3>
+            
+            <div style="overflow-x: auto; width: 100%;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
+                <thead>
+                  <tr style="border-bottom: 2px solid var(--border-color); color: var(--color-text-muted);">
+                    <th style="padding: 8px;">Nombre</th>
+                    <th style="padding: 8px;">Correo</th>
+                    <th style="padding: 8px;">Rol</th>
+                    <th style="padding: 8px; text-align: right;">Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="team-agents-table-body">
+                  ${agentRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          ${rightColumnHtml}
+          
+        </div>
+        
       </div>
     `;
   }
+  
+  // Re-populate switchers on every tab render inside modal to keep it synced
+  populateBusinessSwitchers();
 }
 
 function updateProfileDemoMessage() {
@@ -723,20 +1166,20 @@ function renderEstadisticasTab() {
   }
 
   // 2. Filter data
-  const activeContacts = contacts.filter(c => !c.archived && new Date(c.createdAt + "T00:00:00") <= TODAY);
+  const activeContacts = contacts.filter(c => !c.archived && (c.businessId || 1) === currentBusinessId && new Date(c.createdAt + "T00:00:00") <= TODAY);
   const activeClients = activeContacts.filter(c => c.type === 'Cliente').length;
   const activeProspects = activeContacts.filter(c => c.type === 'Prospecto').length;
 
   // Nuevos contactos ingresados en el período
-  const newContacts = contacts.filter(c => isDateInPeriod(c.createdAt));
+  const newContacts = contacts.filter(c => (c.businessId || 1) === currentBusinessId && isDateInPeriod(c.createdAt));
   const newContactsCount = newContacts.length;
 
   // Cierres ganados (conversionDate in period)
-  const wins = contacts.filter(c => c.type === 'Cliente' && c.conversionDate && isDateInPeriod(c.conversionDate));
+  const wins = contacts.filter(c => (c.businessId || 1) === currentBusinessId && c.type === 'Cliente' && c.conversionDate && isDateInPeriod(c.conversionDate));
   const winsCount = wins.length;
 
   // Cierres perdidos (archived = true, lostDate in period)
-  const losses = contacts.filter(c => c.archived && c.lostDate && isDateInPeriod(c.lostDate));
+  const losses = contacts.filter(c => (c.businessId || 1) === currentBusinessId && c.archived && c.lostDate && isDateInPeriod(c.lostDate));
   const lossesCount = losses.length;
 
   // 3. Consistency Metrics (Seguimiento)

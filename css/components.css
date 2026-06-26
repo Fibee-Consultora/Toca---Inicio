@@ -824,6 +824,49 @@ body.view-mobile #prospectos-list-container {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
 }
 
+.minimal-card.card-starred {
+  border-color: #fbbf24;
+  background: #ffffff;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05), 0 0 12px rgba(251, 191, 36, 0.25);
+  transform: translateY(1px);
+}
+
+.minimal-card.card-starred:hover {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05), 0 0 16px rgba(251, 191, 36, 0.35);
+}
+
+.btn-star-toggle {
+  background: none;
+  border: none;
+  font-size: 1.15rem;
+  cursor: pointer;
+  padding: 2px;
+  line-height: 1;
+  color: #9ca3af;
+  transition: transform 0.15s ease, color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.btn-star-toggle:hover {
+  transform: scale(1.2);
+  color: #fbbf24;
+}
+
+.btn-star-toggle.active {
+  color: #fbbf24;
+  animation: starPulse 0.3s ease-out;
+}
+
+@keyframes starPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
 /* Left Urgency Strip */
 .minimal-card-urgency-bar {
   position: absolute;
@@ -1123,7 +1166,11 @@ body.view-mobile #prospectos-list-container {
   color: var(--color-text-secondary);
   text-overflow: ellipsis;
   overflow: hidden;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  line-height: 1.3;
   width: 100%;
   margin-top: 4px;
   box-sizing: border-box;

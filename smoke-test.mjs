@@ -96,6 +96,12 @@ for (const h of oninputHandlers) {
   else fail(`oninput sin función global: ${h}()`);
 }
 
+const onchangeHandlers = [...html.matchAll(/onchange="([^"(]+)/g)].map((m) => m[1].trim());
+for (const h of onchangeHandlers) {
+  if (globalFns.has(h)) pass(`Handler onchange: ${h}()`);
+  else fail(`onchange sin función global: ${h}()`);
+}
+
 const server = http.createServer((req, res) => {
   const rel = req.url === '/' ? 'index.html' : decodeURIComponent(req.url.slice(1));
   const filePath = path.join(base, rel);

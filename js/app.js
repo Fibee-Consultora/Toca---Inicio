@@ -6,20 +6,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!c.history) {
       if (c.id === 2) {
         c.history = [
-          { date: "22 MAY.", text: "14 días sin respuesta. Posible enfriamiento." },
-          { date: "13 MAY.", text: "Se le envió lista de precios mayorista." },
-          { date: "10 MAY.", text: "Primer contacto por WhatsApp. Preguntó por pedido mayorista de abarrotes para su bodega." }
+          { date: "22/05/2026", text: "14 días sin respuesta. Posible enfriamiento." },
+          { date: "13/05/2026", text: "Se le envió lista de precios mayorista." },
+          { date: "10/05/2026", text: "Primer contacto por WhatsApp. Preguntó por pedido mayorista de polos oversize para su tienda de ropa." }
         ];
       } else {
         c.history = [];
         if (c.context) {
           c.history.push({
-            date: "15 JUN.",
+            date: "15/06/2026",
             text: c.context
           });
         }
         c.history.push({
-          date: "10 JUN.",
+          date: "10/06/2026",
           text: "Contacto inicial registrado en el sistema Toca."
         });
       }
@@ -38,8 +38,35 @@ document.addEventListener("DOMContentLoaded", () => {
     loginScreen.style.display = isLoggedIn ? 'none' : 'flex';
   }
 
+  // Input listener for dynamic enabling of archive confirm button
+  const archiveDetailsInput = document.getElementById('archive-reason-details');
+  if (archiveDetailsInput) {
+    archiveDetailsInput.addEventListener('input', () => {
+      const confirmBtn = document.getElementById('confirm-archive-btn');
+      if (confirmBtn && selectedLostReason === 'Otro') {
+        confirmBtn.disabled = archiveDetailsInput.value.trim() === '';
+      }
+    });
+  }
+
+  populateBusinessSwitchers();
+  updateProfileUI();
   renderAllTabs();
 });
+
+function addSystemHistoryLog(contact, text) {
+  const now = new Date(TODAY);
+  const dd = String(now.getDate()).padStart(2, '0');
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const yyyy = now.getFullYear();
+  const dateStr = `${dd}/${mm}/${yyyy}`;
+  
+  if (!contact.history) contact.history = [];
+  contact.history.unshift({
+    date: dateStr,
+    text: text
+  });
+}
 
 // ==========================================================================
 // UNDO STATE (Esperando respuesta)
@@ -228,7 +255,10 @@ function saveDiscussLater(id) {
   else if (!contact.fu2) contact.fu2 = newDateStr;
   else contact.fu3 = newDateStr;
 
-  showToast(`Se programó contacto para el ${newDateStr}. Movido a Toques del Día.`);
+  const fmtDate = newDateStr.split('-').reverse().join('/');
+  addSystemHistoryLog(contact, `Conversación aplazada. Próximo contacto agendado para el ${fmtDate}.`);
+
+  showToast(`Se programó contacto para el ${fmtDate}. Movido a Toques del Día.`);
   renderAllTabs();
 }
 
@@ -247,6 +277,8 @@ function resolutionCloseDeal(id) {
       const day = String(nextContact.getDate()).padStart(2, '0');
       contact.suggestedDate = `${year}-${month}-${day}`;
 
+      addSystemHistoryLog(contact, `Venta registrada. Nueva recompra exitosa concretada (Ciclo: ${cycle} días).`);
+
       showToastWithAction(
         `Cerraste un nuevo trato con ${contact.name.split(' ')[0]}. Ciclo: ${cycle} días.`,
         "Editar",
@@ -260,6 +292,8 @@ function resolutionCloseDeal(id) {
       const month = String(nextContact.getMonth() + 1).padStart(2, '0');
       const day = String(nextContact.getDate()).padStart(2, '0');
       contact.suggestedDate = `${year}-${month}-${day}`;
+
+      addSystemHistoryLog(contact, `Venta registrada. Nueva recompra exitosa concretada (Renovación fija: ${contact.suggestedDate.split('-').reverse().join('/')}).`);
 
       showToastWithAction(
         `Cerraste un nuevo trato con ${contact.name.split(' ')[0]}. Renovado a fecha fija (anual).`,
@@ -278,6 +312,8 @@ function resolutionCloseDeal(id) {
     const month = String(nextContact.getMonth() + 1).padStart(2, '0');
     const day = String(nextContact.getDate()).padStart(2, '0');
     contact.suggestedDate = `${year}-${month}-${day}`;
+
+    addSystemHistoryLog(contact, "Trato cerrado. Convertido de Prospecto a Cliente con ciclo de 28 días.");
 
     showToastWithAction(
       `¡Trato cerrado! ${contact.name} ya es cliente. Ciclo: 28 días.`,
@@ -318,6 +354,7 @@ function restoreContact(id) {
   if (contact) {
     contact.archived = false;
     delete contact.archivedDate;
+    addSystemHistoryLog(contact, "Contacto restaurado a seguimiento activo.");
     showToast(`${contact.name} ha sido restaurado y reactivado.`);
     closeContactDetailPanel();
     renderAllTabs();
@@ -379,6 +416,15 @@ function openNewContactModal() {
   document.getElementById('modal-step-form-cliente').style.display = 'none';
 
   document.getElementById('p-fu1').value = TODAY_STR;
+  
+  // Clear context input values
+  const pContext = document.getElementById('p-context');
+  if (pContext) pContext.value = '';
+  const cContext = document.getElementById('c-context');
+  if (cContext) cContext.value = '';
+  
+  const suggestionDiv = document.getElementById('p-context-ia-suggestion');
+  if (suggestionDiv) suggestionDiv.style.display = 'none';
   
   // Reset follow mode in Client form
   const followModeSelect = document.getElementById('c-follow-mode');
@@ -464,7 +510,13 @@ function backToSelection() {
 function submitProspectForm(event) {
   event.preventDefault();
   
-  const newId = contacts.length > 0 ? Math.max(...contacts.map(c => c.id)) + 1 : 1;
+  const contactLimit = PLAN_LIMITS[currentActivePlan].contacts + purchasedExtraPacks * 50;
+  const activeContactsCount = contacts.filter(c => !c.archived).length;
+  if (activeContactsCount >= contactLimit) {
+    showToast(`🔒 Límite de contactos alcanzado (${activeContactsCount}/${contactLimit}). Sube de plan o compra adicionales en la pestaña Plan.`);
+    return;
+  }
+  
   const name = document.getElementById('p-name').value;
   const whatsapp = document.getElementById('p-whatsapp').value;
   const company = document.getElementById('p-company').value;
@@ -474,33 +526,74 @@ function submitProspectForm(event) {
   const fu3 = document.getElementById('p-fu3').value;
   const leadSource = document.getElementById('p-leadsource').value;
 
-  const newProspect = {
-    id: newId,
-    name: name,
-    company: company,
-    type: "Prospecto",
-    context: context,
-    status: "Toque del día",
-    fu1: fu1,
-    fu2: fu2,
-    fu3: fu3,
-    whatsapp: whatsapp,
-    suggestedDate: fu1, 
-    lastContacted: "Recién creado",
-    leadSource: leadSource
-  };
+  // Validation
+  if (!validateContextCoherence(context)) {
+    showToast("⚠️ IA Rechazó Notas: El contexto no es coherente. Por favor describe la interacción con palabras reales.");
+    return;
+  }
 
-  contacts.push(newProspect);
-  closeNewContactModal();
-  document.getElementById('form-prospecto').reset();
-  showToast(`Prospecto ${name} agregado con éxito.`);
-  renderAllTabs();
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  const originalHtml = submitBtn.innerHTML;
+  
+  // Spinner & disable
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = `
+    <svg class="animate-spin" style="animation: spin 1s linear infinite; margin-right: 6px; display: inline-block; vertical-align: middle;" width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity:0.25;"></circle>
+      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="#000000"></path>
+    </svg>
+    Validando notas con IA...
+  `;
+
+  setTimeout(() => {
+    const newId = contacts.length > 0 ? Math.max(...contacts.map(c => c.id)) + 1 : 1;
+    const newProspect = {
+      id: newId,
+      name: name,
+      company: company,
+      type: "Prospecto",
+      context: context,
+      status: "Toque del día",
+      fu1: fu1,
+      fu2: fu2,
+      fu3: fu3,
+      whatsapp: whatsapp,
+      suggestedDate: fu1, 
+      lastContacted: "Recién creado",
+      leadSource: leadSource,
+      createdAt: TODAY_STR,
+      lastActivityDate: TODAY_STR,
+      businessId: currentBusinessId
+    };
+
+    contacts.push(newProspect);
+    closeNewContactModal();
+    document.getElementById('form-prospecto').reset();
+    
+    // Hide context IA suggestion label
+    const suggestionDiv = document.getElementById('p-context-ia-suggestion');
+    if (suggestionDiv) suggestionDiv.style.display = 'none';
+
+    showToast(`Prospecto ${name} agregado con éxito.`);
+    
+    // Re-enable and reset button
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalHtml;
+    
+    renderAllTabs();
+  }, 800);
 }
 
 function submitClienteForm(event) {
   event.preventDefault();
 
-  const newId = contacts.length > 0 ? Math.max(...contacts.map(c => c.id)) + 1 : 1;
+  const contactLimit = PLAN_LIMITS[currentActivePlan].contacts + purchasedExtraPacks * 50;
+  const activeContactsCount = contacts.filter(c => !c.archived).length;
+  if (activeContactsCount >= contactLimit) {
+    showToast(`🔒 Límite de contactos alcanzado (${activeContactsCount}/${contactLimit}). Sube de plan o compra adicionales en la pestaña Plan.`);
+    return;
+  }
+
   const name = document.getElementById('c-name').value;
   const whatsapp = document.getElementById('c-whatsapp').value;
   const company = document.getElementById('c-company').value;
@@ -525,33 +618,64 @@ function submitClienteForm(event) {
     cycleDays = null;
   }
 
-  const newClient = {
-    id: newId,
-    name: name,
-    company: company,
-    type: "Cliente",
-    context: context,
-    status: "Toque del día",
-    whatsapp: whatsapp,
-    suggestedDate: suggestedDateStr,
-    lastContacted: "Recién creado",
-    cycleDays: cycleDays,
-    leadSource: leadSource
-  };
+  // Validation
+  if (!validateContextCoherence(context)) {
+    showToast("⚠️ IA Rechazó Notas: El contexto no es coherente. Por favor describe la interacción con palabras reales.");
+    return;
+  }
 
-  contacts.push(newClient);
-  closeNewContactModal();
-  document.getElementById('form-cliente').reset();
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  const originalHtml = submitBtn.innerHTML;
   
-  // Reset follow mode in Client form
-  document.getElementById('c-follow-mode').value = 'recurrente';
-  toggleClientFollowModeModal();
+  // Spinner & disable
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = `
+    <svg class="animate-spin" style="animation: spin 1s linear infinite; margin-right: 6px; display: inline-block; vertical-align: middle;" width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity:0.25;"></circle>
+      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="#000000"></path>
+    </svg>
+    Validando notas con IA...
+  `;
 
-  const msg = cycleDays 
-    ? `Cliente ${name} agregado con éxito. Ciclo: ${cycleDays} días.`
-    : `Cliente ${name} agregado con éxito. Siguiente contacto: ${suggestedDateStr}.`;
-  showToast(msg);
-  renderAllTabs();
+  setTimeout(() => {
+    const newId = contacts.length > 0 ? Math.max(...contacts.map(c => c.id)) + 1 : 1;
+    const newClient = {
+      id: newId,
+      name: name,
+      company: company,
+      type: "Cliente",
+      context: context,
+      status: "Toque del día",
+      whatsapp: whatsapp,
+      suggestedDate: suggestedDateStr,
+      lastContacted: "Recién creado",
+      cycleDays: cycleDays,
+      leadSource: leadSource,
+      createdAt: TODAY_STR,
+      lastActivityDate: TODAY_STR,
+      businessId: currentBusinessId
+    };
+
+    contacts.push(newClient);
+    closeNewContactModal();
+    document.getElementById('form-cliente').reset();
+    
+    // Reset follow mode in Client form
+    document.getElementById('c-follow-mode').value = 'recurrente';
+    toggleClientFollowModeModal();
+
+    const msg = cycleDays 
+      ? `Cliente ${name} agregado con éxito. Ciclo: ${cycleDays} días.`
+      : `Cliente ${name} agregado con éxito. Siguiente contacto: ${suggestedDateStr}.`;
+    
+    showToast(msg);
+    
+    // Re-enable and reset button
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalHtml;
+    
+    renderAllTabs();
+  }, 800);
 }
 
 // ==========================================================================
@@ -782,7 +906,8 @@ function openContactDetailPanel(id) {
           </div>
         </div>
       </div>
-      <div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        ${c.archived ? '' : `<button class="btn-star-toggle${c.starred ? ' active' : ''}" id="detail-star-toggle" onclick="toggleContactStar(${c.id}, event)" title="${c.starred ? 'Quitar destaque' : 'Destacar contacto'}" style="font-size: 1.4rem; padding: 6px;">${c.starred ? '★' : '☆'}</button>`}
         ${headerActionButton}
       </div>
     </div>
@@ -865,11 +990,13 @@ function saveNewHistoryItem(id) {
   if (c) {
     const now = new Date();
     const tz = businessProfile.timezone || 'America/Lima';
-    const formatter = new Intl.DateTimeFormat('es-ES', { timeZone: tz, day: 'numeric', month: 'short' });
-    const parts = formatter.formatToParts(now);
-    const day = parts.find(p => p.type === 'day').value;
-    const monthStr = parts.find(p => p.type === 'month').value.replace(/\./g, '').toUpperCase();
-    const dateStr = `${day} ${monthStr}.`;
+    const formatter = new Intl.DateTimeFormat('es-ES', { 
+      timeZone: tz, 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    });
+    const dateStr = formatter.format(now);
 
     if (!c.history) c.history = [];
     c.history.unshift({
@@ -928,6 +1055,12 @@ function saveContactChanges(id) {
 
   const c = contacts.find(contact => contact.id === id);
   if (c) {
+    const oldSuggestedDate = c.suggestedDate;
+    const oldCycleDays = c.cycleDays;
+    const oldFu1 = c.fu1;
+    const oldFu2 = c.fu2;
+    const oldFollowMode = c.type === 'Cliente' ? (oldCycleDays !== null ? 'recurrente' : 'fijo') : null;
+
     c.name = name;
     c.whatsapp = whatsapp;
     c.company = company;
@@ -938,6 +1071,8 @@ function saveContactChanges(id) {
     if (mainSuggestedInput && mainSuggestedInput.value) {
       c.suggestedDate = mainSuggestedInput.value;
     }
+
+    let configLog = null;
 
     if (c.type === 'Cliente') {
       const followMode = document.getElementById(`detail-follow-mode-${id}`).value;
@@ -956,6 +1091,9 @@ function saveContactChanges(id) {
               const day = String(sugDate.getDate()).padStart(2, '0');
               c.suggestedDate = `${year}-${month}-${day}`;
             }
+            if (oldFollowMode !== 'recurrente' || oldCycleDays !== cycleVal) {
+              configLog = `Seguimiento configurado: Ciclo de ${cycleVal} días.`;
+            }
           }
         }
       } else {
@@ -963,6 +1101,9 @@ function saveContactChanges(id) {
         if (dateInput && dateInput.value) {
           c.cycleDays = null;
           c.suggestedDate = dateInput.value;
+          if (oldFollowMode !== 'fijo' || oldSuggestedDate !== dateInput.value) {
+            configLog = `Seguimiento configurado: Fecha Fija para el ${dateInput.value.split('-').reverse().join('/')}.`;
+          }
         }
       }
     } else {
@@ -971,6 +1112,21 @@ function saveContactChanges(id) {
 
       if (fu1Input && fu1Input.value) c.fu1 = fu1Input.value;
       if (fu2Input && fu2Input.value) c.fu2 = fu2Input.value;
+
+      if (oldFu1 !== c.fu1 || oldFu2 !== c.fu2) {
+        const f1 = c.fu1 ? c.fu1.split('-').reverse().join('/') : 'Sin fecha';
+        const f2 = c.fu2 ? c.fu2.split('-').reverse().join('/') : 'Sin fecha';
+        configLog = `Fechas de seguimiento actualizadas: fu1 (${f1}), fu2 (${f2}).`;
+      }
+    }
+
+    // Log manual reprogram of suggested date if changed manually and configLog wasn't set
+    if (oldSuggestedDate !== c.suggestedDate && !configLog) {
+      configLog = `Próximo contacto reprogramado manualmente para el ${c.suggestedDate.split('-').reverse().join('/')}.`;
+    }
+
+    if (configLog) {
+      addSystemHistoryLog(c, configLog);
     }
 
     showToast(`Datos de ${c.name} actualizados correctamente.`);
@@ -1238,16 +1394,26 @@ function resolutionOfferSomethingNew(id) {
   if (!contact) return;
 
   contact.status = "Toque del día";
-  contact.cycleDays = 15;
   
   const nextContact = new Date(TODAY);
   nextContact.setDate(nextContact.getDate() + 15);
   const year = nextContact.getFullYear();
   const month = String(nextContact.getMonth() + 1).padStart(2, '0');
   const day = String(nextContact.getDate()).padStart(2, '0');
-  contact.suggestedDate = `${year}-${month}-${day}`;
+  const nextContactStr = `${year}-${month}-${day}`;
+  contact.suggestedDate = nextContactStr;
+  
+  if (contact.type === 'Cliente') {
+    contact.cycleDays = 15;
+    showToast(`Contacto ${contact.name} configurado con ciclo de recompra de 15 días para ofrecerle algo nuevo.`);
+  } else {
+    contact.fu1 = nextContactStr;
+    showToast(`Contacto ${contact.name} reprogramado para dentro de 15 días para ofrecerle algo nuevo.`);
+  }
 
-  showToast(`Contacto ${contact.name} movido a ciclo de 15 días para ofrecerle algo nuevo.`);
+  const fmtDate = nextContactStr.split('-').reverse().join('/');
+  addSystemHistoryLog(contact, `Se inició un nuevo ciclo de oferta de 15 días (Próximo contacto: ${fmtDate}).`);
+  
   renderAllTabs();
 }
 
@@ -1307,22 +1473,28 @@ function saveBusinessProfile() {
   const tone = document.getElementById('profile-biz-tone').value;
   const promotion = document.getElementById('profile-biz-promo').value;
 
-  businessProfile = {
-    name,
-    sector,
-    timezone,
-    description,
-    tone,
-    promotion
-  };
-
-  localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
-  showToast("Perfil de negocio e instrucciones de IA actualizadas.");
-  
-  const appDateEl = document.getElementById('app-date');
-  if (appDateEl) {
-    appDateEl.innerHTML = `${getFormattedDate(TODAY)} &bull; Zona Horaria: <strong>${timezone}</strong>`;
+  // Find and update in businesses list
+  const bizIdx = businesses.findIndex(b => b.id === currentBusinessId);
+  if (bizIdx !== -1) {
+    businesses[bizIdx] = {
+      id: currentBusinessId,
+      name,
+      sector,
+      timezone,
+      description,
+      tone,
+      promotion
+    };
+    localStorage.setItem('toca_businesses', JSON.stringify(businesses));
   }
+
+  businessProfile = businesses[bizIdx];
+  localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
+
+  showToast(`🏢 Perfil de: "${name}" e instrucciones de IA actualizadas.`);
+
+  // Update switcher dropdown options and values
+  populateBusinessSwitchers();
 
   renderAllTabs();
 }
@@ -1415,21 +1587,29 @@ function selectLostReason(reason) {
     pill.classList.remove('selected');
   });
   
+  const key = normalizeString(reason);
   let targetId = '';
-  if (reason === 'Precio') targetId = 'lost-reason-precio';
-  else if (reason === 'No respondió') targetId = 'lost-reason-no-respondio';
-  else if (reason === 'Compró a otro') targetId = 'lost-reason-compro-a-otro';
-  else if (reason === 'Sin presupuesto') targetId = 'lost-reason-sin-presupuesto';
-  else if (reason === 'Otro') targetId = 'lost-reason-otro';
+  if (key.includes('precio')) targetId = 'lost-reason-precio';
+  else if (key.includes('respondio')) targetId = 'lost-reason-no-respondio';
+  else if (key.includes('compro')) targetId = 'lost-reason-compro-a-otro';
+  else if (key.includes('presupuesto')) targetId = 'lost-reason-sin-presupuesto';
+  else if (key.includes('otro')) targetId = 'lost-reason-otro';
   
   const selectedPill = document.getElementById(targetId);
   if (selectedPill) selectedPill.classList.add('selected');
   
   const confirmBtn = document.getElementById('confirm-archive-btn');
-  if (confirmBtn) confirmBtn.disabled = false;
+  const detailsInput = document.getElementById('archive-reason-details');
+  
+  if (confirmBtn) {
+    if (reason === 'Otro') {
+      confirmBtn.disabled = !detailsInput || detailsInput.value.trim() === '';
+    } else {
+      confirmBtn.disabled = false;
+    }
+  }
   
   const label = document.getElementById('archive-details-label');
-  const detailsInput = document.getElementById('archive-reason-details');
   if (reason === 'Otro') {
     if (label) label.innerHTML = 'Detalles / Notas Adicionales: <span style="color:var(--color-urgent); font-weight:700;">* Obligatorio</span>';
     if (detailsInput) detailsInput.placeholder = "Por favor, escribe el motivo específico aquí...";
@@ -1463,16 +1643,15 @@ function confirmArchiveWithReason() {
     contact.lostDate = TODAY_STR;
     contact.lastActivityDate = TODAY_STR;
     
-    const months = ["ENE.", "FEB.", "MAR.", "ABR.", "MAY.", "JUN.", "JUL.", "AGO.", "SEP.", "OCT.", "NOV.", "DIC."];
     const now = new Date(TODAY);
-    contact.archivedDate = `${now.getDate()} ${months[now.getMonth()]}`;
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const dateStr = `${dd}/${mm}/${yyyy}`;
+    contact.archivedDate = dateStr;
     
     const reasonText = selectedLostReason === 'Otro' ? `Perdido: ${details}` : `Perdido por: ${selectedLostReason}. ${details ? '(' + details + ')' : ''}`;
-    if (!contact.history) contact.history = [];
-    contact.history.unshift({
-      date: `${now.getDate()} ${months[now.getMonth()]}`,
-      text: `Contacto archivado. Motivo: ${reasonText}`
-    });
+    addSystemHistoryLog(contact, `Contacto archivado. Motivo: ${reasonText}`);
     
     closeArchiveReasonModal();
     closeContactDetailPanel();
@@ -1503,8 +1682,6 @@ function changeStatsPeriod(period) {
 }
 
 // Profile Modal State & Controls
-let currentProfileModalTab = 'perfil';
-
 function openProfileConfigModal() {
   currentProfileModalTab = 'perfil';
   renderProfileModalContent();
@@ -1520,6 +1697,647 @@ function closeProfileConfigModal() {
 function switchProfileModalTab(tabId) {
   currentProfileModalTab = tabId;
   renderProfileModalContent();
+}
+
+// ==========================================================================
+// MOCK IA FUNCTIONS & EVENT HANDLERS (Pedro suggestions)
+// ==========================================================================
+
+function playNotificationSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+    gain1.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.005, audioCtx.currentTime + 0.15);
+    
+    osc1.start();
+    osc1.stop(audioCtx.currentTime + 0.15);
+    
+    setTimeout(() => {
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+      gain2.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain2.gain.exponentialRampToValueAtTime(0.005, audioCtx.currentTime + 0.25);
+      
+      osc2.start();
+      osc2.stop(audioCtx.currentTime + 0.25);
+    }, 100);
+  } catch (e) {
+    console.warn("Audio Context sound blocked or not supported:", e);
+  }
+}
+
+function validateContextCoherence(text) {
+  if (!text || text.trim().length < 12) return false;
+  if (!text.trim().includes(' ')) return false;
+  
+  const lower = text.toLowerCase().trim();
+  
+  // Gibberish strings like "asdfasdfasdf", "123123123", "qwertyqwerty"
+  if (/(asd|qwe|zxc|jkl|123){2,}/i.test(lower.replace(/\s+/g, ''))) return false;
+  
+  const words = lower.split(/\s+/);
+  for (const word of words) {
+    if (/([a-z0-9])\1{4,}/i.test(word)) return false; // repetitive characters (aaaaa)
+    if (word.length > 20 && !word.includes('-')) return false; // nonsense long words
+  }
+  
+  return true;
+}
+
+function extractSuggestedDateFromContext(text) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  
+  // Look for date patterns like: "el 28", "el 28 de junio", "el 5 de julio", "el dia 2"
+  const match = lower.match(/(?:el\s+dia\s+|el\s+|dia\s+|reunion\s+el\s+|llamar\s+el\s+|conversar\s+el\s+)(\d{1,2})(?:\s+de\s+([a-z]+))?/i);
+  if (match) {
+    const dayNum = parseInt(match[1]);
+    if (dayNum >= 1 && dayNum <= 31) {
+      let month = 5; // 0-indexed: June is 5
+      let year = 2026;
+      
+      const monthName = match[2];
+      if (monthName) {
+        const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+        const idx = months.findIndex(m => m.startsWith(monthName.substring(0, 3)));
+        if (idx !== -1) {
+          month = idx;
+        }
+      } else {
+        // If no month is specified, and the day is in the past relative to June 21, assume next month (July)
+        if (dayNum < 21) {
+          month = 6; // July
+        }
+      }
+      
+      const dateObj = new Date(year, month, dayNum);
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+  }
+  
+  return null;
+}
+
+function handleContextInput(value) {
+  const suggestionDiv = document.getElementById('p-context-ia-suggestion');
+  if (!suggestionDiv) return;
+  
+  if (!value || value.trim().length === 0) {
+    suggestionDiv.style.display = 'none';
+    return;
+  }
+  
+  let fu1Str = '';
+  let fu2Str = '';
+  let fu3Str = '';
+  let isMentioned = false;
+  
+  const parsedDate = extractSuggestedDateFromContext(value);
+  if (parsedDate) {
+    fu1Str = parsedDate;
+    isMentioned = true;
+  } else {
+    // Default sequence: today + 3 days, today + 7 days, today + 11 days
+    const d1 = new Date(TODAY);
+    d1.setDate(d1.getDate() + 3);
+    fu1Str = d1.toISOString().split('T')[0];
+  }
+  
+  const d2 = new Date(fu1Str + "T00:00:00");
+  d2.setDate(d2.getDate() + 4);
+  fu2Str = d2.toISOString().split('T')[0];
+  
+  const d3 = new Date(fu2Str + "T00:00:00");
+  d3.setDate(d3.getDate() + 4);
+  fu3Str = d3.toISOString().split('T')[0];
+  
+  // Update inputs
+  const fu1Input = document.getElementById('p-fu1');
+  const fu2Input = document.getElementById('p-fu2');
+  const fu3Input = document.getElementById('p-fu3');
+  
+  if (fu1Input) fu1Input.value = fu1Str;
+  if (fu2Input) fu2Input.value = fu2Str;
+  if (fu3Input) fu3Input.value = fu3Str;
+  
+  // Format display dates
+  const fmt1 = fu1Str.split('-').reverse().join('/');
+  const fmt2 = fu2Str.split('-').reverse().join('/');
+  const fmt3 = fu3Str.split('-').reverse().join('/');
+  
+  suggestionDiv.style.display = 'block';
+  if (isMentioned) {
+    suggestionDiv.innerHTML = `✨ IA sugiere fechas (mencionada): fu1 (${fmt1}), fu2 (${fmt2}), fu3 (${fmt3})`;
+  } else {
+    suggestionDiv.innerHTML = `✨ IA sugiere fechas (por defecto): fu1 (${fmt1}), fu2 (${fmt2}), fu3 (${fmt3})`;
+  }
+}
+
+function triggerDay7RecontactDemo() {
+  const elena = contacts.find(c => c.name === "Elena Patiño");
+  if (!elena) {
+    showToast("Elena Patiño no se encontró en la base de datos.");
+    return;
+  }
+  
+  // Phase 1: Move Elena to Esperando respuesta (simulate she was there)
+  elena.status = "Esperando respuesta";
+  elena.daysWaiting = 7;
+  elena.waitingSince = "hace 7 días";
+  
+  showToast("Simulando Elena Patiño en 'Esperando respuesta' por 7 días...");
+  renderAllTabs();
+  
+  // Phase 2: After 1.2s, trigger the recontact transition
+  setTimeout(() => {
+    elena.status = "Toque del día";
+    elena.suggestedDate = TODAY_STR; // Make it due today (Red)
+    
+    addSystemHistoryLog(elena, "Devuelto a seguimiento: 7 días sin respuesta de WhatsApp.");
+    
+    playNotificationSound();
+    
+    showToastWithAction(
+      `⚠️ Alerta IA: Elena Patiño devuelta a Toques del día (7 días sin respuesta).`,
+      "Ver Ficha",
+      () => openContactDetailPanel(elena.id)
+    );
+    
+    renderAllTabs();
+  }, 1200);
+}
+
+function toggleContactStar(id, event) {
+  if (event) event.stopPropagation();
+  const contact = contacts.find(c => c.id === id);
+  if (contact) {
+    contact.starred = !contact.starred;
+    if (contact.starred) {
+      showToast(`⭐ Contacto destacado: ${contact.name} es prioritario para hoy.`);
+      addSystemHistoryLog(contact, "Añadido como contacto destacado (Prioridad manual).");
+    } else {
+      showToast(`☆ Contacto devuelto al orden estándar.`);
+      addSystemHistoryLog(contact, "Destaque manual retirado.");
+    }
+    
+    // Update detail panel star toggle button in the DOM if open for this contact
+    const detailStarBtn = document.getElementById('detail-star-toggle');
+    if (detailStarBtn && selectedContactId === id) {
+      if (contact.starred) {
+        detailStarBtn.classList.add('active');
+        detailStarBtn.innerHTML = '★';
+        detailStarBtn.title = 'Quitar destaque';
+      } else {
+        detailStarBtn.classList.remove('active');
+        detailStarBtn.innerHTML = '☆';
+        detailStarBtn.title = 'Destacar contacto';
+      }
+    }
+    
+    renderAllTabs();
+  }
+}
+
+function submitAgentInvitation() {
+  const nameInput = document.getElementById('invite-agent-name');
+  const emailInput = document.getElementById('invite-agent-email');
+  
+  if (!nameInput || !emailInput) return;
+  
+  const name = nameInput.value.trim();
+  const email = emailInput.value.trim();
+  const role = "Agente";
+  
+  const agentLimit = PLAN_LIMITS[currentActivePlan].agents + purchasedExtraAgents;
+  if (teamAgents.length >= agentLimit) {
+    showToast(`🔒 Límite de agentes alcanzado (${teamAgents.length}/${agentLimit}). Sube de plan o compra adicionales en la pestaña Plan.`);
+    return;
+  }
+  
+  if (!name || !email) {
+    showToast("Por favor, completa todos los campos para enviar la invitación.");
+    return;
+  }
+  
+  // Basic email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    showToast("Por favor, ingresa un correo electrónico válido.");
+    return;
+  }
+  
+  // Check if already exists
+  const exists = teamAgents.some(agent => agent.email.toLowerCase() === email.toLowerCase());
+  if (exists) {
+    showToast("Este correo ya está registrado en el equipo.");
+    return;
+  }
+  
+  // Add to global state
+  const newAgent = {
+    name: name,
+    email: email,
+    role: role,
+    status: "Pendiente"
+  };
+  
+  teamAgents.push(newAgent);
+  localStorage.setItem('toca_team_agents', JSON.stringify(teamAgents));
+  
+  showToast(`✉️ Invitación enviada a ${name} (${email})`);
+  
+  // Clear fields
+  nameInput.value = "";
+  emailInput.value = "";
+  
+  // Refresh modal tab content
+  renderProfileModalContent();
+}
+
+function resendAgentInvitation(email) {
+  const agent = teamAgents.find(a => a.email === email);
+  if (agent) {
+    showToast(`✉️ Invitación reenviada a ${agent.name} (${email})`);
+  } else {
+    showToast("No se encontró el agente especificado.");
+  }
+}
+
+function togglePricingExpansion() {
+  isPricingExpanded = !isPricingExpanded;
+  renderProfileModalContent();
+}
+
+function adjustExtraAgents(amount) {
+  const newVal = tempExtraAgents + amount;
+  if (newVal >= 0 && newVal <= 2) {
+    tempExtraAgents = newVal;
+    renderProfileModalContent();
+  }
+}
+
+function adjustExtraPacks(amount) {
+  const newVal = tempExtraPacks + amount;
+  if (newVal >= 0 && newVal <= 2) {
+    tempExtraPacks = newVal;
+    renderProfileModalContent();
+  }
+}
+
+function submitPlanExpansion() {
+  if (tempExtraAgents === 0 && tempExtraPacks === 0) return;
+  
+  const text = `Hola Fibee, quiero expandir mi plan en Toca, con +${tempExtraAgents} agentes extra y +${tempExtraPacks} packs de contacto`;
+  window.open(`https://wa.me/51987654321?text=${encodeURIComponent(text)}`, '_blank');
+  
+  // Simulator prompt
+  const extraAgents = tempExtraAgents;
+  const extraPacks = tempExtraPacks;
+  setTimeout(() => {
+    if (confirm(`[SIMULADOR PROTOTIPO] ¿Deseas activar inmediatamente en el prototipo los adicionales solicitados (+${extraAgents} agente(s) y +${extraPacks} pack(s) de contactos)?`)) {
+      purchasedExtraAgents += extraAgents;
+      purchasedExtraPacks += extraPacks;
+      localStorage.setItem('toca_extra_agents', purchasedExtraAgents);
+      localStorage.setItem('toca_extra_packs', purchasedExtraPacks);
+      
+      tempExtraAgents = 0;
+      tempExtraPacks = 0;
+      isPricingExpanded = false;
+      
+      showToast("✅ Adicionales simulados y activados en el prototipo.");
+      renderProfileModalContent();
+      renderAllTabs();
+      updateProfileUI();
+    } else {
+      tempExtraAgents = 0;
+      tempExtraPacks = 0;
+      isPricingExpanded = false;
+      renderProfileModalContent();
+    }
+  }, 1000);
+}
+
+function resetSimulatedAddons() {
+  if (confirm("¿Estás seguro de que deseas restablecer todos los adicionales simulados (agentes y packs extras) a 0?")) {
+    purchasedExtraAgents = 0;
+    purchasedExtraPacks = 0;
+    localStorage.removeItem('toca_extra_agents');
+    localStorage.removeItem('toca_extra_packs');
+    
+    showToast("🔄 Adicionales restablecidos a 0.");
+    renderProfileModalContent();
+    renderAllTabs();
+    updateProfileUI();
+  }
+}
+
+function updateProfileUI() {
+  const nameEl = document.querySelector('.profile-name');
+  const roleEl = document.getElementById('sidebar-profile-role');
+  const avatarEl = document.querySelector('.profile-avatar');
+  const mobileBtnEl = document.querySelector('.mobile-header-profile-btn');
+  const selectRoleEl = document.getElementById('select-role-simulator');
+
+  if (selectRoleEl) {
+    selectRoleEl.value = currentSimulatedUserRole;
+  }
+
+  const planInfo = PLAN_LIMITS[currentActivePlan];
+  const planName = planInfo ? planInfo.name : 'Plan Panal';
+
+  if (currentSimulatedUserRole === 'Administrador') {
+    if (nameEl) nameEl.textContent = 'Javier Reyes';
+    if (roleEl) roleEl.textContent = planName;
+    if (avatarEl) avatarEl.textContent = 'J';
+    if (mobileBtnEl) mobileBtnEl.textContent = 'J';
+  } else {
+    if (nameEl) nameEl.textContent = 'Sofía Castro';
+    if (roleEl) roleEl.textContent = `${planName} (Colaborador)`;
+    if (avatarEl) avatarEl.textContent = 'S';
+    if (mobileBtnEl) mobileBtnEl.textContent = 'S';
+  }
+
+
+
+  const selectPlanEl = document.getElementById('select-plan-simulator');
+  if (selectPlanEl) {
+    selectPlanEl.value = currentActivePlan;
+  }
+}
+
+function switchSimulatedRole(role) {
+  currentSimulatedUserRole = role;
+  localStorage.setItem('toca_current_simulated_role', role);
+  
+  updateProfileUI();
+  renderAllTabs();
+  
+  if (role === 'Administrador') {
+    showToast("Simulando rol: Dueño (Administrador) - Javier Reyes. Control total.");
+  } else {
+    showToast("Simulando rol: Colaborador (Agente) - Sofía Castro. Acceso limitado.");
+  }
+}
+
+function deleteAgent(email) {
+  const agent = teamAgents.find(a => a.email.toLowerCase() === email.toLowerCase());
+  const agentName = agent ? agent.name : email;
+  if (confirm(`¿Estás seguro de que deseas eliminar a ${agentName} del equipo?`)) {
+    teamAgents = teamAgents.filter(a => a.email.toLowerCase() !== email.toLowerCase());
+    localStorage.setItem('toca_team_agents', JSON.stringify(teamAgents));
+    showToast(`🗑️ Agente ${agentName} eliminado del equipo.`);
+    renderProfileModalContent();
+  }
+}
+
+function selfUnsubscribeAgent(email) {
+  if (confirm("¿Estás seguro de que deseas darte de baja del equipo? Perderás acceso al sistema de inmediato.")) {
+    teamAgents = teamAgents.filter(a => a.email.toLowerCase() !== email.toLowerCase());
+    localStorage.setItem('toca_team_agents', JSON.stringify(teamAgents));
+    
+    // Close modal
+    closeProfileConfigModal();
+    
+    showToast("Te has dado de baja del equipo correctamente.");
+    
+    // Reset simulated role to Administrador
+    currentSimulatedUserRole = 'Administrador';
+    localStorage.setItem('toca_current_simulated_role', 'Administrador');
+    
+    // Update profile dropdown in simulator
+    const selectRoleEl = document.getElementById('select-role-simulator');
+    if (selectRoleEl) {
+      selectRoleEl.value = 'Administrador';
+    }
+    
+    // Log out (simulate logout)
+    logout();
+  }
+}
+
+function populateBusinessSwitchers() {
+  const switcherMenu = document.getElementById('workspace-switcher-menu');
+  const triggerText = document.getElementById('current-workspace-name');
+  const triggerBtn = document.getElementById('workspace-switcher-trigger');
+  const modalSelect = document.getElementById('modal-business-switcher');
+  
+  const limit = PLAN_LIMITS[currentActivePlan].businesses;
+  
+  // 1. Populate custom dropdown menu in sidebar
+  let menuHtml = '';
+  businesses.forEach((b, idx) => {
+    const isLocked = idx >= limit;
+    const isActive = b.id === currentBusinessId;
+    
+    if (isActive && triggerText) {
+      triggerText.textContent = isLocked ? `${b.name} 🔒` : b.name;
+    }
+    
+    menuHtml += `
+      <button onclick="${isLocked ? '' : `selectWorkspace(${b.id})`}" 
+              ${isLocked ? 'disabled' : ''} 
+              style="width: 100%; text-align: left; padding: 8px 12px; background: transparent; border: none; color: ${isActive ? 'var(--color-accent)' : '#ffffff'}; font-size: 0.8rem; font-family: var(--font-body); font-weight: ${isActive ? '700' : '500'}; cursor: ${isLocked ? 'not-allowed' : 'pointer'}; opacity: ${isLocked ? '0.4' : '1'}; display: flex; align-items: center; justify-content: space-between; transition: background 0.15s; outline: none;"
+              onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
+              onmouseout="this.style.background='transparent'">
+        <span>🏢 ${b.name} ${isLocked ? ' 🔒 (Subir Plan)' : ''}</span>
+        ${isActive ? '<span style="color: var(--color-accent); font-size: 0.75rem;">✓</span>' : ''}
+      </button>
+    `;
+  });
+  
+  if (switcherMenu) {
+    switcherMenu.innerHTML = menuHtml;
+  }
+  if (triggerBtn) {
+    triggerBtn.disabled = (limit === 1);
+  }
+  
+  // 2. Populate native select in modal configuration
+  let optionsHtml = '';
+  businesses.forEach((b, idx) => {
+    const isLocked = idx >= limit;
+    const label = isLocked ? `${b.name} 🔒 (Subir Plan)` : b.name;
+    const disabledAttr = isLocked ? 'disabled' : '';
+    const selectedAttr = b.id === currentBusinessId ? 'selected' : '';
+    optionsHtml += `<option value="${b.id}" ${disabledAttr} ${selectedAttr}>${label}</option>`;
+  });
+  
+  if (modalSelect) {
+    modalSelect.innerHTML = optionsHtml;
+    modalSelect.value = currentBusinessId;
+    modalSelect.disabled = (limit === 1);
+  }
+}
+
+function toggleWorkspaceDropdown(event) {
+  if (event) event.stopPropagation();
+  const menu = document.getElementById('workspace-switcher-menu');
+  const chevron = document.getElementById('workspace-switcher-chevron');
+  if (!menu) return;
+  const isVisible = menu.style.display === 'block';
+  menu.style.display = isVisible ? 'none' : 'block';
+  if (chevron) {
+    chevron.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+  }
+}
+
+function selectWorkspace(id) {
+  switchBusinessWorkspace(id);
+  const menu = document.getElementById('workspace-switcher-menu');
+  const chevron = document.getElementById('workspace-switcher-chevron');
+  if (menu) menu.style.display = 'none';
+  if (chevron) chevron.style.transform = 'rotate(0deg)';
+}
+
+// Close workspace dropdown when clicking outside
+document.addEventListener('click', () => {
+  const menu = document.getElementById('workspace-switcher-menu');
+  const chevron = document.getElementById('workspace-switcher-chevron');
+  if (menu) menu.style.display = 'none';
+  if (chevron) chevron.style.transform = 'rotate(0deg)';
+});
+
+function switchBusinessWorkspace(id) {
+  currentBusinessId = id;
+  localStorage.setItem('toca_current_business_id', id);
+  businessProfile = businesses.find(b => b.id === id) || businesses[0];
+  
+  const triggerText = document.getElementById('current-workspace-name');
+  if (triggerText) {
+    const limit = PLAN_LIMITS[currentActivePlan].businesses;
+    const idx = businesses.findIndex(b => b.id === id);
+    const isLocked = idx >= limit;
+    triggerText.textContent = isLocked ? `${businessProfile.name} 🔒` : businessProfile.name;
+  }
+  
+  const modalSelect = document.getElementById('modal-business-switcher');
+  if (modalSelect) modalSelect.value = id;
+  
+  showToast(`🏢 Espacio de trabajo cambiado a: ${businessProfile.name}`);
+  
+  const modal = document.getElementById('profile-config-modal');
+  if (modal && modal.classList.contains('open')) {
+    renderProfileModalContent();
+  }
+  
+  renderAllTabs();
+}
+
+function switchSimulatedPlan(plan) {
+  currentActivePlan = plan;
+  localStorage.setItem('toca_current_active_plan', plan);
+  
+  // Enforce business limit: if current active business index exceeds new plan limit, switch to first business
+  const limit = PLAN_LIMITS[plan].businesses;
+  const activeIdx = businesses.findIndex(b => b.id === currentBusinessId);
+  if (activeIdx >= limit) {
+    const mainBizId = businesses[0].id;
+    currentBusinessId = mainBizId;
+    localStorage.setItem('toca_current_business_id', mainBizId);
+    businessProfile = businesses[0];
+    localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
+    showToast(`⚠️ Límite del plan excedido. Cambiado al negocio principal: ${businessProfile.name}`);
+  }
+  
+  // Re-populate switchers
+  populateBusinessSwitchers();
+  
+  // Update role/plan displayed in sidebar and simulator select
+  updateProfileUI();
+  
+  // Update plan tab contents
+  const modal = document.getElementById('profile-config-modal');
+  if (modal && modal.classList.contains('open')) {
+    renderProfileModalContent();
+  }
+  
+  // Re-render other elements
+  renderAllTabs();
+  
+  // Dispatch a descriptive toast message about limits
+  const details = PLAN_LIMITS[plan];
+  showToast(`⚡ Plan Simulado cambiado a: ${details.tag} ${details.name} (Límite: ${details.businesses} Negocio(s), ${details.agents} Agente(s), ${details.contacts} Contactos)`);
+}
+
+function createBusinessWorkspace(name) {
+  if (!name || name.trim() === '') {
+    showToast("⚠️ El nombre del negocio no puede estar vacío.");
+    return;
+  }
+  
+  const limit = PLAN_LIMITS[currentActivePlan].businesses;
+  if (businesses.length >= limit) {
+    showToast(`🔒 No puedes crear más negocios. Has alcanzado el límite de ${limit} negocios para tu plan.`);
+    return;
+  }
+  
+  const newId = businesses.length > 0 ? Math.max(...businesses.map(b => b.id)) + 1 : 1;
+  const newBiz = {
+    id: newId,
+    name: name.trim(),
+    sector: "Otro",
+    description: "Descripción de mi nuevo negocio.",
+    tone: "Amigable",
+    promotion: "Envío a nivel nacional",
+    timezone: "America/Lima"
+  };
+  
+  businesses.push(newBiz);
+  localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+  
+  showToast(`🏢 Nuevo negocio creado: ${newBiz.name}`);
+  
+  // Automatically switch to the newly created business
+  switchBusinessWorkspace(newId);
+}
+
+function deleteBusinessWorkspace(id) {
+  if (businesses.length <= 1) {
+    showToast("⚠️ No puedes eliminar el único negocio existente.");
+    return;
+  }
+  
+  if (id === currentBusinessId) {
+    showToast("⚠️ No puedes eliminar el negocio activo en este momento. Cambia a otro negocio primero.");
+    return;
+  }
+
+  const bizToDelete = businesses.find(b => b.id === id);
+  const name = bizToDelete ? bizToDelete.name : `ID ${id}`;
+
+  if (confirm(`¿Estás seguro de que deseas eliminar permanentemente el negocio "${name}" y TODOS sus contactos asociados?`)) {
+    // Delete contacts
+    contacts = contacts.filter(c => c.businessId !== id);
+    // Delete business
+    businesses = businesses.filter(b => b.id !== id);
+    
+    localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+    
+    showToast(`🗑️ Negocio "${name}" y sus contactos eliminados.`);
+    
+    // Refresh UI
+    populateBusinessSwitchers();
+    if (document.getElementById('profile-config-modal').classList.contains('open')) {
+      renderProfileModalContent();
+    }
+    renderAllTabs();
+  }
 }
 
 

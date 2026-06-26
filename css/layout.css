@@ -44,6 +44,39 @@ body.view-mobile .toca-sidebar {
   margin-bottom: 32px;
 }
 
+.workspace-switcher-trigger {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #ffffff !important;
+  cursor: pointer;
+  outline: none;
+  padding: 8px 12px;
+  width: 100%;
+  border-radius: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.workspace-switcher-trigger:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.workspace-switcher-trigger:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(255, 204, 6, 0.2);
+}
+
+.workspace-switcher-trigger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .brand-logo {
   width: 28px;
   height: 28px;

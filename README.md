@@ -176,3 +176,33 @@ Para estas pestañas, las reglas de tarjetas y buscadores se modificaron para ac
 - **Dimensionamiento de Tarjetas de Prospectos:** Altura fija de `168px`, distribuida en filas secuenciales: Nombre/Empresa y etiqueta `PROSPECTO` en la cabecera, una franja gris horizontal de contexto a todo lo ancho en el centro, y una fila inferior que contiene los badges inline de WhatsApp y próximo contacto al lado de la píldora de urgencia/vigencia (ej. `⏱ HOY`) abajo a la izquierda. Se elimina la barra lineal de progreso del embudo de la tarjeta para mayor limpieza. *Si el prospecto está archivado, se ocultan la fecha de próximo contacto y la píldora de urgencia.*
 - **Píldora de Archivados:** En ambas pestañas se añade la píldora de filtro `📁 Archivados` para acceder a los contactos marcados con `archived: true`.
 
+
+---
+
+## 📋 Resumen de Mejoras de Pedro (Estado en el Prototipo v2)
+
+A continuación se resume y clasifica el tratamiento de las 8 sugerencias de Pedro en el prototipo interactivo actual:
+
+### ✅ 1. Ya Estaban Implementados
+* **Punto 4: Detector de Duplicados en WhatsApp:**
+  - **Estado:** Ya estaba contemplado e implementado en el sistema núcleo (verificación por número de WhatsApp y nombre al guardar o integrar leads desde la extensión). Evita registrar fichas duplicadas del mismo contacto en el flujo.
+
+### 🌟 2. Aceptados como Nuevas Mejoras (Implementados en Prototipo)
+* **Punto 1: Foco Diario (Inicio Limpio):**
+  - **Cambio:** Se configuró el filtro por defecto a "Urgente" (Rojo) al cargar Inicio. Evita la sobrecarga cognitiva mostrando solo lo vencido u hoy.
+* **Punto 2: IA con Contexto (Validación de Notas):**
+  - **Cambio:** Se integró un validador que obliga a ingresar notas de contexto reales (mínimo 12 caracteres, con espacios, bloqueando combinaciones absurdas tipo `asdfasdf`). Al guardar, se simula una validación de la IA con spinner animado de 800ms.
+* **Punto 3: Empuje al Día 7 (Evitar Enfriamientos):**
+  - **Cambio:** Se implementó una rutina de recontacto automatizada que devuelve un lead en espera al día 7 a "Toques del día" (urgencia Rojo) y agrega la entrada correspondiente a su historial.
+* **Punto 6: Criterio Humano (Reordenamiento Manual):**
+  - **Cambio:** Aceptado para la **fase de diseño/planificación teórica**. Se deja registrado como diseño interactivo a desarrollar a futuro para no entorpecer el orden de urgencia algorítmica del prototipo actual.
+* **Punto 7: Secuencia de Seguimiento Automatizada (Fechas de Toques):**
+  - **Cambio:** Se implementó el autocompletado interactivo de `fu1`, `fu2` y `fu3`. Si se menciona fecha en el contexto (ej. "el 28 de junio"), `fu1` toma ese valor. Si no se menciona nada, `fu1` sugiere Hoy + 3 días (no mayor a 5 días). En ambos casos, `fu2` y `fu3` se calculan a +4 días respectivamente de forma secuencial.
+
+### 🚫 3. Descartados / Adaptados
+* **Punto 5: Notificaciones Proactivas de la App:**
+  - **Estado:** *Descartado como app nativa / Adaptado en web*. No se saturará al usuario con notificaciones push externas. En su lugar, el prototipo emite un sonido sutil de chime/notificación web si la aplicación está abierta al momento del recontacto automático del Día 7.
+* **Punto 8: Barreras Anti-Spam (Guardrails):**
+  - **Estado:** *Descartado*. Dado que el operario interactúa directamente desde el chat y tiene a la vista la conversación de WhatsApp previa y el estado del contacto en Toca, esta alerta es redundante y se omite en el código.
+
+
