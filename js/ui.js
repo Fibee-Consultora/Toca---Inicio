@@ -285,6 +285,7 @@ function renderDashboard() {
   // Render Toques del Día List
   const filteredDaily = dailyToques.filter(c => {
     if (currentFilter === 'Todos') return true;
+    if (c.starred) return true; // Prioridades destacadas siempre visibles en cualquier filtro
     return calculateUrgency(c.suggestedDate) === currentFilter;
   });
 
