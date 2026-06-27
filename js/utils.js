@@ -65,6 +65,9 @@ function getShortUrgencyText(c) {
 }
 
 function getDaysRemainingBadge(c) {
+  if (c.recontact) {
+    return { text: "VOLVER A ESCRIBIR", icon: "🔄" };
+  }
   if (!c.suggestedDate) {
     return { text: "SIN FECHA", icon: "📅" };
   }

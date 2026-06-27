@@ -91,10 +91,12 @@ function moveToWaiting(id) {
     status: contact.status,
     waitingSince: contact.waitingSince,
     daysWaiting: contact.daysWaiting,
-    suggestedDate: contact.suggestedDate
+    suggestedDate: contact.suggestedDate,
+    recontact: contact.recontact
   };
 
   contact.status = "Esperando respuesta";
+  contact.recontact = false; // Ya se le volvió a escribir: se retira la marca de re-contacto
   const tz = businessProfile.timezone || 'America/Lima';
   const timeStr = new Date().toLocaleTimeString('es-ES', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase();
   contact.waitingSince = "hoy a las " + timeStr;
@@ -129,6 +131,7 @@ function revertLastAction() {
       contact.waitingSince = undoOriginalData.waitingSince;
       contact.daysWaiting = undoOriginalData.daysWaiting;
       contact.suggestedDate = undoOriginalData.suggestedDate;
+      contact.recontact = undoOriginalData.recontact;
       
       showToast("Acción revertida. Contacto devuelto a la lista diaria.");
     }
@@ -1868,6 +1871,7 @@ function triggerDay7RecontactDemo() {
   setTimeout(() => {
     elena.status = "Toque del día";
     elena.suggestedDate = TODAY_STR; // Make it due today (Red)
+    elena.recontact = true; // Marca de re-contacto: 7 días sin respuesta
     
     addSystemHistoryLog(elena, "Devuelto a seguimiento: 7 días sin respuesta de WhatsApp.");
     
