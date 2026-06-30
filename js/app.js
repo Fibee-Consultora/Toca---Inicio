@@ -1,30 +1,28 @@
 // ==========================================================================
 // INITIALIZATION
 // ==========================================================================
-document.addEventListener("DOMContentLoaded", () => {
-  contacts.forEach(c => {
-    if (!c.history) {
-      if (c.id === 2) {
-        c.history = [
-          { date: "22/05/2026", text: "14 días sin respuesta. Posible enfriamiento." },
-          { date: "13/05/2026", text: "Se le envió lista de precios mayorista." },
-          { date: "10/05/2026", text: "Primer contacto por WhatsApp. Preguntó por pedido mayorista de polos oversize para su tienda de ropa." }
-        ];
-      } else {
-        c.history = [];
-        if (c.context) {
-          c.history.push({
-            date: "15/06/2026",
-            text: c.context
-          });
-        }
-        c.history.push({
-          date: "10/06/2026",
-          text: "Contacto inicial registrado en el sistema Toca."
-        });
-      }
-    }
+function persistContact(contact) {
+  if (!dbReady || !contact?.id) return;
+  window.TocaDB.updateContact(contact).catch((err) => {
+    console.error(err);
+    showToast('Error al guardar en la base de datos.');
   });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    if (window.TocaDB?.isConfigured()) {
+      window.TocaDB.init();
+      contacts = await window.TocaDB.loadContacts();
+      dbReady = true;
+    } else {
+      contacts = [...SEED_CONTACTS];
+    }
+  } catch (err) {
+    console.error(err);
+    contacts = [...SEED_CONTACTS];
+    showToast('No se pudo conectar a Supabase. Usando datos locales.');
+  }
 
   const tz = businessProfile.timezone || 'America/Lima';
   const appDateEl = document.getElementById('app-date');
@@ -32,13 +30,11 @@ document.addEventListener("DOMContentLoaded", () => {
     appDateEl.innerHTML = `${getFormattedDate(TODAY)} &bull; Zona Horaria: <strong>${tz}</strong>`;
   }
 
-  // Set up login screen state
   const loginScreen = document.getElementById('login-screen');
   if (loginScreen) {
     loginScreen.style.display = isLoggedIn ? 'none' : 'flex';
   }
 
-  // Input listener for dynamic enabling of archive confirm button
   const archiveDetailsInput = document.getElementById('archive-reason-details');
   if (archiveDetailsInput) {
     archiveDetailsInput.addEventListener('input', () => {
@@ -102,7 +98,7 @@ function moveToWaiting(id) {
   contact.waitingSince = "hoy a las " + timeStr;
   contact.daysWaiting = 0;
 
-
+  persistContact(contact);
 
   renderAllTabs();
 
@@ -132,6 +128,8 @@ function revertLastAction() {
       contact.daysWaiting = undoOriginalData.daysWaiting;
       contact.suggestedDate = undoOriginalData.suggestedDate;
       contact.recontact = undoOriginalData.recontact;
+
+      persistContact(contact);
       
       showToast("Acción revertida. Contacto devuelto a la lista diaria.");
     }
@@ -261,6 +259,8 @@ function saveDiscussLater(id) {
   const fmtDate = newDateStr.split('-').reverse().join('/');
   addSystemHistoryLog(contact, `Conversación aplazada. Próximo contacto agendado para el ${fmtDate}.`);
 
+  persistContact(contact);
+
   showToast(`Se programó contacto para el ${fmtDate}. Movido a Toques del Día.`);
   renderAllTabs();
 }
@@ -325,6 +325,7 @@ function resolutionCloseDeal(id) {
     );
   }
 
+  persistContact(contact);
   renderAllTabs();
 }
 
@@ -336,6 +337,8 @@ function archiveContact(id) {
     const now = new Date();
     const months = ["ENE.", "FEB.", "MAR.", "ABR.", "MAY.", "JUN.", "JUL.", "AGO.", "SEP.", "OCT.", "NOV.", "DIC."];
     contact.archivedDate = `${now.getDate()} ${months[now.getMonth()]}`;
+
+    persistContact(contact);
     
     showToastWithAction(
       `${contact.name} fue archivado con éxito.`,
@@ -343,6 +346,7 @@ function archiveContact(id) {
       () => {
         contact.archived = false;
         delete contact.archivedDate;
+        persistContact(contact);
         showToast("Contacto restaurado.");
         renderAllTabs();
       }
@@ -358,23 +362,30 @@ function restoreContact(id) {
     contact.archived = false;
     delete contact.archivedDate;
     addSystemHistoryLog(contact, "Contacto restaurado a seguimiento activo.");
+    persistContact(contact);
     showToast(`${contact.name} ha sido restaurado y reactivado.`);
     closeContactDetailPanel();
     renderAllTabs();
   }
 }
 
-function deleteContact(id) {
+async function deleteContact(id) {
   const contact = contacts.find(c => c.id === id);
   if (!contact) return;
   
   if (confirm(`¿Estás seguro de que deseas eliminar permanentemente a ${contact.name}? Esta acción no se puede deshacer.`)) {
-    const index = contacts.findIndex(c => c.id === id);
-    if (index !== -1) {
-      contacts.splice(index, 1);
-      showToast(`${contact.name} ha sido eliminado permanentemente.`);
-      closeContactDetailPanel();
-      renderAllTabs();
+    try {
+      if (dbReady) await window.TocaDB.deleteContact(id);
+      const index = contacts.findIndex(c => c.id === id);
+      if (index !== -1) {
+        contacts.splice(index, 1);
+        showToast(`${contact.name} ha sido eliminado permanentemente.`);
+        closeContactDetailPanel();
+        renderAllTabs();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error al eliminar el contacto.');
     }
   }
 }
@@ -548,10 +559,8 @@ function submitProspectForm(event) {
     Validando notas con IA...
   `;
 
-  setTimeout(() => {
-    const newId = contacts.length > 0 ? Math.max(...contacts.map(c => c.id)) + 1 : 1;
+  setTimeout(async () => {
     const newProspect = {
-      id: newId,
       name: name,
       company: company,
       type: "Prospecto",
@@ -569,7 +578,22 @@ function submitProspectForm(event) {
       businessId: currentBusinessId
     };
 
-    contacts.push(newProspect);
+    try {
+      if (dbReady) {
+        const saved = await window.TocaDB.insertContact(newProspect);
+        contacts.push({ ...saved, leadSource, createdAt: TODAY_STR, lastActivityDate: TODAY_STR, businessId: currentBusinessId });
+      } else {
+        const newId = contacts.length > 0 ? Math.max(...contacts.map(c => c.id)) + 1 : 1;
+        contacts.push({ ...newProspect, id: newId, history: [] });
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error al crear el prospecto.');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalHtml;
+      return;
+    }
+
     closeNewContactModal();
     document.getElementById('form-prospecto').reset();
     
@@ -640,10 +664,8 @@ function submitClienteForm(event) {
     Validando notas con IA...
   `;
 
-  setTimeout(() => {
-    const newId = contacts.length > 0 ? Math.max(...contacts.map(c => c.id)) + 1 : 1;
+  setTimeout(async () => {
     const newClient = {
-      id: newId,
       name: name,
       company: company,
       type: "Cliente",
@@ -659,7 +681,22 @@ function submitClienteForm(event) {
       businessId: currentBusinessId
     };
 
-    contacts.push(newClient);
+    try {
+      if (dbReady) {
+        const saved = await window.TocaDB.insertContact(newClient);
+        contacts.push({ ...saved, leadSource, createdAt: TODAY_STR, lastActivityDate: TODAY_STR, businessId: currentBusinessId });
+      } else {
+        const newId = contacts.length > 0 ? Math.max(...contacts.map(c => c.id)) + 1 : 1;
+        contacts.push({ ...newClient, id: newId, history: [] });
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error al crear el cliente.');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalHtml;
+      return;
+    }
+
     closeNewContactModal();
     document.getElementById('form-cliente').reset();
     
@@ -1009,6 +1046,15 @@ function saveNewHistoryItem(id) {
 
     c.context = text;
 
+    if (dbReady) {
+      window.TocaDB.addHistoryItem(id, { date: dateStr, text })
+        .then(() => window.TocaDB.updateContact(c))
+        .catch((err) => {
+          console.error(err);
+          showToast('Error al guardar el contexto.');
+        });
+    }
+
     showToast("Contexto añadido e historial actualizado.");
     hideAddHistoryInput(id);
 
@@ -1133,6 +1179,7 @@ function saveContactChanges(id) {
     }
 
     showToast(`Datos de ${c.name} actualizados correctamente.`);
+    persistContact(c);
     closeContactDetailPanel();
     renderAllTabs();
   }
@@ -1416,6 +1463,8 @@ function resolutionOfferSomethingNew(id) {
 
   const fmtDate = nextContactStr.split('-').reverse().join('/');
   addSystemHistoryLog(contact, `Se inició un nuevo ciclo de oferta de 15 días (Próximo contacto: ${fmtDate}).`);
+
+  persistContact(contact);
   
   renderAllTabs();
 }
@@ -1658,6 +1707,8 @@ function confirmArchiveWithReason() {
     
     closeArchiveReasonModal();
     closeContactDetailPanel();
+
+    persistContact(contact);
     
     showToastWithAction(
       `${contact.name} fue archivado con éxito.`,
@@ -1670,6 +1721,7 @@ function confirmArchiveWithReason() {
         if (contact.history && contact.history.length > 0) {
           contact.history.shift();
         }
+        persistContact(contact);
         showToast("Contacto restaurado.");
         renderAllTabs();
       }

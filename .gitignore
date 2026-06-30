@@ -22,3 +22,6 @@ yarn-error.log*
 node_modules/
 dist/
 build/
+
+# Credenciales Supabase
+js/supabase-config.js

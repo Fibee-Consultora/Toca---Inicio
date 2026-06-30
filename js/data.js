@@ -1,6 +1,9 @@
-// SEED DATA & STATE (All start in "Toque del día", waiting section is empty)
+// STATE — contactos desde Supabase (PostgreSQL)
 // ==========================================================================
-let contacts = [
+let contacts = [];
+let dbReady = false;
+
+const SEED_CONTACTS = [
   {
     id: 1,
     name: "Jorge Ramírez",
