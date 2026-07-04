@@ -155,6 +155,35 @@
     if (error) throw error;
   }
 
+  async function loadMyProfile() {
+    const { data: { user } } = await getClient().auth.getUser();
+    if (!user) return null;
+    const { data, error } = await client
+      .from('profiles')
+      .select('id, email, full_name, avatar_url, plan, created_at')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+
+  async function loadAllProfiles() {
+    const { data, error } = await client
+      .from('profiles')
+      .select('id, email, full_name, plan, created_at')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function updateUserPlan(userId, plan) {
+    const { error } = await client
+      .from('profiles')
+      .update({ plan, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+    if (error) throw error;
+  }
+
   window.TocaDB = {
     isConfigured,
     init,
@@ -163,6 +192,9 @@
     signOut,
     getSession,
     onAuthStateChange,
+    loadMyProfile,
+    loadAllProfiles,
+    updateUserPlan,
     loadContacts,
     insertContact,
     updateContact,

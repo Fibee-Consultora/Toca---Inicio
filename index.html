@@ -135,6 +135,11 @@
                     <span class="nav-icon">📊</span> Estadísticas
                   </a>
                 </li>
+                <li id="side-nav-admin-wrap" style="display: none;">
+                  <a class="nav-item" id="side-nav-admin" onclick="switchTab('admin')">
+                    <span class="nav-icon">🛡️</span> Admin
+                  </a>
+                </li>
               </ul>
             </nav>
           </div>
@@ -330,6 +335,13 @@
             <!-- Dynamic stats rendered here -->
           </div>
 
+          <!-- ==========================================================================
+               TAB CONTENT: ADMIN
+               ========================================================================== -->
+          <div class="tab-content" id="tab-admin" style="padding: 20px;">
+            <!-- Admin panel rendered dynamically -->
+          </div>
+
           <!-- Profile tab content removed as it is now a popup modal -->
 
         </main>
@@ -351,6 +363,10 @@
           <a class="mobile-nav-item" id="mob-nav-estadisticas" onclick="switchTab('estadisticas')">
             <span class="mobile-nav-icon">📊</span>
             <span>Métricas</span>
+          </a>
+          <a class="mobile-nav-item" id="mob-nav-admin" onclick="switchTab('admin')" style="display: none;">
+            <span class="mobile-nav-icon">🛡️</span>
+            <span>Admin</span>
           </a>
         </nav>
 

@@ -367,6 +367,14 @@ let teamAgents = JSON.parse(localStorage.getItem('toca_team_agents')) || [
 // Auth — sesión real vía Supabase; fallback localStorage solo sin Supabase
 let currentAuthUser = null;
 let isLoggedIn = false;
+const SUPER_ADMIN_EMAIL = 'fibeeconsultoradigital@gmail.com';
+let adminUsers = [];
+
+function isSuperAdmin() {
+  return (
+    currentAuthUser?.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()
+  );
+}
 
 
 

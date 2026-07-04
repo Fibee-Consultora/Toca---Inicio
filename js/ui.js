@@ -493,7 +493,105 @@ function renderAllTabs() {
   renderClientesTab();
   renderProspectosTab();
   renderEstadisticasTab();
+  renderAdminTab();
   renderProfileTab();
+}
+
+function formatProfileDate(isoDate) {
+  if (!isoDate) return '—';
+  const d = new Date(isoDate);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+async function renderAdminTab() {
+  const container = document.getElementById('tab-admin');
+  if (!container) return;
+
+  if (!isSuperAdmin()) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="padding: 8px 0 20px;">
+      <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 6px 0;">Panel Admin</h2>
+      <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin: 0;">Usuarios registrados en Toca y asignación de plan.</p>
+    </div>
+    <p style="font-size: 0.9rem; color: var(--color-text-secondary);">Cargando usuarios...</p>
+  `;
+
+  if (!window.TocaDB?.isConfigured()) {
+    container.innerHTML += '<p style="color: var(--color-urgent);">Supabase no configurado.</p>';
+    return;
+  }
+
+  try {
+    adminUsers = await window.TocaDB.loadAllProfiles();
+    const planOptions = Object.keys(PLAN_LIMITS);
+
+    if (!adminUsers.length) {
+      container.innerHTML = `
+        <div style="padding: 8px 0 20px;">
+          <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; margin: 0 0 6px 0;">Panel Admin</h2>
+          <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin: 0;">Aún no hay usuarios registrados.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const rows = adminUsers
+      .map((user) => {
+        const name = user.full_name || user.email?.split('@')[0] || 'Sin nombre';
+        const options = planOptions
+          .map(
+            (plan) =>
+              `<option value="${plan}" ${user.plan === plan ? 'selected' : ''}>${PLAN_LIMITS[plan].name}</option>`
+          )
+          .join('');
+        return `
+          <tr>
+            <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color); font-weight: 600;">${name}</td>
+            <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--color-text-secondary);">${user.email || '—'}</td>
+            <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color);">
+              <select onchange="adminSetUserPlan('${user.id}', this.value)" style="padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #fff; font-family: var(--font-body); font-size: 0.85rem; min-width: 140px;">
+                ${options}
+              </select>
+            </td>
+            <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--color-text-secondary); font-size: 0.85rem;">${formatProfileDate(user.created_at)}</td>
+          </tr>
+        `;
+      })
+      .join('');
+
+    container.innerHTML = `
+      <div style="padding: 8px 0 20px;">
+        <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 6px 0;">Panel Admin</h2>
+        <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin: 0;">${adminUsers.length} usuario(s) en la plataforma.</p>
+      </div>
+      <div style="background: #fff; border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-sm);">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+          <thead>
+            <tr style="background: #f9fafb; text-align: left;">
+              <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Nombre</th>
+              <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Correo</th>
+              <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Plan</th>
+              <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Registro</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = `
+      <div style="padding: 8px 0 20px;">
+        <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; margin: 0 0 6px 0;">Panel Admin</h2>
+        <p style="color: var(--color-urgent); font-size: 0.9rem;">No se pudieron cargar los usuarios. Ejecuta supabase/admin.sql en Supabase.</p>
+      </div>
+    `;
+  }
 }
 
 function generateIaSuggestionsHtml(id) {

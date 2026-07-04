@@ -1286,6 +1286,8 @@ function switchTab(tabId) {
     renderProspectosTab();
   } else if (tabId === 'estadisticas') {
     renderEstadisticasTab();
+  } else if (tabId === 'admin') {
+    renderAdminTab();
   } else if (tabId === 'profile') {
     renderProfileTab();
   }
@@ -1638,8 +1640,52 @@ function applyAuthUser(user) {
   currentAuthUser = user || null;
   isLoggedIn = !!user;
   if (user) bootstrapAuthenticatedUser(user);
+  updateAdminNavVisibility();
   updateLoginScreen();
   updateProfileUI();
+  if (user) syncUserPlanFromProfile();
+}
+
+function updateAdminNavVisibility() {
+  const show = isSuperAdmin();
+  const sideWrap = document.getElementById('side-nav-admin-wrap');
+  const mobNav = document.getElementById('mob-nav-admin');
+  if (sideWrap) sideWrap.style.display = show ? '' : 'none';
+  if (mobNav) mobNav.style.display = show ? 'flex' : 'none';
+}
+
+async function syncUserPlanFromProfile() {
+  if (!currentAuthUser || !window.TocaDB?.isConfigured()) return;
+  try {
+    const profile = await window.TocaDB.loadMyProfile();
+    if (profile?.plan && PLAN_LIMITS[profile.plan]) {
+      currentActivePlan = profile.plan;
+      localStorage.setItem('toca_current_active_plan', profile.plan);
+      updateProfileUI();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function adminSetUserPlan(userId, plan) {
+  if (!isSuperAdmin() || !PLAN_LIMITS[plan]) return;
+  try {
+    await window.TocaDB.updateUserPlan(userId, plan);
+    const user = adminUsers.find((u) => u.id === userId);
+    if (user) user.plan = plan;
+    if (currentAuthUser?.id === userId) {
+      currentActivePlan = plan;
+      localStorage.setItem('toca_current_active_plan', plan);
+      updateProfileUI();
+      renderAllTabs();
+    }
+    showToast(`Plan ${plan} asignado correctamente.`);
+  } catch (err) {
+    console.error(err);
+    showToast('No se pudo actualizar el plan.');
+    renderAdminTab();
+  }
 }
 
 async function initAuth() {
