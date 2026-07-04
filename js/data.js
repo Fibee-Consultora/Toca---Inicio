@@ -364,8 +364,9 @@ let teamAgents = JSON.parse(localStorage.getItem('toca_team_agents')) || [
   { name: "Sofía Castro", email: "sofia@poloslima.com", role: "Agente", status: "Activo" }
 ];
 
-// Auth State (persisted via localStorage for prototype feel)
-let isLoggedIn = localStorage.getItem('toca_is_logged_in') === 'true';
+// Auth — sesión real vía Supabase; fallback localStorage solo sin Supabase
+let currentAuthUser = null;
+let isLoggedIn = false;
 
 
 

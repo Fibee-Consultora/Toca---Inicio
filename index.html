@@ -19,7 +19,7 @@
 <body class="view-desktop">
 
   <!-- ==========================================================================
-       MOCK GOOGLE AUTH LOGIN SCREEN
+       MOCK GOOGLE AUTH LOGIN SCREEN (OAuth real vía Supabase)
        ========================================================================== -->
   <div id="login-screen" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #F6F6F4; display: flex; align-items: center; justify-content: center; z-index: 99999;">
     <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); padding: 40px; width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center; gap: 24px; text-align: center;">
@@ -30,7 +30,7 @@
         <p style="font-family: 'Inter', sans-serif; font-size: 0.9rem; color: #6b7280; margin: 0;">Tu panel de control inteligente para WhatsApp Ventas</p>
       </div>
 
-      <button onclick="simulateGoogleLogin()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; background: #ffffff; border: 1px solid #d1d5db; border-radius: 999px; padding: 12px; font-family: 'Inter', sans-serif; font-size: 0.92rem; font-weight: 600; color: #374151; cursor: pointer; transition: background 0.2s; outline: none; border: 1px solid #d1d5db;">
+      <button onclick="loginWithGoogle()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; background: #ffffff; border: 1px solid #d1d5db; border-radius: 999px; padding: 12px; font-family: 'Inter', sans-serif; font-size: 0.92rem; font-weight: 600; color: #374151; cursor: pointer; transition: background 0.2s; outline: none; border: 1px solid #d1d5db;">
         <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right: 8px;">
           <path d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.79 2.7v2.24h2.9c1.69-1.55 2.69-3.84 2.69-6.57z" fill="#4285F4"/>
           <path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.24c-.8.54-1.84.87-3.06.87-2.35 0-4.34-1.58-5.05-3.71H.95v2.3C2.43 15.98 5.48 18 9 18z" fill="#34A853"/>

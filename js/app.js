@@ -13,15 +13,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     if (window.TocaDB?.isConfigured()) {
       window.TocaDB.init();
+      await initAuth();
       contacts = await window.TocaDB.loadContacts();
       dbReady = true;
     } else {
       contacts = [...SEED_CONTACTS];
+      isLoggedIn = localStorage.getItem('toca_is_logged_in') === 'true';
+      updateLoginScreen();
     }
   } catch (err) {
     console.error(err);
     contacts = [...SEED_CONTACTS];
     showToast('No se pudo conectar a Supabase. Usando datos locales.');
+    updateLoginScreen();
   }
 
   const tz = businessProfile.timezone || 'America/Lima';
@@ -1551,51 +1555,110 @@ function saveBusinessProfile() {
   renderAllTabs();
 }
 
-function simulateGoogleLogin() {
+function getGoogleLoginButtonHtml() {
+  return `
+    <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right: 8px;">
+      <path d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.79 2.7v2.24h2.9c1.69-1.55 2.69-3.84 2.69-6.57z" fill="#4285F4"/>
+      <path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.24c-.8.54-1.84.87-3.06.87-2.35 0-4.34-1.58-5.05-3.71H.95v2.3C2.43 15.98 5.48 18 9 18z" fill="#34A853"/>
+      <path d="M3.95 10.74c-.18-.54-.28-1.12-.28-1.74s.1-1.2.28-1.74V4.96H.95C.35 6.17 0 7.55 0 9s.35 2.83.95 4.04l3-2.3z" fill="#FBBC05"/>
+      <path d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59C13.47 1.03 11.43 0 9 0 5.48 0 2.43 2.02.95 4.96l3 2.3c.71-2.13 2.7-3.71 5.05-3.71z" fill="#EA4335"/>
+    </svg>
+    Iniciar sesión con Google
+  `;
+}
+
+function setLoginButtonLoading(loading) {
   const loginBtn = document.querySelector('#login-screen button');
-  if (loginBtn) {
-    loginBtn.disabled = true;
-    loginBtn.innerHTML = `
+  if (!loginBtn) return;
+  loginBtn.disabled = loading;
+  loginBtn.innerHTML = loading
+    ? `
       <svg class="animate-spin" style="animation: spin 1s linear infinite; margin-right: 8px;" width="18" height="18" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity:0.25;"></circle>
         <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="#000000"></path>
       </svg>
       Iniciando sesión...
-    `;
-  }
-  
-  setTimeout(() => {
-    isLoggedIn = true;
-    localStorage.setItem('toca_is_logged_in', 'true');
-    const loginScreen = document.getElementById('login-screen');
-    if (loginScreen) {
-      loginScreen.style.display = 'none';
-    }
-    showToast("Sesión iniciada con Google correctamente.");
-    renderAllTabs();
-  }, 1200);
+    `
+    : getGoogleLoginButtonHtml();
 }
 
-function logout() {
-  isLoggedIn = false;
-  localStorage.setItem('toca_is_logged_in', 'false');
+function updateLoginScreen() {
   const loginScreen = document.getElementById('login-screen');
   if (loginScreen) {
-    loginScreen.style.display = 'flex';
-    const loginBtn = document.querySelector('#login-screen button');
-    if (loginBtn) {
-      loginBtn.disabled = false;
-      loginBtn.innerHTML = `
-        <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right: 8px;">
-          <path d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.79 2.7v2.24h2.9c1.69-1.55 2.69-3.84 2.69-6.57z" fill="#4285F4"/>
-          <path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.24c-.8.54-1.84.87-3.06.87-2.35 0-4.34-1.58-5.05-3.71H.95v2.3C2.43 15.98 5.48 18 9 18z" fill="#34A853"/>
-          <path d="M3.95 10.74c-.18-.54-.28-1.12-.28-1.74s.1-1.2.28-1.74V4.96H.95C.35 6.17 0 7.55 0 9s.35 2.83.95 4.04l3-2.3z" fill="#FBBC05"/>
-          <path d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59C13.47 1.03 11.43 0 9 0 5.48 0 2.43 2.02.95 4.96l3 2.3c.71-2.13 2.7-3.71 5.05-3.71z" fill="#EA4335"/>
-        </svg>
-        Iniciar sesión con Google
-      `;
+    loginScreen.style.display = isLoggedIn ? 'none' : 'flex';
+  }
+  if (!isLoggedIn) setLoginButtonLoading(false);
+}
+
+function applyAuthUser(user) {
+  currentAuthUser = user || null;
+  isLoggedIn = !!user;
+  updateLoginScreen();
+  updateProfileUI();
+}
+
+async function initAuth() {
+  if (!window.TocaDB?.isConfigured()) return;
+
+  const { data: { session } } = await window.TocaDB.getSession();
+  applyAuthUser(session?.user ?? null);
+
+  let authReady = false;
+  window.TocaDB.onAuthStateChange(async (event, session) => {
+    const user = session?.user ?? null;
+    const wasLoggedIn = isLoggedIn;
+
+    if (user) {
+      applyAuthUser(user);
+      if (authReady && event === 'SIGNED_IN' && !wasLoggedIn) {
+        showToast('Sesión iniciada con Google correctamente.');
+      }
+      if (dbReady) {
+        try {
+          contacts = await window.TocaDB.loadContacts();
+          renderAllTabs();
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    } else if (event === 'SIGNED_OUT') {
+      applyAuthUser(null);
+    }
+  });
+
+  authReady = true;
+}
+
+async function loginWithGoogle() {
+  if (!window.TocaDB?.isConfigured()) {
+    showToast('Supabase no está configurado. Revisa las variables en Netlify.');
+    return;
+  }
+
+  setLoginButtonLoading(true);
+  try {
+    const { error } = await window.TocaDB.signInWithGoogle();
+    if (error) throw error;
+  } catch (err) {
+    console.error(err);
+    setLoginButtonLoading(false);
+    showToast('No se pudo iniciar sesión con Google.');
+  }
+}
+
+async function logout() {
+  if (window.TocaDB?.isConfigured()) {
+    try {
+      await window.TocaDB.signOut();
+    } catch (err) {
+      console.error(err);
     }
   }
+
+  applyAuthUser(null);
+  localStorage.removeItem('toca_is_logged_in');
+  updateLoginScreen();
+  setLoginButtonLoading(false);
 }
 
 // ==========================================================================
@@ -2116,6 +2179,29 @@ function updateProfileUI() {
 
   const planInfo = PLAN_LIMITS[currentActivePlan];
   const planName = planInfo ? planInfo.name : 'Plan Panal';
+
+  if (currentAuthUser) {
+    const meta = currentAuthUser.user_metadata || {};
+    const displayName =
+      meta.full_name ||
+      meta.name ||
+      currentAuthUser.email?.split('@')[0] ||
+      'Usuario';
+    const avatarUrl = meta.avatar_url || meta.picture;
+    const initial = displayName.charAt(0).toUpperCase();
+
+    if (nameEl) nameEl.textContent = displayName;
+    if (roleEl) roleEl.textContent = planName;
+    if (avatarEl) {
+      if (avatarUrl) {
+        avatarEl.innerHTML = `<img src="${avatarUrl}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = initial;
+      }
+    }
+    if (mobileBtnEl) mobileBtnEl.textContent = initial;
+    return;
+  }
 
   if (currentSimulatedUserRole === 'Administrador') {
     if (nameEl) nameEl.textContent = 'Javier Reyes';

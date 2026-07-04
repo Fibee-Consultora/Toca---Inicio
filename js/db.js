@@ -22,9 +22,39 @@
       throw new Error('No se cargó la librería de Supabase.');
     }
     client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
     });
     return client;
+  }
+
+  function getClient() {
+    if (!client) init();
+    return client;
+  }
+
+  async function signInWithGoogle() {
+    const c = getClient();
+    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    return c.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    });
+  }
+
+  async function signOut() {
+    return getClient().auth.signOut();
+  }
+
+  async function getSession() {
+    return getClient().auth.getSession();
+  }
+
+  function onAuthStateChange(callback) {
+    return getClient().auth.onAuthStateChange(callback);
   }
 
   function rowToContact(row, historyRows) {
@@ -128,6 +158,11 @@
   window.TocaDB = {
     isConfigured,
     init,
+    getClient,
+    signInWithGoogle,
+    signOut,
+    getSession,
+    onAuthStateChange,
     loadContacts,
     insertContact,
     updateContact,
