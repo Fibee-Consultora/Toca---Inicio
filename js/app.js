@@ -56,6 +56,15 @@ function bootstrapAuthenticatedUser(user) {
   }
 }
 
+function resetLoginButtonIfNeeded() {
+  if (!isLoggedIn) setLoginButtonLoading(false);
+}
+
+window.addEventListener('pageshow', resetLoginButtonIfNeeded);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') resetLoginButtonIfNeeded();
+});
+
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     if (window.TocaDB?.isConfigured()) {
@@ -85,11 +94,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     appDateEl.innerHTML = `${getFormattedDate(TODAY)} &bull; Zona Horaria: <strong>${tz}</strong>`;
   }
 
-  const loginScreen = document.getElementById('login-screen');
-  if (loginScreen) {
-    loginScreen.style.display = isLoggedIn ? 'none' : 'flex';
-  }
-
   const archiveDetailsInput = document.getElementById('archive-reason-details');
   if (archiveDetailsInput) {
     archiveDetailsInput.addEventListener('input', () => {
@@ -103,6 +107,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   populateBusinessSwitchers();
   updateProfileUI();
   renderAllTabs();
+  updateLoginScreen();
 });
 
 function addSystemHistoryLog(contact, text) {
@@ -1640,8 +1645,14 @@ function applyAuthUser(user) {
 async function initAuth() {
   if (!window.TocaDB?.isConfigured()) return;
 
+  if (window.location.hash.includes('error=')) {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    showToast('Inicio de sesión cancelado.');
+  }
+
   const { data: { session } } = await window.TocaDB.getSession();
   applyAuthUser(session?.user ?? null);
+  if (!session?.user) resetLoginButtonIfNeeded();
 
   let authReady = false;
   window.TocaDB.onAuthStateChange(async (event, session) => {
