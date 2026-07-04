@@ -513,84 +513,605 @@ async function renderAdminTab() {
     return;
   }
 
-  container.innerHTML = `
-    <div style="padding: 8px 0 20px;">
-      <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 6px 0;">Panel Admin</h2>
-      <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin: 0;">Usuarios registrados en Toca y asignación de plan.</p>
-    </div>
-    <p style="font-size: 0.9rem; color: var(--color-text-secondary);">Cargando usuarios...</p>
-  `;
-
-  if (!window.TocaDB?.isConfigured()) {
-    container.innerHTML += '<p style="color: var(--color-urgent);">Supabase no configurado.</p>';
-    return;
+  // 1. Mostrar banner de suplantación si está activo
+  let impersonationBanner = '';
+  if (impersonatedClientId) {
+    const client = adminClients.find(c => c.id === impersonatedClientId);
+    impersonationBanner = `
+      <div class="admin-banner-card" style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(3, 105, 161, 0.08);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.15rem;">👁️</span>
+          <span>Estás visualizando el sistema como: <strong>${client ? client.businessName : 'Cliente'}</strong></span>
+        </div>
+        <button class="btn-primary" onclick="stopImpersonating()" style="background: #0284c7; color: #fff; border: none; padding: 5px 12px; font-size: 0.72rem; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.15s;">
+          Restaurar Admin
+        </button>
+      </div>
+    `;
   }
 
-  try {
-    adminUsers = await window.TocaDB.loadAllProfiles();
-    const planOptions = Object.keys(PLAN_LIMITS);
+  let isSimulated = true;
+  if (currentAuthUser && window.TocaDB?.isConfigured()) {
+    try {
+      adminUsers = await window.TocaDB.loadAllProfiles();
+      isSimulated = false;
+    } catch (err) {
+      console.warn("Error cargando perfiles de Supabase, cayendo en simulación local:", err);
+    }
+  }
 
-    if (!adminUsers.length) {
-      container.innerHTML = `
-        <div style="padding: 8px 0 20px;">
-          <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; margin: 0 0 6px 0;">Panel Admin</h2>
-          <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin: 0;">Aún no hay usuarios registrados.</p>
-        </div>
-      `;
-      return;
+  if (isSimulated) {
+    // 1. Calcular estadísticas de la simulación basadas en clientes Activos
+    const activeClients = adminClients.filter(c => c.status === "Activo");
+    const totalClientsCount = activeClients.length;
+    const planCounts = { Néctar: 0, Panal: 0, Colmena: 0, Apiario: 0 };
+    let estimatedRevenue = 0;
+    
+    const PLAN_PRICES = { Néctar: 49, Panal: 119, Colmena: 249, Apiario: 499 };
+
+    adminClients.forEach(c => {
+      if (c.status === "Activo") {
+        if (planCounts[c.plan] !== undefined) planCounts[c.plan]++;
+        const basePrice = PLAN_PRICES[c.plan] || 119;
+        const extraAgentsCost = (c.extraAgents || 0) * 24.90;
+        const extraPacksCost = (c.extraPacks || 0) * 19.90;
+        estimatedRevenue += basePrice + extraAgentsCost + extraPacksCost;
+      }
+    });
+
+    // 2. Construir HTML modularizado
+    let html = `
+      ${getImpersonationBannerHtml()}
+      ${getAdminHeaderHtml()}
+      ${getAdminMetricsHtml(totalClientsCount, estimatedRevenue, planCounts)}
+      ${getAdminTableShellHtml()}
+    `;
+
+    if (selectedAdminClientId) {
+      const client = adminClients.find(c => c.id === selectedAdminClientId);
+      if (client) {
+        html += getAdminModalHtml(client);
+      }
     }
 
-    const rows = adminUsers
-      .map((user) => {
-        const name = user.full_name || user.email?.split('@')[0] || 'Sin nombre';
-        const options = planOptions
-          .map(
-            (plan) =>
-              `<option value="${plan}" ${user.plan === plan ? 'selected' : ''}>${PLAN_LIMITS[plan].name}</option>`
-          )
-          .join('');
-        return `
-          <tr>
-            <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color); font-weight: 600;">${name}</td>
-            <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--color-text-secondary);">${user.email || '—'}</td>
-            <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color);">
-              <select onchange="adminSetUserPlan('${user.id}', this.value)" style="padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #fff; font-family: var(--font-body); font-size: 0.85rem; min-width: 140px;">
-                ${options}
-              </select>
-            </td>
-            <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--color-text-secondary); font-size: 0.85rem;">${formatProfileDate(user.created_at)}</td>
-          </tr>
+    container.innerHTML = html;
+    renderSortedAdminTable();
+  } else {
+    // Si Supabase está cargado correctamente (Producción real)
+    try {
+      const planOptions = Object.keys(PLAN_LIMITS);
+      if (!adminUsers.length) {
+        container.innerHTML = `
+          <div style="padding: 8px 0 20px;">
+            <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; margin: 0 0 6px 0;">Panel Admin</h2>
+            <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin: 0;">Aún no hay usuarios registrados.</p>
+          </div>
         `;
-      })
-      .join('');
+        return;
+      }
 
-    container.innerHTML = `
-      <div style="padding: 8px 0 20px;">
-        <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 6px 0;">Panel Admin</h2>
-        <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin: 0;">${adminUsers.length} usuario(s) en la plataforma.</p>
-      </div>
-      <div style="background: #fff; border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-sm);">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-          <thead>
-            <tr style="background: #f9fafb; text-align: left;">
-              <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Nombre</th>
-              <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Correo</th>
-              <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Plan</th>
-              <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Registro</th>
+      const rows = adminUsers
+        .map((user) => {
+          const name = user.full_name || user.email?.split('@')[0] || 'Sin nombre';
+          const options = planOptions
+            .map(
+              (plan) =>
+                `<option value="${plan}" ${user.plan === plan ? 'selected' : ''}>${PLAN_LIMITS[plan].name}</option>`
+            )
+            .join('');
+          return `
+            <tr>
+              <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color); font-weight: 600;">${name}</td>
+              <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--color-text-secondary);">${user.email || '—'}</td>
+              <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color);">
+                <select onchange="adminSetUserPlan('${user.id}', this.value)" style="padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #fff; font-family: var(--font-body); font-size: 0.85rem; min-width: 140px;">
+                  ${options}
+                </select>
+              </td>
+              <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--color-text-secondary); font-size: 0.85rem;">${formatProfileDate(user.created_at)}</td>
             </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
+          `;
+        })
+        .join('');
+
+      container.innerHTML = `
+        <div style="padding: 8px 0 20px;">
+          <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 6px 0;">Panel Admin</h2>
+          <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin: 0;">${adminUsers.length} usuario(s) en la plataforma.</p>
+        </div>
+        <div style="background: #fff; border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-sm);">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+              <tr style="background: #f9fafb; text-align: left;">
+                <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Nombre</th>
+                <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Correo</th>
+                <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Plan</th>
+                <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Registro</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    } catch (err) {
+      console.error(err);
+    }
+  }
+}
+
+// SUB-RENDERERS PARA EL PANEL ADMIN (SIMULADO)
+
+let adminSearchQuery = '';
+
+function updateAdminSearchQuery(query) {
+  adminSearchQuery = query;
+  filterAdminClientsTable(query);
+}
+
+function getImpersonationBannerHtml() {
+  if (!impersonatedClientId) return '';
+  const client = adminClients.find(c => c.id === impersonatedClientId);
+  return `
+    <div class="admin-banner-card" style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(3, 105, 161, 0.08);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.15rem;">👁️</span>
+        <span>Estás visualizando el sistema como: <strong>${client ? client.businessName : 'Cliente'}</strong></span>
       </div>
-    `;
-  } catch (err) {
-    console.error(err);
-    container.innerHTML = `
-      <div style="padding: 8px 0 20px;">
-        <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; margin: 0 0 6px 0;">Panel Admin</h2>
-        <p style="color: var(--color-urgent); font-size: 0.9rem;">No se pudieron cargar los usuarios. Ejecuta supabase/admin.sql en Supabase.</p>
+      <button class="btn-primary" onclick="stopImpersonating()" style="background: #0284c7; color: #fff; border: none; padding: 5px 12px; font-size: 0.72rem; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.15s;">
+        Restaurar Admin
+      </button>
+    </div>
+  `;
+}
+
+function getAdminHeaderHtml() {
+  return `
+    <div style="padding: 8px 0 20px;">
+      <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 6px 0;">Panel de Administración Toca (Simulación)</h2>
+      <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin: 0;">Gestiona clientes locales, edita planes y simula accesos.</p>
+    </div>
+  `;
+}
+
+function getAdminMetricsHtml(totalActive, estimatedRevenue, planCounts) {
+  return `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <div class="admin-metric-card" style="background: #ffffff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between; height: 100px;">
+        <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--color-text-secondary); font-weight: 700; letter-spacing: 0.03em;">Clientes Activos</div>
+        <div style="font-size: 1.6rem; font-weight: 800; color: var(--color-text-primary); margin-top: 4px;">${totalActive}</div>
+        <div style="font-size: 0.65rem; color: var(--color-text-muted);">Suscripciones activas</div>
       </div>
+      <div class="admin-metric-card" style="background: #ffffff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between; height: 100px;">
+        <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--color-text-secondary); font-weight: 700; letter-spacing: 0.03em;">MRR Estimado</div>
+        <div style="font-size: 1.6rem; font-weight: 800; color: #10b981; margin-top: 4px;">S/. ${estimatedRevenue.toFixed(2)}</div>
+        <div style="font-size: 0.65rem; color: var(--color-text-muted);">Suscripciones + Adicionales activos</div>
+      </div>
+      <div class="admin-metric-card" style="background: #ffffff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between; height: 100px;">
+        <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--color-text-secondary); font-weight: 700; letter-spacing: 0.03em;">Suscripciones por Plan</div>
+        <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 0.75rem; font-weight: 600;">
+          <span title="Néctar" style="background: #fef0f0; color: #fe3c43; padding: 2px 6px; border-radius: 4px;">🌸 ${planCounts.Néctar}</span>
+          <span title="Panal" style="background: #fffbeb; color: #d97706; padding: 2px 6px; border-radius: 4px;">🍯 ${planCounts.Panal}</span>
+          <span title="Colmena" style="background: #f5f3ff; color: #7c3aed; padding: 2px 6px; border-radius: 4px;">🐝 ${planCounts.Colmena}</span>
+          <span title="Apiario" style="background: #ecfdf5; color: #059669; padding: 2px 6px; border-radius: 4px;">👑 ${planCounts.Apiario}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function getAdminTableShellHtml() {
+  return `
+    <div style="margin-bottom: 16px; display: flex; gap: 10px;">
+      <input type="text" id="admin-client-search" placeholder="🔍 Buscar por nombre de cliente, empresa o correo..." style="padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-color); font-family: var(--font-body); font-size: 0.82rem; width: 100%; max-width: 420px; box-shadow: var(--shadow-sm); outline: none; transition: border-color 0.15s;" oninput="updateAdminSearchQuery(this.value)" value="${adminSearchQuery || ''}">
+    </div>
+
+    <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 14px; overflow: auto; max-height: 440px; box-shadow: var(--shadow-sm); margin-bottom: 24px; position: relative;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
+        <thead style="position: sticky; top: 0; background: #f9fafb; z-index: 10; box-shadow: 0 1px 0 var(--border-color);">
+          <tr style="text-transform: uppercase; font-size: 0.7rem; color: var(--color-text-secondary); font-weight: 700;">
+            <th onclick="sortAdminTable('business')" style="padding: 10px 14px; background: #f9fafb; cursor: pointer; user-select: none; transition: background 0.1s;">Negocio<span id="sort-icon-business" style="font-size: 0.65rem; color: var(--color-text-muted);"> ↕</span></th>
+            <th onclick="sortAdminTable('admin')" style="padding: 10px 14px; background: #f9fafb; cursor: pointer; user-select: none; transition: background 0.1s;">Administrador<span id="sort-icon-admin" style="font-size: 0.65rem; color: var(--color-text-muted);"> ↕</span></th>
+            <th onclick="sortAdminTable('contacts')" style="padding: 10px 14px; background: #f9fafb; cursor: pointer; user-select: none; transition: background 0.1s;">Contactos / Agentes<span id="sort-icon-contacts" style="font-size: 0.65rem; color: var(--color-text-muted);"> ↕</span></th>
+            <th onclick="sortAdminTable('plan')" style="padding: 10px 14px; background: #f9fafb; cursor: pointer; user-select: none; transition: background 0.1s;">Plan<span id="sort-icon-plan" style="font-size: 0.65rem; color: var(--color-text-muted);"> ↕</span></th>
+            <th style="padding: 10px 14px; text-align: right; background: #f9fafb; user-select: none;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="admin-clients-tbody">
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function getAdminModalHtml(client) {
+  return `
+    <div id="admin-manage-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10, 10, 10, 0.45); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); z-index: 100010; display: flex; align-items: center; justify-content: center; padding: 20px;">
+      <style>
+        @keyframes adminModalFade {
+          from { opacity: 0; transform: scale(0.96); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      </style>
+      <div class="admin-modal-card" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; max-width: 520px; width: 100%; box-shadow: 0 20px 45px rgba(0, 0, 0, 0.15); animation: adminModalFade 0.18s ease-out; position: relative;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+          <div>
+            <h3 style="font-family: var(--font-title); font-size: 1.15rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 4px 0;">⚙️ Configurar Cuenta de Cliente</h3>
+            <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin: 0;">${client.businessName} &bull; Admin: ${client.name}</p>
+          </div>
+          <button onclick="selectClientForEdit(null)" style="background: transparent; border: none; font-size: 1.3rem; cursor: pointer; color: var(--color-text-muted); transition: color 0.15s; padding: 0; line-height: 1;">✕</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; max-height: 60vh; overflow-y: auto; padding-right: 4px;">
+          
+          <div style="background: #f9fafb; border: 1px solid var(--border-color); border-radius: 12px; padding: 14px;">
+            <h4 style="font-size: 0.72rem; font-weight: 700; color: var(--color-text-secondary); margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.04em;">Estado & Facturación</h4>
+            
+            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap;">
+              <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px;">
+                <span style="font-size: 0.72rem; color: var(--color-text-muted);">Estado del Servicio</span>
+                <select id="admin-edit-status" style="padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #ffffff; font-family: var(--font-body); font-size: 0.85rem; font-weight: 600; cursor: pointer; height: 34px;">
+                  <option value="Activo" ${client.status === 'Activo' ? 'selected' : ''}>🟢 Activo</option>
+                  <option value="Vencido" ${client.status === 'Vencido' ? 'selected' : ''}>🟡 Vencido</option>
+                  <option value="Cancelado" ${client.status === 'Cancelado' ? 'selected' : ''}>🔴 Cancelado</option>
+                </select>
+              </div>
+              
+              <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px;">
+                <span style="font-size: 0.72rem; color: var(--color-text-muted);">Último Pago Validado</span>
+                <input type="date" id="admin-edit-payment-date" value="${client.lastPaymentDate}" style="padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-color); font-family: var(--font-body); font-size: 0.85rem; height: 34px;">
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 10px;">
+              <button onclick="adminValidatePayment(${client.id})" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: background 0.15s;">
+                💰 Validar Pago Mes Activo
+              </button>
+              <button onclick="adminCancelService(${client.id})" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: background 0.15s;">
+                🚫 Cancelar Servicio
+              </button>
+            </div>
+          </div>
+
+          <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 14px;">
+            <h4 style="font-size: 0.72rem; font-weight: 700; color: var(--color-text-secondary); margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.04em;">Plan & Límites del Sistema</h4>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 12px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: 0.72rem; color: var(--color-text-muted);">Plan Asignado</label>
+                <select id="admin-edit-plan" onchange="toggleAdminCustomPlanFields(this.value)" style="padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #ffffff; font-family: var(--font-body); font-size: 0.85rem; height: 36px; cursor: pointer;">
+                  <option value="Néctar" ${client.plan === 'Néctar' ? 'selected' : ''}>🌸 Plan Néctar</option>
+                  <option value="Panal" ${client.plan === 'Panal' ? 'selected' : ''}>🍯 Plan Panal</option>
+                  <option value="Colmena" ${client.plan === 'Colmena' ? 'selected' : ''}>🐝 Plan Colmena</option>
+                  <option value="Apiario" ${client.plan === 'Apiario' ? 'selected' : ''}>👑 Plan Apiario (Custom)</option>
+                </select>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: 0.72rem; color: var(--color-text-muted);">Límite de Contactos</label>
+                <input type="number" id="admin-edit-contacts" value="${client.maxContacts}" ${client.plan !== 'Apiario' ? 'disabled' : ''} style="padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); font-family: var(--font-body); font-size: 0.85rem; height: 34px; background: ${client.plan !== 'Apiario' ? '#f3f4f6' : '#ffffff'};">
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: 0.72rem; color: var(--color-text-muted);">Límite de Agentes</label>
+                <input type="number" id="admin-edit-agents" value="${client.maxAgents}" ${client.plan !== 'Apiario' ? 'disabled' : ''} style="padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); font-family: var(--font-body); font-size: 0.85rem; height: 34px; background: ${client.plan !== 'Apiario' ? '#f3f4f6' : '#ffffff'};">
+              </div>
+            </div>
+          </div>
+
+          <div id="admin-expansion-panel" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; display: ${client.plan === 'Apiario' ? 'none' : 'block'}; background: #ffffff;">
+            <h4 style="font-size: 0.72rem; font-weight: 700; color: var(--color-text-secondary); margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.04em;">⚙️ Personalizar Expansión</h4>
+            
+            <input type="hidden" id="admin-edit-extra-agents" value="${client.extraAgents || 0}">
+            <input type="hidden" id="admin-edit-extra-packs" value="${client.extraPacks || 0}">
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px dashed var(--border-color); padding-bottom: 10px;">
+              <div>
+                <div style="font-size: 0.82rem; font-weight: 600; color: var(--color-text-primary);">➕ Agente adicional</div>
+                <div style="font-size: 0.72rem; color: var(--color-text-muted);">S/. 24.90 / mes por cada agente extra</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" onclick="changeAdminExpansionField('agents', -1)" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border-color); background: #ffffff; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--color-text-primary); transition: background 0.1s;">-</button>
+                <span id="admin-val-extra-agents" style="font-weight: 700; font-size: 0.85rem; min-width: 24px; text-align: center; color: var(--color-text-primary);">+${client.extraAgents || 0}</span>
+                <button type="button" onclick="changeAdminExpansionField('agents', 1)" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border-color); background: #ffffff; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--color-text-primary); transition: background 0.1s;">+</button>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+              <div>
+                <div style="font-size: 0.82rem; font-weight: 600; color: var(--color-text-primary);">➕ Pack de 50 contactos</div>
+                <div style="font-size: 0.72rem; color: var(--color-text-muted);">S/. 19.90 / mes por cada pack de 50 contactos</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" onclick="changeAdminExpansionField('packs', -1)" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border-color); background: #ffffff; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--color-text-primary); transition: background 0.1s;">-</button>
+                <span id="admin-val-extra-packs" style="font-weight: 700; font-size: 0.85rem; min-width: 24px; text-align: center; color: var(--color-text-primary);">+${client.extraPacks || 0}</span>
+                <button type="button" onclick="changeAdminExpansionField('packs', 1)" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border-color); background: #ffffff; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--color-text-primary); transition: background 0.1s;">+</button>
+              </div>
+            </div>
+
+            <div style="background: #f9fafb; border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700;">Costo Adicional Estimado</div>
+                <div id="admin-expansion-cost" style="font-size: 0.95rem; font-weight: 800; color: var(--color-text-primary);">S/. ${((client.extraAgents || 0) * 24.90 + (client.extraPacks || 0) * 19.90).toFixed(2)} / mes</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="admin-apiario-custom-panel" style="background: #fdfbf7; border: 1px solid #fef3c7; border-radius: 12px; padding: 14px; display: ${client.plan === 'Apiario' ? 'block' : 'none'};">
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 10px;">
+              <span style="font-size: 1rem;">👑</span>
+              <h4 style="font-size: 0.75rem; font-weight: 700; color: #92400e; margin: 0; text-transform: uppercase; letter-spacing: 0.04em;">Plan Apiario a medida</h4>
+            </div>
+            <p style="font-size: 0.75rem; color: #b45309; margin: 0 0 12px 0; line-height: 1.4;">Activa o desactiva las mecánicas de comunicación de WhatsApp según las especificaciones del contrato de este cliente.</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; border-top: 1px dashed #fde68a; padding-top: 10px;">
+              <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #78350f; cursor: pointer; font-weight: 600;">
+                <input type="checkbox" id="admin-edit-copilot" ${client.copilot ? 'checked' : ''} style="cursor: pointer; width: 16px; height: 16px;">
+                Activar Extensión Manual (Copilot)
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #78350f; cursor: pointer; font-weight: 600;">
+                <input type="checkbox" id="admin-edit-autopilot" ${client.autopilot ? 'checked' : ''} style="cursor: pointer; width: 16px; height: 16px;">
+                Activar Respuestas Automáticas (Autopilot)
+              </label>
+            </div>
+          </div>
+
+          ${getCollaboratorsListHtml(client.agentsList)}
+
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border-color); padding-top: 14px;">
+          <button onclick="selectClientForEdit(null)" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 18px; font-size: 0.82rem; font-weight: 600; cursor: pointer; color: var(--color-text-primary); transition: background 0.15s;">
+            Cancelar
+          </button>
+          <button onclick="adminApplyClientEditChanges(${client.id})" style="background: var(--color-accent); border: none; color: #0a0a0a; font-weight: 600; padding: 10px 18px; font-size: 0.82rem; border-radius: 8px; cursor: pointer; transition: opacity 0.15s;">
+            Guardar Cambios
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function getCollaboratorsListHtml(agentsList) {
+  return `
+    <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; background: #ffffff;">
+      <h4 style="font-size: 0.72rem; font-weight: 700; color: var(--color-text-secondary); margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.04em;">👥 Colaboradores del Equipo (${(agentsList || []).length})</h4>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        ${(agentsList && agentsList.length > 0) ? agentsList.map(a => `
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 6px; margin-bottom: 2px;">
+            <span style="color: var(--color-text-primary); font-weight: 600;">
+              ${a.name} <span style="font-weight: normal; color: var(--color-text-secondary); font-size: 0.75rem;">(${a.email})</span>
+            </span>
+            <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: ${a.role === 'Dueño' ? '#fef3c7' : '#f3f4f6'}; color: ${a.role === 'Dueño' ? '#92400e' : 'var(--color-text-secondary)'}; font-weight: 700;">
+              ${a.role}
+            </span>
+          </div>
+        `).join('') : `
+          <span style="font-size: 0.8rem; color: var(--color-text-muted); font-style: italic;">No hay colaboradores registrados</span>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+// Helpers para el Panel Admin
+function selectClientForEdit(clientId) {
+  selectedAdminClientId = clientId;
+  renderAllTabs();
+}
+
+function toggleAdminCustomPlanFields(planValue) {
+  const customPanel = document.getElementById('admin-apiario-custom-panel');
+  const expansionPanel = document.getElementById('admin-expansion-panel');
+  const limitContacts = document.getElementById('admin-edit-contacts');
+  const limitAgents = document.getElementById('admin-edit-agents');
+  
+  if (planValue === 'Apiario') {
+    if (customPanel) customPanel.style.display = 'block';
+    if (expansionPanel) expansionPanel.style.display = 'none';
+    if (limitContacts) {
+      limitContacts.removeAttribute('disabled');
+      limitContacts.style.background = '#ffffff';
+    }
+    if (limitAgents) {
+      limitAgents.removeAttribute('disabled');
+      limitAgents.style.background = '#ffffff';
+    }
+  } else {
+    if (customPanel) customPanel.style.display = 'none';
+    if (expansionPanel) expansionPanel.style.display = 'block';
+    if (limitContacts) {
+      limitContacts.setAttribute('disabled', 'true');
+      limitContacts.style.background = '#f3f4f6';
+    }
+    if (limitAgents) {
+      limitAgents.setAttribute('disabled', 'true');
+      limitAgents.style.background = '#f3f4f6';
+    }
+    
+    // Reset limits based on base + expansions
+    const baseLimits = PLAN_LIMITS[planValue] || PLAN_LIMITS['Panal'];
+    const extraAgents = parseInt(document.getElementById('admin-edit-extra-agents')?.value) || 0;
+    const extraPacks = parseInt(document.getElementById('admin-edit-extra-packs')?.value) || 0;
+    
+    if (limitContacts) limitContacts.value = baseLimits.contacts + (extraPacks * 50);
+    if (limitAgents) limitAgents.value = baseLimits.agents + extraAgents;
+  }
+}
+
+function changeAdminExpansionField(field, delta) {
+  const hiddenInput = document.getElementById(field === 'agents' ? 'admin-edit-extra-agents' : 'admin-edit-extra-packs');
+  const textVal = document.getElementById(field === 'agents' ? 'admin-val-extra-agents' : 'admin-val-extra-packs');
+  const costVal = document.getElementById('admin-expansion-cost');
+  const limitInput = document.getElementById(field === 'agents' ? 'admin-edit-agents' : 'admin-edit-contacts');
+  
+  if (!hiddenInput || !textVal || !costVal || !limitInput) return;
+  
+  let currentVal = parseInt(hiddenInput.value) || 0;
+  let newVal = currentVal + delta;
+  if (newVal < 0) newVal = 0;
+  
+  hiddenInput.value = newVal;
+  textVal.textContent = `+${newVal}`;
+  
+  // Recalcular límites visuales
+  const plan = document.getElementById('admin-edit-plan').value;
+  const baseLimits = PLAN_LIMITS[plan] || { agents: 3, contacts: 200 };
+  
+  if (field === 'agents') {
+    limitInput.value = baseLimits.agents + newVal;
+  } else {
+    limitInput.value = baseLimits.contacts + (newVal * 50);
+  }
+  
+  // Recalcular costo
+  const extraAgents = parseInt(document.getElementById('admin-edit-extra-agents').value) || 0;
+  const extraPacks = parseInt(document.getElementById('admin-edit-extra-packs').value) || 0;
+  const totalCost = (extraAgents * 24.90) + (extraPacks * 19.90);
+  costVal.textContent = `S/. ${totalCost.toFixed(2)} / mes`;
+}
+
+function adminApplyClientEditChanges(clientId) {
+  const plan = document.getElementById('admin-edit-plan').value;
+  const maxContacts = document.getElementById('admin-edit-contacts').value;
+  const maxAgents = document.getElementById('admin-edit-agents').value;
+  const status = document.getElementById('admin-edit-status').value;
+  const lastPaymentDate = document.getElementById('admin-edit-payment-date').value;
+  const copilot = document.getElementById('admin-edit-copilot')?.checked ?? false;
+  const autopilot = document.getElementById('admin-edit-autopilot')?.checked ?? false;
+  
+  const extraAgents = document.getElementById('admin-edit-extra-agents')?.value ?? 0;
+  const extraPacks = document.getElementById('admin-edit-extra-packs')?.value ?? 0;
+
+  saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, maxAgents, status, lastPaymentDate, extraAgents, extraPacks);
+  selectClientForEdit(null);
+}
+
+function filterAdminClientsTable(query) {
+  const term = query.toLowerCase().trim();
+  const rows = document.querySelectorAll('.admin-client-row');
+  rows.forEach(row => {
+    const searchVal = row.getAttribute('data-search') || '';
+    if (searchVal.includes(term)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+let adminSortField = null;
+let adminSortOrder = 'default'; // 'default', 'asc', 'desc'
+
+function sortAdminTable(field) {
+  if (adminSortField === field) {
+    if (adminSortOrder === 'default') {
+      adminSortOrder = 'asc';
+    } else if (adminSortOrder === 'asc') {
+      adminSortOrder = 'desc';
+    } else {
+      adminSortOrder = 'default';
+    }
+  } else {
+    adminSortField = field;
+    adminSortOrder = 'asc';
+  }
+  
+  renderSortedAdminTable();
+}
+
+function renderSortedAdminTable() {
+  const tbody = document.getElementById('admin-clients-tbody');
+  if (!tbody) return;
+  
+  // 1. Obtener copia de los clientes
+  let list = [...adminClients];
+  
+  // 2. Ordenar según el campo y orden actual
+  if (adminSortField && adminSortOrder !== 'default') {
+    list.sort((a, b) => {
+      let valA, valB;
+      if (adminSortField === 'business') {
+        valA = a.businessName.toLowerCase();
+        valB = b.businessName.toLowerCase();
+        return adminSortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      } else if (adminSortField === 'admin') {
+        valA = a.name.toLowerCase();
+        valB = b.name.toLowerCase();
+        return adminSortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      } else if (adminSortField === 'contacts') {
+        valA = a.contactsCount || 0;
+        valB = b.contactsCount || 0;
+        return adminSortOrder === 'asc' ? valA - valB : valB - valA;
+      } else if (adminSortField === 'plan') {
+        const ranks = { Néctar: 1, Panal: 2, Colmena: 3, Apiario: 4 };
+        valA = ranks[a.plan] || 0;
+        valB = ranks[b.plan] || 0;
+        return adminSortOrder === 'asc' ? valA - valB : valB - valA;
+      }
+      return 0;
+    });
+  }
+  
+  // 3. Renderizar el HTML de las filas
+  const planPills = {
+    Néctar: { bg: '#fef0f0', text: '#fe3c43', tag: '🌸 Néctar' },
+    Panal: { bg: '#fffbeb', text: '#d97706', tag: '🍯 Plan Panal' },
+    Colmena: { bg: '#f5f3ff', text: '#7c3aed', tag: '🐝 Colmena' },
+    Apiario: { bg: '#ecfdf5', text: '#059669', tag: '👑 Apiario' }
+  };
+
+  tbody.innerHTML = list.map(c => {
+    const pill = planPills[c.plan] || planPills.Panal;
+    const searchData = `${c.name.toLowerCase()} ${c.businessName.toLowerCase()} ${c.email.toLowerCase()} ${c.plan.toLowerCase()}`;
+    return `
+      <tr class="admin-client-row" data-search="${searchData}" style="border-bottom: 1px solid var(--border-color); background: #ffffff;">
+        <td style="padding: 12px 14px; font-weight: 600; color: var(--color-text-primary);">${c.businessName}</td>
+        <td style="padding: 12px 14px; color: var(--color-text-secondary);">
+          <div style="font-weight: 500; font-size: 0.85rem;">${c.name}</div>
+          <div style="font-size: 0.75rem; color: var(--color-text-muted);">${c.email}</div>
+        </td>
+        <td style="padding: 12px 14px; color: var(--color-text-secondary); font-size: 0.8rem;">
+          <span>👤 ${c.contactsCount} / ${c.maxContacts}</span>
+          <span style="margin-left: 10px; color: var(--color-text-muted);">👥 ${c.agentsCount} agentes</span>
+        </td>
+        <td style="padding: 12px 14px;">
+          <span style="background: ${pill.bg}; color: ${pill.text}; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 0.68rem; text-transform: uppercase;">
+            ${pill.tag}
+          </span>
+        </td>
+        <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
+          <button onclick="selectClientForEdit(${c.id})" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--color-text-primary); margin-right: 6px; transition: background 0.15s;">
+            ⚙️ Gestionar
+          </button>
+          <button onclick="impersonateClient(${c.id})" style="background: #f3f4f6; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--color-text-primary); transition: background 0.15s;">
+            👁️ Suplantar
+          </button>
+        </td>
+      </tr>
     `;
+  }).join('');
+  
+  // 4. Actualizar iconos de ordenación en el DOM
+  const fields = ['business', 'admin', 'contacts', 'plan'];
+  fields.forEach(f => {
+    const icon = document.getElementById(`sort-icon-${f}`);
+    if (icon) {
+      if (adminSortField === f && adminSortOrder !== 'default') {
+        icon.textContent = adminSortOrder === 'asc' ? ' ▲' : ' ▼';
+        icon.style.color = 'var(--color-accent)';
+      } else {
+        icon.textContent = ' ↕';
+        icon.style.color = 'var(--color-text-muted)';
+      }
+    }
+  });
+
+  // Re-aplicar filtro si hay valor en el buscador
+  const searchInput = document.getElementById('admin-client-search');
+  if (searchInput && searchInput.value) {
+    filterAdminClientsTable(searchInput.value);
   }
 }
 

@@ -40,6 +40,12 @@
         Iniciar sesión con Google
       </button>
 
+      <div style="width: 100%; height: 1px; background: #e5e7eb; margin: 4px 0;"></div>
+
+      <button onclick="loginLocalSimulation()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: #0a0a0a; border: none; border-radius: 999px; padding: 12px; font-family: 'Inter', sans-serif; font-size: 0.88rem; font-weight: 600; color: #ffffff; cursor: pointer; transition: background 0.2s; outline: none;">
+        <span>🚀</span> Iniciar Simulación Local (Demo)
+      </button>
+
       <div style="font-size: 0.72rem; color: #9ca3af; margin-top: 10px;">
         Al ingresar, aceptas nuestros Términos de Servicio y Políticas de Privacidad.
       </div>
@@ -64,6 +70,7 @@
       <select class="proto-btn" id="select-role-simulator" onchange="switchSimulatedRole(this.value)" style="background: #ffffff; border: 1px solid var(--border-color); color: var(--color-text-primary); border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; font-family: var(--font-body); font-weight: 600; cursor: pointer; outline: none; height: 28px;">
         <option value="Administrador" selected>🔑 Simular Dueño (Admin)</option>
         <option value="Agente">👤 Simular Colaborador (Agente)</option>
+        <option value="SuperAdmin">🛡️ Simular Super-Admin Toca</option>
       </select>
       <select class="proto-btn" id="select-plan-simulator" onchange="switchSimulatedPlan(this.value)" style="background: #ffffff; border: 1px solid var(--border-color); color: var(--color-text-primary); border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; font-family: var(--font-body); font-weight: 600; cursor: pointer; outline: none; height: 28px;">
         <option value="Néctar">🌸 Simular Plan Néctar</option>
@@ -620,6 +627,20 @@
        TOAST CONTAINER
        ========================================================================== -->
   <div class="toast-container" id="toast-container"></div>
+
+  <!-- ==========================================================================
+       FLOATING ROLE SWITCHER WIDGET (SOLO PARA PRUEBAS)
+       ========================================================================== -->
+  <div id="floating-proto-switcher" style="position: fixed; bottom: 20px; right: 20px; z-index: 100002; background: #ef4444; color: #ffffff; padding: 12px 16px; border-radius: 14px; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4); display: flex; flex-direction: column; gap: 8px; font-family: 'Outfit', sans-serif; font-size: 0.8rem; border: 2px solid #ffffff; width: 220px;">
+    <div style="font-weight: 800; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px;">
+      <span>⚙️</span> ROLES SIMULADOS (TEST)
+    </div>
+    <select onchange="switchSimulatedRole(this.value)" id="floating-role-select" style="background: #ffffff; color: #111827; border: none; border-radius: 8px; padding: 8px 10px; font-weight: 700; font-size: 0.8rem; cursor: pointer; outline: none; width: 100%; border: 1px solid #d1d5db; height: 34px;">
+      <option value="Administrador">🔑 Simular Dueño (Admin)</option>
+      <option value="Agente">👤 Simular Colaborador (Agente)</option>
+      <option value="SuperAdmin">🛡️ Simular Super-Admin Toca</option>
+    </select>
+  </div>
 
   <!-- ==========================================================================
        JAVASCRIPT LOGIC

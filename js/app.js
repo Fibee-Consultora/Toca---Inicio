@@ -88,6 +88,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateLoginScreen();
   }
 
+  // Carga de sesión de cliente suplantado (impersonated) en inicialización
+  if (impersonatedClientId) {
+    const client = adminClients.find(c => c.id === impersonatedClientId);
+    if (client) {
+      currentBusinessId = 999;
+      currentActivePlan = client.plan;
+      businessProfile = {
+        id: 999,
+        name: client.businessName,
+        sector: "Venta e Importación",
+        description: "Operaciones y gestiones comerciales del cliente suplantado.",
+        tone: "Profesional",
+        promotion: "Envío express",
+        timezone: "America/Lima"
+      };
+      contacts = [
+        { id: 901, name: "Contacto Cliente Slim 1", company: "SlimCorp Tech", type: "Prospecto", context: "Espera catálogo de importaciones.", status: "Toque del día", fu1: TODAY_STR, whatsapp: "+51987654321", suggestedDate: TODAY_STR, lastContacted: "Hace 2 días", leadSource: "Instagram", createdAt: TODAY_STR, lastActivityDate: TODAY_STR, businessId: 999 },
+        { id: 902, name: "Contacto Cliente Slim 2", company: "Gamarra Mayorista", type: "Cliente", context: "Recompra quincenal activa.", status: "Esperando respuesta", whatsapp: "+51912345678", suggestedDate: "2026-07-15", lastContacted: "Ayer", cycleDays: 14, leadSource: "Referido", createdAt: TODAY_STR, lastActivityDate: TODAY_STR, businessId: 999 }
+      ];
+    }
+  }
+
   const tz = businessProfile.timezone || 'America/Lima';
   const appDateEl = document.getElementById('app-date');
   if (appDateEl) {
@@ -1743,6 +1765,16 @@ async function loginWithGoogle() {
   }
 }
 
+function loginLocalSimulation() {
+  isLoggedIn = true;
+  localStorage.setItem('toca_is_logged_in', 'true');
+  updateAdminNavVisibility();
+  updateLoginScreen();
+  updateProfileUI();
+  renderAllTabs();
+  showToast("Sesión iniciada en modo demostración local.");
+}
+
 async function logout() {
   if (window.TocaDB?.isConfigured()) {
     try {
@@ -2274,6 +2306,11 @@ function updateProfileUI() {
     selectRoleEl.value = currentSimulatedUserRole;
   }
 
+  const floatingSelectEl = document.getElementById('floating-role-select');
+  if (floatingSelectEl) {
+    floatingSelectEl.value = currentSimulatedUserRole;
+  }
+
   const planInfo = PLAN_LIMITS[currentActivePlan];
   const planName = planInfo ? planInfo.name : 'Plan Panal';
 
@@ -2300,7 +2337,12 @@ function updateProfileUI() {
     return;
   }
 
-  if (currentSimulatedUserRole === 'Administrador') {
+  if (currentSimulatedUserRole === 'SuperAdmin') {
+    if (nameEl) nameEl.textContent = 'Super Admin';
+    if (roleEl) roleEl.textContent = '🛡️ Toca Master';
+    if (avatarEl) avatarEl.textContent = '🛡️';
+    if (mobileBtnEl) mobileBtnEl.textContent = '🛡️';
+  } else if (currentSimulatedUserRole === 'Administrador') {
     if (nameEl) nameEl.textContent = 'Javier Reyes';
     if (roleEl) roleEl.textContent = planName;
     if (avatarEl) avatarEl.textContent = 'J';
@@ -2324,13 +2366,19 @@ function switchSimulatedRole(role) {
   currentSimulatedUserRole = role;
   localStorage.setItem('toca_current_simulated_role', role);
   
+  updateAdminNavVisibility();
   updateProfileUI();
   renderAllTabs();
   
-  if (role === 'Administrador') {
+  if (role === 'SuperAdmin') {
+    showToast("Simulando rol: Super-Administrador de Toca. Gestión global.");
+    switchTab('admin');
+  } else if (role === 'Administrador') {
     showToast("Simulando rol: Dueño (Administrador) - Javier Reyes. Control total.");
+    if (currentTab === 'admin') switchTab('inicio');
   } else {
     showToast("Simulando rol: Colaborador (Agente) - Sofía Castro. Acceso limitado.");
+    if (currentTab === 'admin') switchTab('inicio');
   }
 }
 
@@ -2567,7 +2615,6 @@ function deleteBusinessWorkspace(id) {
     businesses = businesses.filter(b => b.id !== id);
     
     localStorage.setItem('toca_businesses', JSON.stringify(businesses));
-    
     showToast(`🗑️ Negocio "${name}" y sus contactos eliminados.`);
     
     // Refresh UI
@@ -2577,6 +2624,156 @@ function deleteBusinessWorkspace(id) {
     }
     renderAllTabs();
   }
+}
+
+// ==========================================================================
+// SECCIÓN ADMINISTRATIVA (Simulación de Gestión de Clientes y Planes)
+// ==========================================================================
+
+function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, maxAgents, status, lastPaymentDate, extraAgents, extraPacks) {
+  const client = adminClients.find(c => c.id === clientId);
+  if (!client) return;
+
+  client.plan = plan;
+  client.status = status || "Activo";
+  client.lastPaymentDate = lastPaymentDate || "2026-06-21";
+
+  if (plan === 'Apiario') {
+    // Apiario is custom, limits and toggles are fully editable
+    client.maxContacts = parseInt(maxContacts) || 1000;
+    client.maxAgents = parseInt(maxAgents) || 10;
+    client.copilot = !!copilot;
+    client.autopilot = !!autopilot;
+    client.extraAgents = 0;
+    client.extraPacks = 0;
+  } else {
+    // Fixed plans (Néctar, Panal, Colmena): limits are set dynamically by base limits + expansions
+    const limits = PLAN_LIMITS[plan] || PLAN_LIMITS['Panal'];
+    client.extraAgents = parseInt(extraAgents) || 0;
+    client.extraPacks = parseInt(extraPacks) || 0;
+
+    client.maxContacts = limits.contacts + (client.extraPacks * 50);
+    client.maxAgents = limits.agents + client.extraAgents;
+
+    // Enforce default capabilities of the fixed plans
+    if (plan === 'Néctar') {
+      client.copilot = false;
+      client.autopilot = false;
+    } else if (plan === 'Panal') {
+      client.copilot = true;
+      client.autopilot = false;
+    } else if (plan === 'Colmena') {
+      client.copilot = true;
+      client.autopilot = true;
+    }
+  }
+
+  localStorage.setItem('toca_simulated_admin_clients', JSON.stringify(adminClients));
+  showToast(`✓ Cambios guardados para ${client.businessName}.`);
+  
+  // Si estamos suplantando a este cliente, actualizar los límites activos de inmediato
+  if (impersonatedClientId === clientId) {
+    currentActivePlan = plan;
+    localStorage.setItem('toca_current_active_plan', plan);
+  }
+
+  renderAllTabs();
+}
+
+function adminValidatePayment(clientId) {
+  const client = adminClients.find(c => c.id === clientId);
+  if (!client) return;
+
+  client.status = "Activo";
+  client.lastPaymentDate = "2026-06-21";
+
+  localStorage.setItem('toca_simulated_admin_clients', JSON.stringify(adminClients));
+  showToast(`✅ Pago validado con éxito para ${client.businessName}. Cuenta Activada.`);
+  
+  // Refresh modal if open
+  if (selectedAdminClientId === clientId) {
+    renderAllTabs();
+  }
+}
+
+function adminCancelService(clientId) {
+  const client = adminClients.find(c => c.id === clientId);
+  if (!client) return;
+
+  if (confirm(`¿Estás seguro de que deseas cancelar el servicio de ${client.businessName}?`)) {
+    client.status = "Cancelado";
+    localStorage.setItem('toca_simulated_admin_clients', JSON.stringify(adminClients));
+    showToast(`🗑️ Servicio cancelado para ${client.businessName}.`);
+    
+    // Refresh modal if open
+    if (selectedAdminClientId === clientId) {
+      renderAllTabs();
+    }
+  }
+}
+
+function impersonateClient(clientId) {
+  const client = adminClients.find(c => c.id === clientId);
+  if (!client) return;
+
+  impersonatedClientId = clientId;
+  localStorage.setItem('toca_impersonated_client_id', JSON.stringify(clientId));
+
+  // Cambiar el plan activo simulado en el sistema
+  currentActivePlan = client.plan;
+  localStorage.setItem('toca_current_active_plan', client.plan);
+
+  // Simular los datos del negocio y sus contactos correspondientes
+  currentBusinessId = 999;
+  localStorage.setItem('toca_current_business_id', 999);
+
+  businessProfile = {
+    id: 999,
+    name: client.businessName,
+    sector: "Venta e Importación",
+    description: "Operaciones y gestiones comerciales del cliente suplantado.",
+    tone: "Profesional",
+    promotion: "Envío express",
+    timezone: "America/Lima"
+  };
+
+  // Cargar contactos semilla filtrados para el cliente suplantado
+  contacts = [
+    { id: 901, name: "Contacto Cliente Slim 1", company: "SlimCorp Tech", type: "Prospecto", context: "Espera catálogo de importaciones.", status: "Toque del día", fu1: TODAY_STR, whatsapp: "+51987654321", suggestedDate: TODAY_STR, lastContacted: "Hace 2 días", leadSource: "Instagram", createdAt: TODAY_STR, lastActivityDate: TODAY_STR, businessId: 999 },
+    { id: 902, name: "Contacto Cliente Slim 2", company: "Gamarra Mayorista", type: "Cliente", context: "Recompra quincenal activa.", status: "Esperando respuesta", whatsapp: "+51912345678", suggestedDate: "2026-07-15", lastContacted: "Ayer", cycleDays: 14, leadSource: "Referido", createdAt: TODAY_STR, lastActivityDate: TODAY_STR, businessId: 999 }
+  ];
+
+  showToast(`👁️ Suplantando sesión de: ${client.businessName}.`);
+  
+  // Salir de la pestaña admin y redirigir a inicio para ver el dashboard del cliente
+  switchTab('inicio');
+  renderAllTabs();
+  updateProfileUI();
+}
+
+function stopImpersonating() {
+  if (!impersonatedClientId) return;
+
+  impersonatedClientId = null;
+  localStorage.removeItem('toca_impersonated_client_id');
+
+  // Restaurar el negocio original (Polos Mayoristas Lima)
+  currentBusinessId = 1;
+  localStorage.setItem('toca_current_business_id', 1);
+  businessProfile = businesses.find(b => b.id === 1) || businesses[0];
+
+  // Restaurar rol a SuperAdmin
+  currentSimulatedUserRole = 'SuperAdmin';
+  localStorage.setItem('toca_current_simulated_role', 'SuperAdmin');
+  
+  // Recargar contactos originales
+  contacts = [...SEED_CONTACTS];
+
+  showToast("Sesión restaurada a Super-Administrador.");
+  
+  switchTab('admin');
+  renderAllTabs();
+  updateProfileUI();
 }
 
 
