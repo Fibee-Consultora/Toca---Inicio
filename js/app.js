@@ -606,13 +606,7 @@ function submitProspectForm(event) {
   
   // Spinner & disable
   submitBtn.disabled = true;
-  submitBtn.innerHTML = `
-    <svg class="animate-spin" style="animation: spin 1s linear infinite; margin-right: 6px; display: inline-block; vertical-align: middle;" width="14" height="14" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity:0.25;"></circle>
-      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="#000000"></path>
-    </svg>
-    Validando notas con IA...
-  `;
+  submitBtn.innerHTML = `${getSpinnerHtml('sm')}Validando notas con IA...`;
 
   setTimeout(async () => {
     const newProspect = {
@@ -711,13 +705,7 @@ function submitClienteForm(event) {
   
   // Spinner & disable
   submitBtn.disabled = true;
-  submitBtn.innerHTML = `
-    <svg class="animate-spin" style="animation: spin 1s linear infinite; margin-right: 6px; display: inline-block; vertical-align: middle;" width="14" height="14" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity:0.25;"></circle>
-      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="#000000"></path>
-    </svg>
-    Validando notas con IA...
-  `;
+  submitBtn.innerHTML = `${getSpinnerHtml('sm')}Validando notas con IA...`;
 
   setTimeout(async () => {
     const newClient = {
@@ -1606,6 +1594,12 @@ function saveBusinessProfile() {
   renderAllTabs();
 }
 
+function getSpinnerHtml(size = 'md') {
+  const sizeClass = size === 'sm' ? 'ui-spinner--sm' : 'ui-spinner--md';
+  const margin = size === 'sm' ? ' style="margin-right: 6px;"' : '';
+  return `<span class="ui-spinner ${sizeClass}"${margin} aria-hidden="true"></span>`;
+}
+
 function getGoogleLoginButtonHtml() {
   return `
     <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right: 8px;">
@@ -1623,13 +1617,7 @@ function setLoginButtonLoading(loading) {
   if (!loginBtn) return;
   loginBtn.disabled = loading;
   loginBtn.innerHTML = loading
-    ? `
-      <svg class="animate-spin" style="animation: spin 1s linear infinite; margin-right: 8px;" width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity:0.25;"></circle>
-        <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="#000000"></path>
-      </svg>
-      Iniciando sesión...
-    `
+    ? `${getSpinnerHtml('md')}Iniciando sesión...`
     : getGoogleLoginButtonHtml();
 }
 

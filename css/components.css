@@ -772,6 +772,33 @@ body.view-mobile .mobile-header-profile-btn {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ui-spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2.5px solid rgba(0, 0, 0, 0.12);
+  border-top-color: #4285F4;
+  animation: spin 0.65s linear infinite;
+  vertical-align: middle;
+}
+
+.ui-spinner--sm {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+}
+
+.ui-spinner--md {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+}
+
 /* Responsive Grid Overrides: Desktop = Grid, Mobile Emulator & Mobile Screens = 1 column */
 body.view-mobile .daily-list,
 body.view-mobile .section-waiting-content,
