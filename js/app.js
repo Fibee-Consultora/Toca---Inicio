@@ -9,6 +9,53 @@ function persistContact(contact) {
   });
 }
 
+function shouldUseSeedContacts() {
+  return !window.TocaDB?.isConfigured() && !currentAuthUser;
+}
+
+function bootstrapAuthenticatedUser(user) {
+  const storageKey = `toca_user_${user.id}`;
+  const meta = user.user_metadata || {};
+  const displayName =
+    meta.full_name || meta.name || user.email?.split('@')[0] || 'Usuario';
+
+  if (!localStorage.getItem(storageKey)) {
+    businesses = [
+      {
+        id: 1,
+        name: 'Mi negocio',
+        sector: 'Otro',
+        description: '',
+        tone: 'Amigable',
+        promotion: '',
+        timezone: 'America/Lima',
+      },
+    ];
+    currentBusinessId = 1;
+    businessProfile = businesses[0];
+    teamAgents = [
+      {
+        name: displayName,
+        email: user.email || '',
+        role: 'Administrador',
+        status: 'Activo',
+      },
+    ];
+    localStorage.setItem(storageKey, 'true');
+    localStorage.setItem(`toca_businesses_${user.id}`, JSON.stringify(businesses));
+    localStorage.setItem(`toca_current_business_id_${user.id}`, String(currentBusinessId));
+    return;
+  }
+
+  const savedBusinesses = localStorage.getItem(`toca_businesses_${user.id}`);
+  if (savedBusinesses) {
+    businesses = JSON.parse(savedBusinesses);
+    currentBusinessId =
+      parseInt(localStorage.getItem(`toca_current_business_id_${user.id}`), 10) || 1;
+    businessProfile = businesses.find((b) => b.id === currentBusinessId) || businesses[0];
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     if (window.TocaDB?.isConfigured()) {
@@ -23,8 +70,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   } catch (err) {
     console.error(err);
-    contacts = [...SEED_CONTACTS];
-    showToast('No se pudo conectar a Supabase. Usando datos locales.');
+    contacts = shouldUseSeedContacts() ? [...SEED_CONTACTS] : [];
+    if (!shouldUseSeedContacts()) {
+      showToast('No se pudieron cargar los contactos.');
+    } else {
+      showToast('No se pudo conectar a Supabase. Usando datos locales.');
+    }
     updateLoginScreen();
   }
 
@@ -1593,6 +1644,7 @@ function updateLoginScreen() {
 function applyAuthUser(user) {
   currentAuthUser = user || null;
   isLoggedIn = !!user;
+  if (user) bootstrapAuthenticatedUser(user);
   updateLoginScreen();
   updateProfileUI();
 }

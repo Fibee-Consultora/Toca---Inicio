@@ -255,7 +255,16 @@ function renderDashboard() {
   const activeContacts = contacts.filter(c => !c.archived && (c.businessId || 1) === currentBusinessId);
   const dailyToques = activeContacts.filter(c => c.status === "Toque del día");
   
-  const greetingName = currentSimulatedUserRole === 'Administrador' ? 'Javier' : 'Sofía';
+  const greetingName = currentAuthUser
+    ? (
+        currentAuthUser.user_metadata?.full_name ||
+        currentAuthUser.user_metadata?.name ||
+        currentAuthUser.email?.split('@')[0] ||
+        'Usuario'
+      ).split(' ')[0]
+    : currentSimulatedUserRole === 'Administrador'
+      ? 'Javier'
+      : 'Sofía';
   document.getElementById('app-greeting').innerHTML = `Hola ${greetingName}, hoy tienes <span style="color:var(--color-accent); font-weight:700;">${dailyToques.length}</span> toques pendientes.`;
   
   const totalInitialCount = dailyToques.length;
