@@ -2790,4 +2790,38 @@ function stopImpersonating() {
   updateProfileUI();
 }
 
+// Integración con extensión de WhatsApp: abrir contacto o crear nuevo pre-llenado
+window.addEventListener("toca_open_contact", (e) => {
+  const { name, phone } = e.detail;
+  if (!name) return;
+
+  const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
+  const contact = contacts.find(c => {
+    const contactNameMatch = c.name.toLowerCase() === name.toLowerCase();
+    const contactPhoneMatch = cleanPhone && c.whatsapp && c.whatsapp.replace(/\D/g, "").includes(cleanPhone);
+    return contactNameMatch || contactPhoneMatch;
+  });
+
+  if (contact) {
+    // Si existe, abrir el modal de detalles
+    openEditCycleDetail(contact.id);
+    showToast(`Mostrando detalles de: ${contact.name}`);
+  } else {
+    // Si no existe, abrir modal nuevo contacto pre-llenando campos
+    openNewContactModal();
+    
+    const pName = document.getElementById('p-name');
+    const pWhatsapp = document.getElementById('p-whatsapp');
+    const cName = document.getElementById('c-name');
+    const cWhatsapp = document.getElementById('c-whatsapp');
+
+    if (pName) pName.value = name;
+    if (pWhatsapp) pWhatsapp.value = phone || "";
+    if (cName) cName.value = name;
+    if (cWhatsapp) cWhatsapp.value = phone || "";
+
+    showToast(`Preparando nuevo contacto: ${name}`);
+  }
+});
+
 
