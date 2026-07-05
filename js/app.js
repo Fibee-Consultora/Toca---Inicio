@@ -2790,9 +2790,9 @@ function stopImpersonating() {
   updateProfileUI();
 }
 
-// Integración con extensión de WhatsApp: abrir contacto o crear nuevo pre-llenado
-window.addEventListener("toca_open_contact", (e) => {
-  const { name, phone, company, context, fu1, fu2, fu3 } = e.detail;
+// Función unificada para procesar la apertura de un contacto en el dashboard
+function handleOpenContact(detail) {
+  const { name, phone, company, context, fu1, fu2, fu3 } = detail;
   if (!name) return;
 
   const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
@@ -2853,6 +2853,18 @@ window.addEventListener("toca_open_contact", (e) => {
     }
 
     showToast(`Preparando nuevo contacto: ${name}`);
+  }
+}
+
+// Escuchar CustomEvent desde la extensión
+window.addEventListener("toca_open_contact", (e) => {
+  handleOpenContact(e.detail);
+});
+
+// Escuchar postMessage desde el isolated content script
+window.addEventListener("message", (e) => {
+  if (e.data && e.data.source === "toca-extension" && e.data.action === "openContact") {
+    handleOpenContact(e.data.detail);
   }
 });
 
