@@ -2792,7 +2792,7 @@ function stopImpersonating() {
 
 // Integración con extensión de WhatsApp: abrir contacto o crear nuevo pre-llenado
 window.addEventListener("toca_open_contact", (e) => {
-  const { name, phone } = e.detail;
+  const { name, phone, company, context, fu1, fu2, fu3 } = e.detail;
   if (!name) return;
 
   const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
@@ -2812,13 +2812,45 @@ window.addEventListener("toca_open_contact", (e) => {
     
     const pName = document.getElementById('p-name');
     const pWhatsapp = document.getElementById('p-whatsapp');
+    const pCompany = document.getElementById('p-company');
+    const pContext = document.getElementById('p-context');
+    const pFu1 = document.getElementById('p-fu1');
+    const pFu2 = document.getElementById('p-fu2');
+    const pFu3 = document.getElementById('p-fu3');
+
     const cName = document.getElementById('c-name');
     const cWhatsapp = document.getElementById('c-whatsapp');
+    const cCompany = document.getElementById('c-company');
+    const cContext = document.getElementById('c-context');
 
     if (pName) pName.value = name;
     if (pWhatsapp) pWhatsapp.value = phone || "";
+    if (pCompany) pCompany.value = company || "";
+    if (pContext) pContext.value = context || "";
+
     if (cName) cName.value = name;
     if (cWhatsapp) cWhatsapp.value = phone || "";
+    if (cCompany) cCompany.value = company || "";
+    if (cContext) cContext.value = context || "";
+
+    if (context) {
+      if (fu1 && fu2 && fu3) {
+        if (pFu1) pFu1.value = fu1;
+        if (pFu2) pFu2.value = fu2;
+        if (pFu3) pFu3.value = fu3;
+
+        const suggestionDiv = document.getElementById('p-context-ia-suggestion');
+        if (suggestionDiv) {
+          const fmt1 = fu1.split('-').reverse().join('/');
+          const fmt2 = fu2.split('-').reverse().join('/');
+          const fmt3 = fu3.split('-').reverse().join('/');
+          suggestionDiv.style.display = 'block';
+          suggestionDiv.innerHTML = `✨ IA sugiere fechas (mencionada): fu1 (${fmt1}), fu2 (${fmt2}), fu3 (${fmt3})`;
+        }
+      } else {
+        handleContextInput(context);
+      }
+    }
 
     showToast(`Preparando nuevo contacto: ${name}`);
   }
