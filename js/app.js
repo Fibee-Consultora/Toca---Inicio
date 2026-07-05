@@ -128,8 +128,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   populateBusinessSwitchers();
   updateProfileUI();
-  renderAllTabs();
   updateLoginScreen();
+  
+  // Sincronizar datos por defecto con localStorage para la extensión
+  if (!localStorage.getItem('toca_current_active_plan')) {
+    localStorage.setItem('toca_current_active_plan', currentActivePlan);
+  }
+  if (!localStorage.getItem('toca_current_simulated_role')) {
+    localStorage.setItem('toca_current_simulated_role', currentSimulatedUserRole);
+  }
+  if (!localStorage.getItem('toca_business_profile')) {
+    localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
+  }
+  if (!localStorage.getItem('toca_team_agents')) {
+    localStorage.setItem('toca_team_agents', JSON.stringify(teamAgents));
+  }
+  renderAllTabs();
 });
 
 function addSystemHistoryLog(contact, text) {
