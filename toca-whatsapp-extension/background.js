@@ -1,6 +1,6 @@
 console.log("[Toca Extension] Service Worker (background.js) activo.");
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.action === "openContactInToca") {
     try {
       const name = message.name || '';
