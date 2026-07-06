@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Toca WhatsApp Connector",
+  "version": "2.0.0",
+  "description": "Botón discreto para vincular chats de WhatsApp Web con tu Dashboard local de Toca",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*.whatsapp.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.whatsapp.com/*"
+      ],
+      "js": ["content_whatsapp.js"],
+      "run_at": "document_end"
+    }
+  ]
+}
