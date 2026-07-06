@@ -849,10 +849,6 @@ function getAdminModalHtml(client) {
                 <input type="checkbox" id="admin-edit-copilot" ${client.copilot ? 'checked' : ''} style="cursor: pointer; width: 16px; height: 16px;">
                 Activar Extensión Manual (Copilot)
               </label>
-              <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #78350f; cursor: pointer; font-weight: 600;">
-                <input type="checkbox" id="admin-edit-autopilot" ${client.autopilot ? 'checked' : ''} style="cursor: pointer; width: 16px; height: 16px;">
-                Activar Respuestas Automáticas (Autopilot)
-              </label>
             </div>
           </div>
 
@@ -979,12 +975,11 @@ function adminApplyClientEditChanges(clientId) {
   const status = document.getElementById('admin-edit-status').value;
   const lastPaymentDate = document.getElementById('admin-edit-payment-date').value;
   const copilot = document.getElementById('admin-edit-copilot')?.checked ?? false;
-  const autopilot = document.getElementById('admin-edit-autopilot')?.checked ?? false;
   
   const extraAgents = document.getElementById('admin-edit-extra-agents')?.value ?? 0;
   const extraPacks = document.getElementById('admin-edit-extra-packs')?.value ?? 0;
 
-  saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, maxAgents, status, lastPaymentDate, extraAgents, extraPacks);
+  saveClientPlanChanges(clientId, plan, copilot, maxContacts, maxAgents, status, lastPaymentDate, extraAgents, extraPacks);
   selectClientForEdit(null);
 }
 

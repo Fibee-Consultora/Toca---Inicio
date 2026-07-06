@@ -1,3 +1,6 @@
+let pendingContactOpen = null;
+let appInitialized = false;
+
 // ==========================================================================
 // INITIALIZATION
 // ==========================================================================
@@ -143,7 +146,38 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!localStorage.getItem('toca_team_agents')) {
     localStorage.setItem('toca_team_agents', JSON.stringify(teamAgents));
   }
+  // Asegurar que Grethy Casavilca existe para la prueba local del usuario
+  if (!contacts.some(c => c.name === "Grethy Casavilca" || c.whatsapp === "+51922840196")) {
+    contacts.unshift({
+      id: 99,
+      name: "Grethy Casavilca",
+      company: "Casavilca Import",
+      type: "Prospecto",
+      context: "Preguntando por la app toca..",
+      status: "Toque del día",
+      fu1: "2026-06-21",
+      fu2: "",
+      fu3: "",
+      whatsapp: "+51922840196",
+      suggestedDate: "2026-06-21",
+      lastContacted: "Hace 1 día",
+      leadSource: "WhatsApp",
+      createdAt: "2026-06-20",
+      lastActivityDate: "2026-06-21",
+      businessId: currentBusinessId
+    });
+  }
   renderAllTabs();
+  appInitialized = true;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('openModal') === 'true') {
+    const name = urlParams.get('name');
+    const phone = urlParams.get('phone');
+    const context = urlParams.get('context') || '';
+    window.history.replaceState({}, document.title, window.location.pathname);
+    sessionStorage.setItem('toca_pending_lead', JSON.stringify({ name, phone, context }));
+  }
 });
 
 function addSystemHistoryLog(contact, text) {
@@ -515,15 +549,20 @@ function actionCopyMessage(id, elementId, btn) {
 // ==========================================================================
 // MODAL: NUEVO CONTACTO DIALOG
 // ==========================================================================
-function openNewContactModal() {
+function openNewContactModal(autoType = null) {
   const modal = document.getElementById('new-contact-modal');
   modal.classList.add('open');
   
-  selectContactType(lastUsedType);
-  
-  document.getElementById('modal-step-selection').style.display = 'block';
-  document.getElementById('modal-step-form-prospecto').style.display = 'none';
-  document.getElementById('modal-step-form-cliente').style.display = 'none';
+  if (autoType) {
+    selectedTypeInModal = autoType;
+    selectContactType(autoType);
+    proceedToForm();
+  } else {
+    selectContactType(lastUsedType);
+    document.getElementById('modal-step-selection').style.display = 'block';
+    document.getElementById('modal-step-form-prospecto').style.display = 'none';
+    document.getElementById('modal-step-form-cliente').style.display = 'none';
+  }
 
   document.getElementById('p-fu1').value = TODAY_STR;
   
@@ -1670,6 +1709,21 @@ function updateLoginScreen() {
     loginScreen.style.display = isLoggedIn ? 'none' : 'flex';
   }
   if (!isLoggedIn) setLoginButtonLoading(false);
+
+  if (isLoggedIn) {
+    const pendingLeadStr = sessionStorage.getItem('toca_pending_lead');
+    if (pendingLeadStr) {
+      try {
+        const pendingLead = JSON.parse(pendingLeadStr);
+        sessionStorage.removeItem('toca_pending_lead');
+        setTimeout(() => {
+          handleOpenContact(pendingLead);
+        }, 300);
+      } catch (e) {
+        console.error("Error al parsear pending lead de sessionStorage:", e);
+      }
+    }
+  }
 }
 
 function applyAuthUser(user) {
@@ -2027,8 +2081,9 @@ function extractSuggestedDateFromContext(text) {
   if (match) {
     const dayNum = parseInt(match[1]);
     if (dayNum >= 1 && dayNum <= 31) {
-      let month = 5; // 0-indexed: June is 5
-      let year = 2026;
+      const currentToday = new Date(TODAY);
+      let month = currentToday.getMonth();
+      let year = currentToday.getFullYear();
       
       const monthName = match[2];
       if (monthName) {
@@ -2038,9 +2093,13 @@ function extractSuggestedDateFromContext(text) {
           month = idx;
         }
       } else {
-        // If no month is specified, and the day is in the past relative to June 21, assume next month (July)
-        if (dayNum < 21) {
-          month = 6; // July
+        // If no month is specified, and the day is in the past relative to today, assume next month
+        if (dayNum < currentToday.getDate()) {
+          month += 1;
+          if (month > 11) {
+            month = 0;
+            year += 1;
+          }
         }
       }
       
@@ -2792,23 +2851,110 @@ function stopImpersonating() {
 
 // Función unificada para procesar la apertura de un contacto en el dashboard
 function handleOpenContact(detail) {
-  const { name, phone, company, context, fu1, fu2, fu3 } = detail;
+  if (!appInitialized) {
+    pendingContactOpen = detail;
+    console.log("App not fully initialized. Saving pending contact open event:", detail);
+    return;
+  }
+  const { name, phone, company, context, fu1, fu2, fu3, type } = detail;
   if (!name) return;
 
   const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
   const contact = contacts.find(c => {
-    const contactNameMatch = c.name.toLowerCase() === name.toLowerCase();
-    const contactPhoneMatch = cleanPhone && c.whatsapp && c.whatsapp.replace(/\D/g, "").includes(cleanPhone);
+    // 1. Comparación tolerante de nombres (minúsculas, sin caracteres especiales, coincidencia de subcadena o primeras 10 letras)
+    const norm = (str) => (str || "").toLowerCase().replace(/[^a-z0-9]/g, "").trim();
+    const name1 = norm(c.name);
+    const name2 = norm(name);
+    const contactNameMatch = name1 && name2 && (
+      name1.includes(name2) || 
+      name2.includes(name1) || 
+      (name1.substring(0, 10) === name2.substring(0, 10))
+    );
+
+    // 2. Comparación robusta de teléfonos (últimos 9 dígitos o subcadena)
+    let contactPhoneMatch = false;
+    if (cleanPhone && c.whatsapp) {
+      const cClean = c.whatsapp.replace(/\D/g, "");
+      if (cClean && cleanPhone) {
+        const last9_1 = cClean.slice(-9);
+        const last9_2 = cleanPhone.slice(-9);
+        contactPhoneMatch = cClean.includes(cleanPhone) || 
+                            cleanPhone.includes(cClean) || 
+                            (last9_1.length >= 7 && last9_1 === last9_2);
+      }
+    }
+
     return contactNameMatch || contactPhoneMatch;
   });
 
   if (contact) {
-    // Si existe, abrir el modal de detalles
+    let updated = false;
+    
+    // 1. Agregar nuevo contexto de chat al historial si existe
+    if (context) {
+      contact.context = context; // Actualizar la descripción/contexto actual
+      addSystemHistoryLog(contact, `Mensajes sincronizados desde WhatsApp:\n${context}`);
+      updated = true;
+    }
+    
+    // 2. Actualizar fechas de seguimiento del contacto
+    if (contact.type === 'Prospecto') {
+      let fu1Str = '';
+      const parsedDate = extractSuggestedDateFromContext(context || '');
+      if (parsedDate) {
+        fu1Str = parsedDate;
+      } else {
+        // Secuencia por defecto: hoy (7 de julio de 2026) + 3 días
+        const d1 = new Date(TODAY);
+        d1.setDate(d1.getDate() + 3);
+        const y = d1.getFullYear();
+        const m = String(d1.getMonth() + 1).padStart(2, '0');
+        const d = String(d1.getDate()).padStart(2, '0');
+        fu1Str = `${y}-${m}-${d}`;
+      }
+      
+      const d2 = new Date(fu1Str + "T00:00:00");
+      d2.setDate(d2.getDate() + 4);
+      const fu2Str = `${d2.getFullYear()}-${String(d2.getMonth() + 1).padStart(2, '0')}-${String(d2.getDate()).padStart(2, '0')}`;
+      
+      const d3 = new Date(fu2Str + "T00:00:00");
+      d3.setDate(d3.getDate() + 4);
+      const fu3Str = `${d3.getFullYear()}-${String(d3.getMonth() + 1).padStart(2, '0')}-${String(d3.getDate()).padStart(2, '0')}`;
+      
+      contact.fu1 = fu1Str;
+      contact.fu2 = fu2Str;
+      contact.fu3 = fu3Str;
+      contact.suggestedDate = fu1Str;
+      
+      addSystemHistoryLog(contact, `Seguimientos reprogramados automáticamente tras sincronizar WhatsApp: fu1 (${fu1Str.split('-').reverse().join('/')}), fu2 (${fu2Str.split('-').reverse().join('/')}), fu3 (${fu3Str.split('-').reverse().join('/')}).`);
+      updated = true;
+    } else if (contact.type === 'Cliente') {
+      // Clientes: recalcular sugerido según su ciclo
+      if (contact.cycleDays) {
+        const sugDate = new Date(TODAY);
+        sugDate.setDate(sugDate.getDate() + contact.cycleDays);
+        contact.suggestedDate = `${sugDate.getFullYear()}-${String(sugDate.getMonth() + 1).padStart(2, '0')}-${String(sugDate.getDate()).padStart(2, '0')}`;
+        addSystemHistoryLog(contact, `Contacto recurrente reprogramado automáticamente para el ${contact.suggestedDate.split('-').reverse().join('/')}.`);
+      } else {
+        const sugDate = new Date(TODAY);
+        sugDate.setDate(sugDate.getDate() + 7);
+        contact.suggestedDate = `${sugDate.getFullYear()}-${String(sugDate.getMonth() + 1).padStart(2, '0')}-${String(sugDate.getDate()).padStart(2, '0')}`;
+        addSystemHistoryLog(contact, `Contacto fijo sugerido automáticamente para el ${contact.suggestedDate.split('-').reverse().join('/')}.`);
+      }
+      updated = true;
+    }
+    
+    if (updated) {
+      persistContact(contact);
+    }
+    
+    // Re-renderizar pestañas y abrir detalles del contacto
+    renderAllTabs();
     openEditCycleDetail(contact.id);
-    showToast(`Mostrando detalles de: ${contact.name}`);
+    showToast(`Historial y seguimientos actualizados para: ${contact.name}`);
   } else {
-    // Si no existe, abrir modal nuevo contacto pre-llenando campos
-    openNewContactModal();
+    // Si no existe, abrir modal nuevo contacto pre-llenando campos y seleccionando el tipo directamente
+    openNewContactModal(type || "Prospecto");
     
     const pName = document.getElementById('p-name');
     const pWhatsapp = document.getElementById('p-whatsapp');
