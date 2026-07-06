@@ -439,6 +439,20 @@ function getVisibleContacts() {
   return contacts;
 }
 
+function getWhatsAppChatHistory() {
+  const messageNodes = document.querySelectorAll('div.message-in, div.message-out');
+  const history = [];
+  messageNodes.forEach(node => {
+    const textEl = node.querySelector('span.selectable-text');
+    if (textEl) {
+      const text = textEl.innerText;
+      const isOut = node.classList.contains('message-out');
+      history.push(`${isOut ? 'Tú' : 'Cliente'}: ${text}`);
+    }
+  });
+  return history.slice(-12).join('\n');
+}
+
 // 4. Renderizar la lista de contactos en el popover
 function renderContactsList(filterQuery = "") {
   listContainer.innerHTML = "";
@@ -460,28 +474,55 @@ function renderContactsList(filterQuery = "") {
     item.innerHTML = `👤 <span>${contact.name}</span>${phoneLabel}`;
 
     item.onclick = () => {
-      console.log("[Toca Extension] Contacto seleccionado:", { name: contact.name, phone: contact.phone });
+      item.innerHTML = `⏳ <span>Sincronizando...</span>`;
+      item.style.pointerEvents = "none";
 
-      try {
-        chrome.runtime.sendMessage({
-          action: "openContactInToca",
-          name: contact.name,
-          phone: contact.phone,
-          context: "",
-        }, () => {
-          if (chrome.runtime.lastError) {
-            console.error("[Toca Extension] Error de runtime:", chrome.runtime.lastError.message);
-            alert("⚠️ Error: No se pudo conectar con la extensión. Intenta recargar (F5) la pestaña de WhatsApp Web.");
-          } else {
-            console.log("[Toca Extension] Contacto enviado correctamente a Toca");
+      // Intentar buscar y abrir el chat en la barra lateral
+      let clicked = false;
+      const pane = document.getElementById('pane-side');
+      if (pane) {
+        const rows = pane.querySelectorAll('div[role="row"]');
+        for (const row of rows) {
+          const spans = row.querySelectorAll('span[title]');
+          for (const s of spans) {
+            if ((s.getAttribute('title') || '').trim() === contact.name) {
+              row.click();
+              clicked = true;
+              break;
+            }
           }
-        });
-      } catch (err) {
-        console.error("[Toca Extension] Excepción al enviar contacto:", err);
-        alert("⚠️ La extensión se ha actualizado. Por favor, refresca (F5) la página de WhatsApp Web para volver a sincronizar.");
+          if (clicked) break;
+        }
       }
 
-      popover.style.display = "none";
+      // Esperar 800ms a que el chat cargue y recolectar/enviar los datos
+      setTimeout(() => {
+        const context = getWhatsAppChatHistory();
+        console.log("[Toca Extension] Sincronizando:", { name: contact.name, phone: contact.phone, context });
+
+        try {
+          chrome.runtime.sendMessage({
+            action: "openContactInToca",
+            name: contact.name,
+            phone: contact.phone,
+            context: context,
+          }, () => {
+            if (chrome.runtime.lastError) {
+              console.error("[Toca Extension] Error de runtime:", chrome.runtime.lastError.message);
+              alert("⚠️ Error: No se pudo conectar con la extensión. Intenta recargar (F5) la pestaña de WhatsApp Web.");
+            } else {
+              console.log("[Toca Extension] Contacto enviado correctamente a Toca");
+            }
+          });
+        } catch (err) {
+          console.error("[Toca Extension] Excepción al enviar contacto:", err);
+          alert("⚠️ La extensión se ha actualizado. Por favor, refresca (F5) la página de WhatsApp Web para volver a sincronizar.");
+        }
+
+        popover.style.display = "none";
+        item.style.pointerEvents = "";
+        item.innerHTML = `👤 <span>${contact.name}</span>${phoneLabel}`;
+      }, 800);
     };
 
     listContainer.appendChild(item);
