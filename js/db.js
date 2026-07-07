@@ -160,7 +160,7 @@
     if (!user) return null;
     const { data, error } = await client
       .from('profiles')
-      .select('id, email, full_name, avatar_url, plan, created_at')
+      .select('id, email, full_name, avatar_url, plan, created_at, last_session_id')
       .eq('id', user.id)
       .maybeSingle();
     if (error) throw error;
@@ -184,6 +184,14 @@
     if (error) throw error;
   }
 
+  async function updateSessionToken(userId, token) {
+    const { error } = await client
+      .from('profiles')
+      .update({ last_session_id: token, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+    if (error) throw error;
+  }
+
   window.TocaDB = {
     isConfigured,
     init,
@@ -195,6 +203,7 @@
     loadMyProfile,
     loadAllProfiles,
     updateUserPlan,
+    updateSessionToken,
     loadContacts,
     insertContact,
     updateContact,

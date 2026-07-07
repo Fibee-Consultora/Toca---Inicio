@@ -1423,7 +1423,6 @@ function renderProfileModalContent() {
             ` : `
               <div style="margin-top: 8px;">
                 <button class="btn-secondary" onclick="window.open('https://wa.me/51987654321?text=Hola%20asesor%20de%20Fibee%2C%20quisiera%20cambiar%20mi%20plan%20al%20Plan%20N%C3%A9ctar', '_blank')" style="width: 100%; justify-content: center; font-size: 0.72rem; padding: 6px; border-color: var(--border-color); color: var(--color-text-primary); background: #ffffff; cursor: pointer; border-radius: 6px;">Contratar</button>
-                <div style="text-align: center; margin-top: 4px;"><span style="font-size: 0.6rem; color: #3b82f6; cursor: pointer; text-decoration: underline;" onclick="switchSimulatedPlan('Néctar')">⚡ Simular Activación</span></div>
               </div>
             `}
           </div>
@@ -1453,7 +1452,6 @@ function renderProfileModalContent() {
             ` : `
               <div style="margin-top: 8px;">
                 <button class="btn-secondary" onclick="window.open('https://wa.me/51987654321?text=Hola%20asesor%20de%20Fibee%2C%20quisiera%20cambiar%20mi%20plan%20al%20Plan%20Panal', '_blank')" style="width: 100%; justify-content: center; font-size: 0.72rem; padding: 6px; border-color: var(--border-color); color: var(--color-text-primary); background: #ffffff; cursor: pointer; border-radius: 6px;">Contratar</button>
-                <div style="text-align: center; margin-top: 4px;"><span style="font-size: 0.6rem; color: #3b82f6; cursor: pointer; text-decoration: underline;" onclick="switchSimulatedPlan('Panal')">⚡ Simular Activación</span></div>
               </div>
             `}
           </div>
@@ -1482,7 +1480,6 @@ function renderProfileModalContent() {
             ` : `
               <div style="margin-top: 8px;">
                 <button class="btn-secondary" onclick="window.open('https://wa.me/51987654321?text=Hola%20asesor%20de%20Fibee%2C%20quisiera%20cambiar%20mi%20plan%20al%20Plan%20Colmena', '_blank')" style="width: 100%; justify-content: center; font-size: 0.72rem; padding: 6px; border-color: var(--border-color); color: var(--color-text-primary); background: #ffffff; cursor: pointer; border-radius: 6px;">Contratar</button>
-                <div style="text-align: center; margin-top: 4px;"><span style="font-size: 0.6rem; color: #3b82f6; cursor: pointer; text-decoration: underline;" onclick="switchSimulatedPlan('Colmena')">⚡ Simular Activación</span></div>
               </div>
             `}
           </div>
@@ -1511,7 +1508,6 @@ function renderProfileModalContent() {
             ` : `
               <div style="margin-top: 8px;">
                 <button class="btn-primary" onclick="window.open('https://wa.me/51987654321?text=Hola%20asesor%20de%20Fibee%2C%20quisiera%20cotizar%20un%20Plan%20Apiario%20personalizado%20para%20mi%20empresa', '_blank')" style="width: 100%; justify-content: center; font-size: 0.72rem; background: var(--color-accent); color: #0a0a0a; border: none; cursor: pointer; border-radius: 6px; font-weight: 600;">Consultar</button>
-                <div style="text-align: center; margin-top: 4px;"><span style="font-size: 0.6rem; color: #3b82f6; cursor: pointer; text-decoration: underline;" onclick="switchSimulatedPlan('Apiario')">⚡ Simular Activación</span></div>
               </div>
             `}
           </div>
@@ -1570,7 +1566,6 @@ function renderProfileModalContent() {
           ${purchasedExtraAgents > 0 || purchasedExtraPacks > 0 ? `
             <div style="margin-top: 4px; border-top: 1px solid var(--border-color); padding-top: 4px;">
               Adicionales Activos: +${purchasedExtraAgents} agentes, +${purchasedExtraPacks} packs de contactos.
-              <span style="color: #ef4444; text-decoration: underline; cursor: pointer; font-weight: 600; margin-left: 6px;" onclick="resetSimulatedAddons()">Restablecer a 0</span>
             </div>
           ` : ''}
         </div>

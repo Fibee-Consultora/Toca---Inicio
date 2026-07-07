@@ -146,27 +146,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!localStorage.getItem('toca_team_agents')) {
     localStorage.setItem('toca_team_agents', JSON.stringify(teamAgents));
   }
-  // Asegurar que Grethy Casavilca existe para la prueba local del usuario
-  if (!contacts.some(c => c.name === "Grethy Casavilca" || c.whatsapp === "+51922840196")) {
-    contacts.unshift({
-      id: 99,
-      name: "Grethy Casavilca",
-      company: "Casavilca Import",
-      type: "Prospecto",
-      context: "Preguntando por la app toca..",
-      status: "Toque del día",
-      fu1: "2026-06-21",
-      fu2: "",
-      fu3: "",
-      whatsapp: "+51922840196",
-      suggestedDate: "2026-06-21",
-      lastContacted: "Hace 1 día",
-      leadSource: "WhatsApp",
-      createdAt: "2026-06-20",
-      lastActivityDate: "2026-06-21",
-      businessId: currentBusinessId
-    });
-  }
   renderAllTabs();
   appInitialized = true;
 
@@ -890,7 +869,7 @@ function openContactDetailPanel(id) {
       </div>
     `;
   } else if (c.type === 'Prospecto') {
-    headerActionButton = `<button class="btn-primary" style="font-size:0.8rem; padding:8px 14px; background:var(--color-accent); color:#0A0A0A; border-radius:8px; font-weight:600; display:flex; align-items:center; gap:6px; box-shadow:none; border:none;" onclick="convertProspectToClient(${c.id})">🏁 Cerrar lead</button>`;
+    headerActionButton = `<button class="btn-secondary" style="font-size:0.8rem; padding:8px 14px; border-color:var(--border-color); color:var(--color-text-secondary); background:#ffffff;" onclick="showArchiveReasonModal(${c.id})">🗑️ Archivar</button>`;
   } else {
     headerActionButton = `<button class="btn-secondary" style="font-size:0.8rem; padding:8px 14px; border-color:var(--border-color); color:var(--color-text-secondary); background:#ffffff;" onclick="showArchiveReasonModal(${c.id})">🗑️ Archivar</button>`;
   }
@@ -1726,10 +1705,55 @@ function updateLoginScreen() {
   }
 }
 
+let sessionCheckInterval = null;
+let currentSessionToken = null;
+
+function initSessionToken() {
+  currentSessionToken = sessionStorage.getItem('toca_session_token');
+  if (!currentSessionToken) {
+    currentSessionToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    sessionStorage.setItem('toca_session_token', currentSessionToken);
+  }
+}
+initSessionToken();
+
+function startSessionLockChecker(userId) {
+  if (sessionCheckInterval) clearInterval(sessionCheckInterval);
+  sessionCheckInterval = setInterval(async () => {
+    if (!isLoggedIn || !currentAuthUser) {
+      clearInterval(sessionCheckInterval);
+      return;
+    }
+    try {
+      const profile = await window.TocaDB.loadMyProfile();
+      if (profile) {
+        const dbToken = profile.last_session_id;
+        const localToken = sessionStorage.getItem('toca_session_token');
+        if (dbToken && localToken && dbToken !== localToken) {
+          clearInterval(sessionCheckInterval);
+          await window.TocaDB.signOut();
+          alert("⚠️ Sesión cerrada: Se ha iniciado sesión con esta cuenta en otro dispositivo o pestaña.");
+          window.location.reload();
+        }
+      }
+    } catch (err) {
+      console.error("Error checking session lock:", err);
+    }
+  }, 10000); // Check every 10 seconds
+}
+
 function applyAuthUser(user) {
   currentAuthUser = user || null;
   isLoggedIn = !!user;
-  if (user) bootstrapAuthenticatedUser(user);
+  if (user) {
+    bootstrapAuthenticatedUser(user);
+    startSessionLockChecker(user.id);
+  } else {
+    if (sessionCheckInterval) {
+      clearInterval(sessionCheckInterval);
+      sessionCheckInterval = null;
+    }
+  }
   updateAdminNavVisibility();
   updateLoginScreen();
   updateProfileUI();
@@ -1788,6 +1812,15 @@ async function initAuth() {
 
   const { data: { session } } = await window.TocaDB.getSession();
   applyAuthUser(session?.user ?? null);
+  
+  if (session?.user) {
+    try {
+      await window.TocaDB.updateSessionToken(session.user.id, currentSessionToken);
+    } catch (err) {
+      console.error("Error updating session token on load:", err);
+    }
+  }
+  
   if (!session?.user) resetLoginButtonIfNeeded();
 
   let authReady = false;
@@ -1797,6 +1830,13 @@ async function initAuth() {
 
     if (user) {
       applyAuthUser(user);
+      if (event === 'SIGNED_IN') {
+        try {
+          await window.TocaDB.updateSessionToken(user.id, currentSessionToken);
+        } catch (err) {
+          console.error("Error updating session token on SIGNED_IN:", err);
+        }
+      }
       if (authReady && event === 'SIGNED_IN' && !wasLoggedIn) {
         showToast('Sesión iniciada con Google correctamente.');
       }
