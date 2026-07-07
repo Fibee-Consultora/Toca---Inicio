@@ -69,6 +69,11 @@ create policy "profiles_admin_update_any"
   using (lower(auth.jwt() ->> 'email') = 'fibeeconsultoradigital@gmail.com')
   with check (lower(auth.jwt() ->> 'email') = 'fibeeconsultoradigital@gmail.com');
 
+drop policy if exists "profiles_admin_delete_any" on public.profiles;
+create policy "profiles_admin_delete_any"
+  on public.profiles for delete
+  using (lower(auth.jwt() ->> 'email') = 'fibeeconsultoradigital@gmail.com');
+
 -- =============================================================================
 -- 5. Trigger: crear perfil al registrarse con Google
 -- =============================================================================

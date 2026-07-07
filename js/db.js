@@ -155,6 +155,33 @@
     if (error) throw error;
   }
 
+  function parseDbProfile(fullName, dbPlan) {
+    let name = fullName || 'Sin nombre';
+    let plan = dbPlan || 'Panal';
+    let extraAgents = 0;
+    let extraPacks = 0;
+    
+    if (name.includes('|')) {
+      const parts = name.split('|');
+      name = parts[0].trim();
+      for (let i = 1; i < parts.length; i++) {
+        const part = parts[i].trim();
+        if (part.startsWith('plan:')) {
+          plan = part.substring(5);
+        } else if (part.startsWith('agents:')) {
+          extraAgents = parseInt(part.substring(7)) || 0;
+        } else if (part.startsWith('packs:')) {
+          extraPacks = parseInt(part.substring(6)) || 0;
+        }
+      }
+    } else {
+      if (plan === 'Panal' && !fullName) {
+        plan = 'Gratuito';
+      }
+    }
+    return { name, plan, extraAgents, extraPacks };
+  }
+
   async function loadMyProfile() {
     const { data: { user } } = await getClient().auth.getUser();
     if (!user) return null;
@@ -164,6 +191,13 @@
       .eq('id', user.id)
       .maybeSingle();
     if (error) throw error;
+    if (data) {
+      const parsed = parseDbProfile(data.full_name, data.plan);
+      data.full_name = parsed.name;
+      data.plan = parsed.plan;
+      data.extra_agents = parsed.extraAgents;
+      data.extra_packs = parsed.extraPacks;
+    }
     return data;
   }
 
@@ -173,13 +207,42 @@
       .select('id, email, full_name, plan, created_at')
       .order('created_at', { ascending: false });
     if (error) throw error;
+    if (data) {
+      data.forEach(row => {
+        const parsed = parseDbProfile(row.full_name, row.plan);
+        row.full_name = parsed.name;
+        row.plan = parsed.plan;
+        row.extra_agents = parsed.extraAgents;
+        row.extra_packs = parsed.extraPacks;
+      });
+    }
     return data || [];
   }
 
-  async function updateUserPlan(userId, plan) {
+  async function updateUserPlan(userId, planStr, fullName) {
+    const parts = planStr.split('|');
+    const planName = parts[0] || 'Gratuito';
+    let extraAgents = 0;
+    let extraPacks = 0;
+    for (let i = 1; i < parts.length; i++) {
+      if (parts[i].startsWith('agents:')) extraAgents = parseInt(parts[i].substring(7)) || 0;
+      else if (parts[i].startsWith('packs:')) extraPacks = parseInt(parts[i].substring(6)) || 0;
+    }
+
+    let validDbPlan = planName;
+    if (validDbPlan === 'Gratuito') {
+      validDbPlan = 'Néctar';
+    }
+
+    const formattedName = `${fullName || 'Sin nombre'}|plan:${planName}|agents:${extraAgents}|packs:${extraPacks}`;
+
     const { error } = await client
       .from('profiles')
-      .update({ plan, updated_at: new Date().toISOString() })
+      .update({ 
+        plan: validDbPlan, 
+        full_name: formattedName,
+        updated_at: new Date().toISOString() 
+      })
       .eq('id', userId);
     if (error) throw error;
   }

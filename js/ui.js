@@ -535,26 +535,28 @@ async function renderAdminTab() {
     try {
       adminUsers = await window.TocaDB.loadAllProfiles();
       adminClients = adminUsers.map(u => {
-        const dbInfo = parseDbPlan(u.plan);
-        const baseLimits = PLAN_LIMITS[dbInfo.plan] || PLAN_LIMITS['Gratuito'];
-        const maxContacts = baseLimits.contacts + (dbInfo.extraPacks * 50);
-        const maxAgents = baseLimits.agents + dbInfo.extraAgents;
+        const planVal = u.plan || 'Gratuito';
+        const extraAgents = u.extra_agents || 0;
+        const extraPacks = u.extra_packs || 0;
+        const baseLimits = PLAN_LIMITS[planVal] || PLAN_LIMITS['Gratuito'];
+        const maxContacts = baseLimits.contacts + (extraPacks * 50);
+        const maxAgents = baseLimits.agents + extraAgents;
         return {
           id: u.id,
           name: u.full_name || u.email?.split('@')[0] || 'Sin nombre',
           email: u.email,
           businessName: u.full_name ? `Negocio de ${u.full_name}` : `Negocio de ${u.email?.split('@')[0]}`,
-          plan: dbInfo.plan,
-          extraAgents: dbInfo.extraAgents,
-          extraPacks: dbInfo.extraPacks,
+          plan: planVal,
+          extraAgents: extraAgents,
+          extraPacks: extraPacks,
           maxContacts: maxContacts,
           maxAgents: maxAgents,
           contactsCount: 0,
           agentsCount: maxAgents,
           status: "Activo",
           lastPaymentDate: "2026-07-01",
-          copilot: dbInfo.plan !== 'Néctar' && dbInfo.plan !== 'Gratuito',
-          autopilot: dbInfo.plan === 'Colmena' || dbInfo.plan === 'Apiario',
+          copilot: planVal !== 'Néctar' && planVal !== 'Gratuito',
+          autopilot: planVal === 'Colmena' || planVal === 'Apiario',
           created_at: u.created_at
         };
       });
