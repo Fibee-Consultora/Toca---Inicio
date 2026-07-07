@@ -557,7 +557,8 @@ async function renderAdminTab() {
           lastPaymentDate: "2026-07-01",
           copilot: planVal !== 'Néctar' && planVal !== 'Gratuito',
           autopilot: planVal === 'Colmena' || planVal === 'Apiario',
-          created_at: u.created_at
+          created_at: u.created_at,
+          factura: u.factura !== false
         };
       });
       isSimulated = false;
@@ -577,10 +578,14 @@ async function renderAdminTab() {
   adminClients.forEach(c => {
     if (c.status === "Activo") {
       if (planCounts[c.plan] !== undefined) planCounts[c.plan]++;
-      const basePrice = PLAN_PRICES[c.plan] || 119;
-      const extraAgentsCost = (c.extraAgents || 0) * 24.90;
-      const extraPacksCost = (c.extraPacks || 0) * 19.90;
-      estimatedRevenue += basePrice + extraAgentsCost + extraPacksCost;
+      
+      // El SuperAdmin no genera MRR y las cuentas sin facturación tampoco
+      if (c.email.toLowerCase() !== 'fibeeconsultoradigital@gmail.com' && c.factura !== false) {
+        const basePrice = PLAN_PRICES[c.plan] || 119;
+        const extraAgentsCost = (c.extraAgents || 0) * 24.90;
+        const extraPacksCost = (c.extraPacks || 0) * 19.90;
+        estimatedRevenue += basePrice + extraAgentsCost + extraPacksCost;
+      }
     }
   });
 
@@ -728,6 +733,26 @@ function getAdminModalHtml(client) {
                 <span style="font-size: 0.72rem; color: var(--color-text-muted);">Último Pago Validado</span>
                 <input type="date" id="admin-edit-payment-date" value="${client.lastPaymentDate}" style="padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-color); font-family: var(--font-body); font-size: 0.85rem; height: 34px;">
               </div>
+            </div>
+
+            <!-- Switch de Facturación (MRR) -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; background: #ffffff; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;">
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.78rem; font-weight: 600; color: var(--color-text-primary);">Contabilizar en MRR</span>
+                <span style="font-size: 0.65rem; color: var(--color-text-muted);">Si está inactivo, este negocio no suma ingresos al MRR</span>
+              </div>
+              <label class="switch-toggle" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                <input type="checkbox" id="admin-edit-factura" ${client.factura !== false ? 'checked' : ''} style="opacity: 0; width: 0; height: 0; cursor: pointer;">
+                <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);"></span>
+              </label>
+              <style>
+                .switch-toggle input:checked + span { background-color: #10b981; }
+                .switch-toggle span:before {
+                  position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+                  background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+                }
+                .switch-toggle input:checked + span:before { transform: translateX(20px); }
+              </style>
             </div>
 
             <div style="display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 10px;">
@@ -950,8 +975,9 @@ function adminApplyClientEditChanges(clientId) {
   
   const extraAgents = document.getElementById('admin-edit-extra-agents')?.value ?? 0;
   const extraPacks = document.getElementById('admin-edit-extra-packs')?.value ?? 0;
+  const factura = document.getElementById('admin-edit-factura')?.checked ?? true;
 
-  saveClientPlanChanges(clientId, plan, copilot, maxContacts, maxAgents, status, lastPaymentDate, extraAgents, extraPacks);
+  saveClientPlanChanges(clientId, plan, copilot, false, maxContacts, maxAgents, status, lastPaymentDate, extraAgents, extraPacks, factura);
   selectClientForEdit(null);
 }
 

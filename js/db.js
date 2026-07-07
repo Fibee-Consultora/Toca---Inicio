@@ -162,6 +162,7 @@
     let extraPacks = 0;
     let status = 'Activo';
     let lastPaymentDate = '2026-07-01';
+    let factura = true;
     
     if (name.includes('|')) {
       const parts = name.split('|');
@@ -178,14 +179,17 @@
           status = part.substring(7);
         } else if (part.startsWith('pay:')) {
           lastPaymentDate = part.substring(4);
+        } else if (part.startsWith('factura:')) {
+          factura = part.substring(8) === 'true';
         }
       }
     } else {
       plan = 'Gratuito';
       status = 'Activo';
       lastPaymentDate = '2026-07-01';
+      factura = true;
     }
-    return { name, plan, extraAgents, extraPacks, status, lastPaymentDate };
+    return { name, plan, extraAgents, extraPacks, status, lastPaymentDate, factura };
   }
 
   async function loadMyProfile() {
@@ -205,6 +209,7 @@
       data.extra_packs = parsed.extraPacks;
       data.status = parsed.status;
       data.last_payment_date = parsed.lastPaymentDate;
+      data.factura = parsed.factura;
     }
     return data;
   }
@@ -231,6 +236,7 @@
           row.extra_packs = parsed.extraPacks;
           row.status = parsed.status;
           row.last_payment_date = parsed.lastPaymentDate;
+          row.factura = parsed.factura;
         });
       }
       return data || [];
@@ -263,12 +269,14 @@
     let extraPacks = 0;
     let status = 'Activo';
     let lastPaymentDate = '2026-07-01';
+    let factura = true;
 
     for (let i = 1; i < parts.length; i++) {
       if (parts[i].startsWith('agents:')) extraAgents = parseInt(parts[i].substring(7)) || 0;
       else if (parts[i].startsWith('packs:')) extraPacks = parseInt(parts[i].substring(6)) || 0;
       else if (parts[i].startsWith('status:')) status = parts[i].substring(7);
       else if (parts[i].startsWith('pay:')) lastPaymentDate = parts[i].substring(4);
+      else if (parts[i].startsWith('factura:')) factura = parts[i].substring(8) === 'true';
     }
 
     let validDbPlan = planName;
@@ -276,7 +284,7 @@
       validDbPlan = 'Néctar';
     }
 
-    const formattedName = `${fullName || 'Sin nombre'}|plan:${planName}|agents:${extraAgents}|packs:${extraPacks}|status:${status}|pay:${lastPaymentDate}`;
+    const formattedName = `${fullName || 'Sin nombre'}|plan:${planName}|agents:${extraAgents}|packs:${extraPacks}|status:${status}|pay:${lastPaymentDate}|factura:${factura}`;
 
     const { error } = await client
       .from('profiles')

@@ -1865,6 +1865,11 @@ async function syncUserPlanFromProfile() {
       return;
     }
     const profile = await window.TocaDB.loadMyProfile();
+    if (!profile) {
+      console.warn("Perfil eliminado de la base de datos. Cerrando sesión forzadamente...");
+      logout();
+      return;
+    }
     if (profile?.plan && PLAN_LIMITS[profile.plan]) {
       currentActivePlan = profile.plan;
       currentAccountStatus = profile.status || 'Activo';
@@ -2838,13 +2843,14 @@ function deleteBusinessWorkspace(id) {
 // SECCIÓN ADMINISTRATIVA (Simulación de Gestión de Clientes y Planes)
 // ==========================================================================
 
-function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, maxAgents, status, lastPaymentDate, extraAgents, extraPacks) {
+function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, maxAgents, status, lastPaymentDate, extraAgents, extraPacks, factura) {
   const client = adminClients.find(c => String(c.id) === String(clientId));
   if (!client) return;
 
   client.plan = plan;
   client.status = status || "Activo";
   client.lastPaymentDate = lastPaymentDate || "2026-06-21";
+  client.factura = factura !== false;
 
   if (plan === 'Apiario') {
     // Apiario is custom, limits and toggles are fully editable
@@ -2890,8 +2896,8 @@ function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, 
   }
 
   if (window.TocaDB?.isConfigured()) {
-    const dbPlanStr = `${plan}|agents:${client.extraAgents}|packs:${client.extraPacks}`;
-    window.TocaDB.updateUserPlan(clientId, dbPlanStr)
+    const dbPlanStr = `${plan}|agents:${client.extraAgents}|packs:${client.extraPacks}|status:${client.status}|pay:${client.lastPaymentDate}|factura:${client.factura}`;
+    window.TocaDB.updateUserPlan(clientId, dbPlanStr, client.name)
       .then(() => {
         showToast(`✓ Cambios guardados en base de datos.`);
         return window.TocaDB.loadAllProfiles();
@@ -3253,5 +3259,19 @@ window.addEventListener("message", (e) => {
     handleOpenContact(e.data.detail);
   }
 });
+
+// Escuchar focus de pestaña para verificar si la cuenta sigue activa/existente
+window.addEventListener('focus', () => {
+  if (currentAuthUser && window.TocaDB?.isConfigured() && !impersonatedClientId) {
+    syncUserPlanFromProfile();
+  }
+});
+
+// Intervalo de verificación en segundo plano cada 30 segundos
+setInterval(() => {
+  if (currentAuthUser && window.TocaDB?.isConfigured() && !impersonatedClientId) {
+    syncUserPlanFromProfile();
+  }
+}, 30000);
 
 
