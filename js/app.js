@@ -398,6 +398,10 @@ function resolutionDiscussLater(id) {
 }
 
 function saveDiscussLater(id) {
+  if (isSuspended()) {
+    showToast("⚠️ Tu cuenta se encuentra suspendida por falta de pago. Renueva tu suscripción para volver a habilitar estas funciones.");
+    return;
+  }
   const newDateStr = document.getElementById(`new-fu-date-${id}`).value;
   if (!newDateStr) return;
 
@@ -419,6 +423,10 @@ function saveDiscussLater(id) {
 }
 
 function resolutionCloseDeal(id) {
+  if (isSuspended()) {
+    showToast("⚠️ Tu cuenta se encuentra suspendida por falta de pago. Renueva tu suscripción para volver a habilitar estas funciones.");
+    return;
+  }
   const contact = contacts.find(c => c.id === id);
   
   if (contact.type === 'Cliente') {
@@ -682,7 +690,7 @@ function backToSelection() {
 function submitProspectForm(event) {
   event.preventDefault();
   
-  const contactLimit = PLAN_LIMITS[currentActivePlan].contacts + purchasedExtraPacks * 50;
+  const contactLimit = getActiveContactLimit();
   const activeContactsCount = contacts.filter(c => !c.archived).length;
   if (activeContactsCount >= contactLimit) {
     showToast(`🔒 Límite de contactos alcanzado (${activeContactsCount}/${contactLimit}). Sube de plan o compra adicionales en la pestaña Plan.`);
@@ -766,7 +774,7 @@ function submitProspectForm(event) {
 function submitClienteForm(event) {
   event.preventDefault();
 
-  const contactLimit = PLAN_LIMITS[currentActivePlan].contacts + purchasedExtraPacks * 50;
+  const contactLimit = getActiveContactLimit();
   const activeContactsCount = contacts.filter(c => !c.archived).length;
   if (activeContactsCount >= contactLimit) {
     showToast(`🔒 Límite de contactos alcanzado (${activeContactsCount}/${contactLimit}). Sube de plan o compra adicionales en la pestaña Plan.`);
@@ -1166,6 +1174,10 @@ function hideAddHistoryInput(id) {
 }
 
 function saveNewHistoryItem(id) {
+  if (isSuspended()) {
+    showToast("⚠️ Tu cuenta se encuentra suspendida por falta de pago. Renueva tu suscripción para volver a habilitar estas funciones.");
+    return;
+  }
   const text = document.getElementById(`new-history-text-${id}`).value.trim();
   if (!text) {
     showToast("Por favor, ingresa una descripción para el contexto.");
@@ -1236,6 +1248,10 @@ function toggleClientFollowModeDetail(id) {
 
 // Save changes from Editable panel
 function saveContactChanges(id) {
+  if (isSuspended()) {
+    showToast("⚠️ Tu cuenta se encuentra suspendida por falta de pago. Renueva tu suscripción para volver a habilitar estas funciones.");
+    return;
+  }
   const name = document.getElementById(`detail-name-${id}`).value;
   const whatsapp = document.getElementById(`detail-whatsapp-${id}`).value;
   const company = document.getElementById(`detail-company-${id}`).value;
@@ -1584,10 +1600,18 @@ function performSearch() {
 }
 
 function resolutionNoAgreement(id) {
+  if (isSuspended()) {
+    showToast("⚠️ Tu cuenta se encuentra suspendida por falta de pago. Renueva tu suscripción para volver a habilitar estas funciones.");
+    return;
+  }
   showArchiveReasonModal(id);
 }
 
 function resolutionOfferSomethingNew(id) {
+  if (isSuspended()) {
+    showToast("⚠️ Tu cuenta se encuentra suspendida por falta de pago. Renueva tu suscripción para volver a habilitar estas funciones.");
+    return;
+  }
   const contact = contacts.find(c => c.id === id);
   if (!contact) return;
 
@@ -2352,7 +2376,7 @@ function submitAgentInvitation() {
   const email = emailInput.value.trim();
   const role = "Agente";
   
-  const agentLimit = PLAN_LIMITS[currentActivePlan].agents + purchasedExtraAgents;
+  const agentLimit = getActiveAgentLimit();
   if (teamAgents.length >= agentLimit) {
     showToast(`🔒 Límite de agentes alcanzado (${teamAgents.length}/${agentLimit}). Sube de plan o compra adicionales en la pestaña Plan.`);
     return;
@@ -2604,7 +2628,7 @@ function populateBusinessSwitchers() {
   const triggerBtn = document.getElementById('workspace-switcher-trigger');
   const modalSelect = document.getElementById('modal-business-switcher');
   
-  const limit = PLAN_LIMITS[currentActivePlan].businesses;
+  const limit = getActiveBusinessLimit();
   
   // 1. Populate custom dropdown menu in sidebar
   let menuHtml = '';
@@ -2687,7 +2711,7 @@ function switchBusinessWorkspace(id) {
   
   const triggerText = document.getElementById('current-workspace-name');
   if (triggerText) {
-    const limit = PLAN_LIMITS[currentActivePlan].businesses;
+    const limit = getActiveBusinessLimit();
     const idx = businesses.findIndex(b => b.id === id);
     const isLocked = idx >= limit;
     triggerText.textContent = isLocked ? `${businessProfile.name} 🔒` : businessProfile.name;
@@ -2748,7 +2772,7 @@ function createBusinessWorkspace(name) {
     return;
   }
   
-  const limit = PLAN_LIMITS[currentActivePlan].businesses;
+  const limit = getActiveBusinessLimit();
   if (businesses.length >= limit) {
     showToast(`🔒 No puedes crear más negocios. Has alcanzado el límite de ${limit} negocios para tu plan.`);
     return;

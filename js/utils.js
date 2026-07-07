@@ -219,3 +219,35 @@ function parseDbPlan(planStr) {
 function formatDbPlan(plan, extraAgents, extraPacks) {
   return `${plan}|agents:${extraAgents}|packs:${extraPacks}`;
 }
+
+function isSuspended() {
+  if (typeof currentSimulatedUserRole !== 'undefined' && currentSimulatedUserRole === 'SuperAdmin') {
+    return false;
+  }
+  if (typeof currentActivePlan === 'undefined' || currentActivePlan === 'Gratuito') return false;
+  if (typeof currentAccountStatus !== 'undefined' && currentAccountStatus === 'Cancelado') return true;
+  if (typeof currentLastPaymentDate === 'undefined' || !currentLastPaymentDate) return false;
+  
+  const payDate = new Date(currentLastPaymentDate + "T00:00:00");
+  const diffTime = TODAY - payDate;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  if (diffDays > 34) {
+    return true;
+  }
+  return false;
+}
+
+function getActiveContactLimit() {
+  if (isSuspended()) return 5;
+  return (PLAN_LIMITS[currentActivePlan]?.contacts || 5) + (purchasedExtraPacks || 0) * 50;
+}
+
+function getActiveAgentLimit() {
+  if (isSuspended()) return 1;
+  return (PLAN_LIMITS[currentActivePlan]?.agents || 1) + (purchasedExtraAgents || 0);
+}
+
+function getActiveBusinessLimit() {
+  if (isSuspended()) return 1;
+  return PLAN_LIMITS[currentActivePlan]?.businesses || 1;
+}

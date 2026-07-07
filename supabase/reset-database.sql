@@ -89,7 +89,7 @@ begin
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1)),
+    coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1)) || '|plan:Gratuito|agents:0|packs:0',
     new.raw_user_meta_data ->> 'avatar_url',
     'Panal'
   )

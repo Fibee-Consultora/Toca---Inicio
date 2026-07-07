@@ -30,7 +30,7 @@ begin
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name'),
+    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name') || '|plan:Gratuito|agents:0|packs:0',
     new.raw_user_meta_data->>'avatar_url'
   )
   on conflict (id) do nothing;

@@ -221,4 +221,7 @@ let impersonatedClientId = JSON.parse(localStorage.getItem('toca_impersonated_cl
 const TODAY_STR = "2026-07-07";
 const TODAY = new Date(TODAY_STR + "T00:00:00");
 
+let currentAccountStatus = localStorage.getItem('toca_current_account_status') || 'Activo';
+let currentLastPaymentDate = localStorage.getItem('toca_current_last_payment_date') || TODAY_STR;
+
 // ==========================================================================
