@@ -1050,12 +1050,16 @@ function renderSortedAdminTable() {
           </span>
         </td>
         <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
-          <button onclick="selectClientForEdit('${c.id}')" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--color-text-primary); margin-right: 6px; transition: background 0.15s;">
-            ⚙️ Gestionar
-          </button>
-          <button onclick="impersonateClient('${c.id}')" style="background: #f3f4f6; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--color-text-primary); transition: background 0.15s;">
-            👁️ Suplantar
-          </button>
+          ${c.email.toLowerCase() === 'fibeeconsultoradigital@gmail.com' ? `
+            <span style="font-size: 0.75rem; font-weight: 700; color: #7d35ef; text-transform: uppercase; letter-spacing: 0.05em; padding-right: 14px;">👑 Super Admin</span>
+          ` : `
+            <button onclick="selectClientForEdit('${c.id}')" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--color-text-primary); margin-right: 6px; transition: background 0.15s;">
+              ⚙️ Gestionar
+            </button>
+            <button onclick="impersonateClient('${c.id}')" style="background: #f3f4f6; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--color-text-primary); transition: background 0.15s;">
+              👁️ Suplantar
+            </button>
+          `}
         </td>
       </tr>
     `;

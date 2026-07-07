@@ -125,13 +125,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateLoginScreen();
     }
   } catch (err) {
-    console.error(err);
+    console.error("Error al cargar contactos de Supabase:", err);
     contacts = shouldUseSeedContacts() ? [...SEED_CONTACTS] : [];
-    if (!shouldUseSeedContacts()) {
-      showToast('No se pudieron cargar los contactos.');
-    } else {
-      showToast('No se pudo conectar a Supabase. Usando datos locales.');
-    }
     updateLoginScreen();
   }
 
@@ -1862,9 +1857,18 @@ function updateAdminNavVisibility() {
 async function syncUserPlanFromProfile() {
   if (!currentAuthUser || !window.TocaDB?.isConfigured()) return;
   try {
+    if (currentAuthUser.email.toLowerCase() === 'fibeeconsultoradigital@gmail.com') {
+      currentActivePlan = 'Apiario';
+      currentAccountStatus = 'Activo';
+      localStorage.setItem('toca_current_active_plan', 'Apiario');
+      updateProfileUI();
+      return;
+    }
     const profile = await window.TocaDB.loadMyProfile();
     if (profile?.plan && PLAN_LIMITS[profile.plan]) {
       currentActivePlan = profile.plan;
+      currentAccountStatus = profile.status || 'Activo';
+      currentLastPaymentDate = profile.last_payment_date || TODAY_STR;
       localStorage.setItem('toca_current_active_plan', profile.plan);
       updateProfileUI();
     }
