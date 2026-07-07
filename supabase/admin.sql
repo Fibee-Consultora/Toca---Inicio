@@ -25,24 +25,43 @@ create policy "profiles_admin_delete_any"
 -- RPC: Obtener todos los usuarios registrados en Supabase Auth, cruzados con sus perfiles
 create or replace function public.get_all_users()
 returns table (
-  id uuid,
-  email varchar,
-  full_name text,
-  plan text,
-  created_at timestamptz
+  u_id uuid,
+  u_email varchar,
+  u_full_name text,
+  u_plan text,
+  u_created_at timestamptz,
+  u_contacts_count int,
+  u_agents_count int
 )
 language plpgsql
 security definer
 as $$
 begin
-  if exists (select 1 from public.profiles where id = auth.uid() and plan = 'SuperAdmin') or (select email from auth.users where id = auth.uid()) = 'fibeeconsultoradigital@gmail.com' then
+  if lower(auth.jwt() ->> 'email') = 'fibeeconsultoradigital@gmail.com' then
     return query
     select 
       u.id,
       u.email::varchar,
       coalesce(p.full_name, split_part(u.email, '@', 1))::text,
       coalesce(p.plan, 'Panal')::text,
-      u.created_at
+      u.created_at,
+      (
+        select count(*)::int 
+        from public.contacts c 
+        where c.workspace_id in (select w.id from public.workspaces w where w.owner_id = u.id)
+      )::int as u_contacts_count,
+      greatest(
+        (
+          select count(*)::int 
+          from public.workspace_team wt 
+          where wt.workspace_id in (select w.id from public.workspaces w where w.owner_id = u.id)
+        ),
+        (
+          select count(*)::int 
+          from public.workspace_members wm 
+          where wm.workspace_id in (select w.id from public.workspaces w where w.owner_id = u.id)
+        )
+      )::int as u_agents_count
     from auth.users u
     left join public.profiles p on u.id = p.id
     order by u.created_at desc;

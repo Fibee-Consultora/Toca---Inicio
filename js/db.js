@@ -215,6 +215,15 @@
     if (!error) {
       if (data) {
         data.forEach(row => {
+          // Mapear alias de retorno del RPC
+          row.id = row.u_id;
+          row.email = row.u_email;
+          row.full_name = row.u_full_name;
+          row.plan = row.u_plan;
+          row.created_at = row.u_created_at;
+          row.contacts_count = row.u_contacts_count;
+          row.agents_count = row.u_agents_count;
+
           const parsed = parseDbProfile(row.full_name, row.plan);
           row.full_name = parsed.name;
           row.plan = parsed.plan;
