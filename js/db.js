@@ -160,6 +160,8 @@
     let plan = dbPlan || 'Panal';
     let extraAgents = 0;
     let extraPacks = 0;
+    let status = 'Activo';
+    let lastPaymentDate = '2026-07-01';
     
     if (name.includes('|')) {
       const parts = name.split('|');
@@ -172,14 +174,18 @@
           extraAgents = parseInt(part.substring(7)) || 0;
         } else if (part.startsWith('packs:')) {
           extraPacks = parseInt(part.substring(6)) || 0;
+        } else if (part.startsWith('status:')) {
+          status = part.substring(7);
+        } else if (part.startsWith('pay:')) {
+          lastPaymentDate = part.substring(4);
         }
       }
     } else {
-      if (plan === 'Panal' && !fullName) {
-        plan = 'Gratuito';
-      }
+      plan = 'Gratuito';
+      status = 'Activo';
+      lastPaymentDate = '2026-07-01';
     }
-    return { name, plan, extraAgents, extraPacks };
+    return { name, plan, extraAgents, extraPacks, status, lastPaymentDate };
   }
 
   async function loadMyProfile() {
@@ -197,26 +203,48 @@
       data.plan = parsed.plan;
       data.extra_agents = parsed.extraAgents;
       data.extra_packs = parsed.extraPacks;
+      data.status = parsed.status;
+      data.last_payment_date = parsed.lastPaymentDate;
     }
     return data;
   }
 
   async function loadAllProfiles() {
-    const { data, error } = await client
+    // Intentar llamar a RPC get_all_users para sincronización absoluta con auth.users
+    const { data, error } = await client.rpc('get_all_users');
+    if (!error) {
+      if (data) {
+        data.forEach(row => {
+          const parsed = parseDbProfile(row.full_name, row.plan);
+          row.full_name = parsed.name;
+          row.plan = parsed.plan;
+          row.extra_agents = parsed.extraAgents;
+          row.extra_packs = parsed.extraPacks;
+          row.status = parsed.status;
+          row.last_payment_date = parsed.lastPaymentDate;
+        });
+      }
+      return data || [];
+    }
+
+    console.warn("RPC get_all_users no encontrado, cayendo en select directo de profiles:", error);
+    const { data: selectData, error: selectError } = await client
       .from('profiles')
       .select('id, email, full_name, plan, created_at')
       .order('created_at', { ascending: false });
-    if (error) throw error;
-    if (data) {
-      data.forEach(row => {
+    if (selectError) throw selectError;
+    if (selectData) {
+      selectData.forEach(row => {
         const parsed = parseDbProfile(row.full_name, row.plan);
         row.full_name = parsed.name;
         row.plan = parsed.plan;
         row.extra_agents = parsed.extraAgents;
         row.extra_packs = parsed.extraPacks;
+        row.status = parsed.status;
+        row.last_payment_date = parsed.lastPaymentDate;
       });
     }
-    return data || [];
+    return selectData || [];
   }
 
   async function updateUserPlan(userId, planStr, fullName) {
@@ -224,9 +252,14 @@
     const planName = parts[0] || 'Gratuito';
     let extraAgents = 0;
     let extraPacks = 0;
+    let status = 'Activo';
+    let lastPaymentDate = '2026-07-01';
+
     for (let i = 1; i < parts.length; i++) {
       if (parts[i].startsWith('agents:')) extraAgents = parseInt(parts[i].substring(7)) || 0;
       else if (parts[i].startsWith('packs:')) extraPacks = parseInt(parts[i].substring(6)) || 0;
+      else if (parts[i].startsWith('status:')) status = parts[i].substring(7);
+      else if (parts[i].startsWith('pay:')) lastPaymentDate = parts[i].substring(4);
     }
 
     let validDbPlan = planName;
@@ -234,7 +267,7 @@
       validDbPlan = 'Néctar';
     }
 
-    const formattedName = `${fullName || 'Sin nombre'}|plan:${planName}|agents:${extraAgents}|packs:${extraPacks}`;
+    const formattedName = `${fullName || 'Sin nombre'}|plan:${planName}|agents:${extraAgents}|packs:${extraPacks}|status:${status}|pay:${lastPaymentDate}`;
 
     const { error } = await client
       .from('profiles')

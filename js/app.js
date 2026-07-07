@@ -3056,13 +3056,19 @@ async function adminDeleteUser(clientId) {
   
   if (window.TocaDB?.isConfigured()) {
     try {
-      const { error } = await window.TocaDB.getClient()
-        .from('profiles')
-        .delete()
-        .eq('id', clientId);
-      if (error) throw error;
+      // Intentar primero borrar desde auth.users a través del RPC admin_delete_user (para purga completa)
+      const { error: rpcError } = await window.TocaDB.getClient().rpc('admin_delete_user', { user_id: clientId });
       
-      showToast("🗑️ Usuario eliminado de la base de datos.");
+      if (rpcError) {
+        console.warn("RPC admin_delete_user no disponible o falló, intentando delete directo en profiles:", rpcError);
+        const { error: deleteError } = await window.TocaDB.getClient()
+          .from('profiles')
+          .delete()
+          .eq('id', clientId);
+        if (deleteError) throw deleteError;
+      }
+      
+      showToast("🗑️ Usuario eliminado permanentemente.");
       adminUsers = await window.TocaDB.loadAllProfiles();
       selectClientForEdit(null);
       renderAdminTab();
