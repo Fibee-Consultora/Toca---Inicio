@@ -516,7 +516,7 @@ async function renderAdminTab() {
   // 1. Mostrar banner de suplantación si está activo
   let impersonationBanner = '';
   if (impersonatedClientId) {
-    const client = adminClients.find(c => c.id === impersonatedClientId);
+    const client = adminClients.find(c => String(c.id) === String(impersonatedClientId));
     impersonationBanner = `
       <div class="admin-banner-card" style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(3, 105, 161, 0.08);">
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -534,109 +534,73 @@ async function renderAdminTab() {
   if (currentAuthUser && window.TocaDB?.isConfigured()) {
     try {
       adminUsers = await window.TocaDB.loadAllProfiles();
+      adminClients = adminUsers.map(u => {
+        const dbInfo = parseDbPlan(u.plan);
+        const baseLimits = PLAN_LIMITS[dbInfo.plan] || PLAN_LIMITS['Gratuito'];
+        const maxContacts = baseLimits.contacts + (dbInfo.extraPacks * 50);
+        const maxAgents = baseLimits.agents + dbInfo.extraAgents;
+        return {
+          id: u.id,
+          name: u.full_name || u.email?.split('@')[0] || 'Sin nombre',
+          email: u.email,
+          businessName: u.full_name ? `Negocio de ${u.full_name}` : `Negocio de ${u.email?.split('@')[0]}`,
+          plan: dbInfo.plan,
+          extraAgents: dbInfo.extraAgents,
+          extraPacks: dbInfo.extraPacks,
+          maxContacts: maxContacts,
+          maxAgents: maxAgents,
+          contactsCount: 0,
+          agentsCount: maxAgents,
+          status: "Activo",
+          lastPaymentDate: "2026-07-01",
+          copilot: dbInfo.plan !== 'Néctar' && dbInfo.plan !== 'Gratuito',
+          autopilot: dbInfo.plan === 'Colmena' || dbInfo.plan === 'Apiario',
+          created_at: u.created_at
+        };
+      });
       isSimulated = false;
     } catch (err) {
       console.warn("Error cargando perfiles de Supabase, cayendo en simulación local:", err);
     }
   }
 
-  if (isSimulated) {
-    // 1. Calcular estadísticas de la simulación basadas en clientes Activos
-    const activeClients = adminClients.filter(c => c.status === "Activo");
-    const totalClientsCount = activeClients.length;
-    const planCounts = { Néctar: 0, Panal: 0, Colmena: 0, Apiario: 0 };
-    let estimatedRevenue = 0;
-    
-    const PLAN_PRICES = { Néctar: 49, Panal: 119, Colmena: 249, Apiario: 499 };
+  // Calcular estadísticas de la simulación
+  const activeClients = adminClients.filter(c => c.status === "Activo");
+  const totalClientsCount = activeClients.length;
+  const planCounts = { Gratuito: 0, Néctar: 0, Panal: 0, Colmena: 0, Apiario: 0 };
+  let estimatedRevenue = 0;
+  
+  const PLAN_PRICES = { Gratuito: 0, Néctar: 49, Panal: 119, Colmena: 249, Apiario: 499 };
 
-    adminClients.forEach(c => {
-      if (c.status === "Activo") {
-        if (planCounts[c.plan] !== undefined) planCounts[c.plan]++;
-        const basePrice = PLAN_PRICES[c.plan] || 119;
-        const extraAgentsCost = (c.extraAgents || 0) * 24.90;
-        const extraPacksCost = (c.extraPacks || 0) * 19.90;
-        estimatedRevenue += basePrice + extraAgentsCost + extraPacksCost;
-      }
-    });
-
-    // 2. Construir HTML modularizado
-    let html = `
-      ${getImpersonationBannerHtml()}
-      ${getAdminHeaderHtml()}
-      ${getAdminMetricsHtml(totalClientsCount, estimatedRevenue, planCounts)}
-      ${getAdminTableShellHtml()}
-    `;
-
-    if (selectedAdminClientId) {
-      const client = adminClients.find(c => c.id === selectedAdminClientId);
-      if (client) {
-        html += getAdminModalHtml(client);
-      }
+  adminClients.forEach(c => {
+    if (c.status === "Activo") {
+      if (planCounts[c.plan] !== undefined) planCounts[c.plan]++;
+      const basePrice = PLAN_PRICES[c.plan] || 119;
+      const extraAgentsCost = (c.extraAgents || 0) * 24.90;
+      const extraPacksCost = (c.extraPacks || 0) * 19.90;
+      estimatedRevenue += basePrice + extraAgentsCost + extraPacksCost;
     }
+  });
 
-    container.innerHTML = html;
-    renderSortedAdminTable();
-  } else {
-    // Si Supabase está cargado correctamente (Producción real)
-    try {
-      const planOptions = Object.keys(PLAN_LIMITS);
-      if (!adminUsers.length) {
-        container.innerHTML = `
-          <div style="padding: 8px 0 20px;">
-            <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; margin: 0 0 6px 0;">Panel Admin</h2>
-            <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin: 0;">Aún no hay usuarios registrados.</p>
-          </div>
-        `;
-        return;
-      }
+  let html = `
+    ${impersonationBanner}
+    <div style="padding: 8px 0 20px;">
+      <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 6px 0;">Panel Admin</h2>
+      <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin: 0;">Gestiona las cuentas de los clientes y supervisa sus consumos.</p>
+    </div>
+    ${getAdminMetricsHtml(totalClientsCount, estimatedRevenue, planCounts)}
+    ${getAdminTableShellHtml()}
+  `;
 
-      const rows = adminUsers
-        .map((user) => {
-          const name = user.full_name || user.email?.split('@')[0] || 'Sin nombre';
-          const options = planOptions
-            .map(
-              (plan) =>
-                `<option value="${plan}" ${user.plan === plan ? 'selected' : ''}>${PLAN_LIMITS[plan].name}</option>`
-            )
-            .join('');
-          return `
-            <tr>
-              <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color); font-weight: 600;">${name}</td>
-              <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--color-text-secondary);">${user.email || '—'}</td>
-              <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color);">
-                <select onchange="adminSetUserPlan('${user.id}', this.value)" style="padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #fff; font-family: var(--font-body); font-size: 0.85rem; min-width: 140px;">
-                  ${options}
-                </select>
-              </td>
-              <td style="padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--color-text-secondary); font-size: 0.85rem;">${formatProfileDate(user.created_at)}</td>
-            </tr>
-          `;
-        })
-        .join('');
-
-      container.innerHTML = `
-        <div style="padding: 8px 0 20px;">
-          <h2 style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 6px 0;">Panel Admin</h2>
-          <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin: 0;">${adminUsers.length} usuario(s) en la plataforma.</p>
-        </div>
-        <div style="background: #fff; border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-sm);">
-          <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-            <thead>
-              <tr style="background: #f9fafb; text-align: left;">
-                <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Nombre</th>
-                <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Correo</th>
-                <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Plan</th>
-                <th style="padding: 12px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary);">Registro</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
-      `;
-    } catch (err) {
-      console.error(err);
+  if (selectedAdminClientId) {
+    const client = adminClients.find(c => String(c.id) === String(selectedAdminClientId));
+    if (client) {
+      html += getAdminModalHtml(client);
     }
   }
+
+  container.innerHTML = html;
+  renderSortedAdminTable();
 }
 
 // SUB-RENDERERS PARA EL PANEL ADMIN (SIMULADO)
@@ -688,11 +652,12 @@ function getAdminMetricsHtml(totalActive, estimatedRevenue, planCounts) {
       </div>
       <div class="admin-metric-card" style="background: #ffffff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between; height: 100px;">
         <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--color-text-secondary); font-weight: 700; letter-spacing: 0.03em;">Suscripciones por Plan</div>
-        <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 0.75rem; font-weight: 600;">
-          <span title="Néctar" style="background: #fef0f0; color: #fe3c43; padding: 2px 6px; border-radius: 4px;">🌸 ${planCounts.Néctar}</span>
-          <span title="Panal" style="background: #fffbeb; color: #d97706; padding: 2px 6px; border-radius: 4px;">🍯 ${planCounts.Panal}</span>
-          <span title="Colmena" style="background: #f5f3ff; color: #7c3aed; padding: 2px 6px; border-radius: 4px;">🐝 ${planCounts.Colmena}</span>
-          <span title="Apiario" style="background: #ecfdf5; color: #059669; padding: 2px 6px; border-radius: 4px;">👑 ${planCounts.Apiario}</span>
+        <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 0.75rem; font-weight: 600; flex-wrap: wrap;">
+          <span title="Gratuito" style="background: #f3f4f6; color: #4b5563; padding: 2px 6px; border-radius: 4px;">🌱 ${planCounts.Gratuito || 0}</span>
+          <span title="Néctar" style="background: #fef0f0; color: #fe3c43; padding: 2px 6px; border-radius: 4px;">🌸 ${planCounts.Néctar || 0}</span>
+          <span title="Panal" style="background: #fffbeb; color: #d97706; padding: 2px 6px; border-radius: 4px;">🍯 ${planCounts.Panal || 0}</span>
+          <span title="Colmena" style="background: #f5f3ff; color: #7c3aed; padding: 2px 6px; border-radius: 4px;">🐝 ${planCounts.Colmena || 0}</span>
+          <span title="Apiario" style="background: #ecfdf5; color: #059669; padding: 2px 6px; border-radius: 4px;">👑 ${planCounts.Apiario || 0}</span>
         </div>
       </div>
     </div>
@@ -764,13 +729,17 @@ function getAdminModalHtml(client) {
             </div>
 
             <div style="display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 10px;">
-              <button onclick="adminValidatePayment(${client.id})" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: background 0.15s;">
+              <button onclick="adminValidatePayment('${client.id}')" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: background 0.15s;">
                 💰 Validar Pago Mes Activo
               </button>
-              <button onclick="adminCancelService(${client.id})" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: background 0.15s;">
+              <button onclick="adminCancelService('${client.id}')" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: background 0.15s;">
                 🚫 Cancelar Servicio
               </button>
             </div>
+            
+            <button onclick="adminDeleteUser('${client.id}')" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #fff1f2; border: 1px solid #fecdd3; color: #be123c; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: background 0.15s; margin-top: 10px; width: 100%;">
+              🗑️ Eliminar Cuenta permanentemente
+            </button>
           </div>
 
           <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 14px;">
@@ -780,6 +749,7 @@ function getAdminModalHtml(client) {
               <div style="display: flex; flex-direction: column; gap: 4px;">
                 <label style="font-size: 0.72rem; color: var(--color-text-muted);">Plan Asignado</label>
                 <select id="admin-edit-plan" onchange="toggleAdminCustomPlanFields(this.value)" style="padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #ffffff; font-family: var(--font-body); font-size: 0.85rem; height: 36px; cursor: pointer;">
+                  <option value="Gratuito" ${client.plan === 'Gratuito' ? 'selected' : ''}>🌱 Plan Gratuito</option>
                   <option value="Néctar" ${client.plan === 'Néctar' ? 'selected' : ''}>🌸 Plan Néctar</option>
                   <option value="Panal" ${client.plan === 'Panal' ? 'selected' : ''}>🍯 Plan Panal</option>
                   <option value="Colmena" ${client.plan === 'Colmena' ? 'selected' : ''}>🐝 Plan Colmena</option>
@@ -1040,7 +1010,7 @@ function renderSortedAdminTable() {
         valB = b.contactsCount || 0;
         return adminSortOrder === 'asc' ? valA - valB : valB - valA;
       } else if (adminSortField === 'plan') {
-        const ranks = { Néctar: 1, Panal: 2, Colmena: 3, Apiario: 4 };
+        const ranks = { Gratuito: 1, Néctar: 2, Panal: 3, Colmena: 4, Apiario: 5 };
         valA = ranks[a.plan] || 0;
         valB = ranks[b.plan] || 0;
         return adminSortOrder === 'asc' ? valA - valB : valB - valA;
@@ -1051,6 +1021,7 @@ function renderSortedAdminTable() {
   
   // 3. Renderizar el HTML de las filas
   const planPills = {
+    Gratuito: { bg: '#f3f4f6', text: '#4b5563', tag: '🌱 Gratuito' },
     Néctar: { bg: '#fef0f0', text: '#fe3c43', tag: '🌸 Néctar' },
     Panal: { bg: '#fffbeb', text: '#d97706', tag: '🍯 Plan Panal' },
     Colmena: { bg: '#f5f3ff', text: '#7c3aed', tag: '🐝 Colmena' },
@@ -1077,10 +1048,10 @@ function renderSortedAdminTable() {
           </span>
         </td>
         <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
-          <button onclick="selectClientForEdit(${c.id})" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--color-text-primary); margin-right: 6px; transition: background 0.15s;">
+          <button onclick="selectClientForEdit('${c.id}')" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--color-text-primary); margin-right: 6px; transition: background 0.15s;">
             ⚙️ Gestionar
           </button>
-          <button onclick="impersonateClient(${c.id})" style="background: #f3f4f6; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--color-text-primary); transition: background 0.15s;">
+          <button onclick="impersonateClient('${c.id}')" style="background: #f3f4f6; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--color-text-primary); transition: background 0.15s;">
             👁️ Suplantar
           </button>
         </td>

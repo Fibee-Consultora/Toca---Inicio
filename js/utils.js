@@ -199,3 +199,23 @@ function getCurrentOwnerName() {
   }
   return owner ? owner.name : 'Dueño Local';
 }
+
+function parseDbPlan(planStr) {
+  if (!planStr) return { plan: 'Gratuito', extraAgents: 0, extraPacks: 0 };
+  const parts = planStr.split('|');
+  const plan = parts[0] || 'Gratuito';
+  let extraAgents = 0;
+  let extraPacks = 0;
+  for (let i = 1; i < parts.length; i++) {
+    if (parts[i].startsWith('agents:')) {
+      extraAgents = parseInt(parts[i].substring(7)) || 0;
+    } else if (parts[i].startsWith('packs:')) {
+      extraPacks = parseInt(parts[i].substring(6)) || 0;
+    }
+  }
+  return { plan, extraAgents, extraPacks };
+}
+
+function formatDbPlan(plan, extraAgents, extraPacks) {
+  return `${plan}|agents:${extraAgents}|packs:${extraPacks}`;
+}

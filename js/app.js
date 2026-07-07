@@ -2811,7 +2811,7 @@ function deleteBusinessWorkspace(id) {
 // ==========================================================================
 
 function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, maxAgents, status, lastPaymentDate, extraAgents, extraPacks) {
-  const client = adminClients.find(c => c.id === clientId);
+  const client = adminClients.find(c => String(c.id) === String(clientId));
   if (!client) return;
 
   client.plan = plan;
@@ -2827,7 +2827,7 @@ function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, 
     client.extraAgents = 0;
     client.extraPacks = 0;
   } else {
-    // Fixed plans (Néctar, Panal, Colmena): limits are set dynamically by base limits + expansions
+    // Fixed plans: limits are set dynamically by base limits + expansions
     const limits = PLAN_LIMITS[plan] || PLAN_LIMITS['Panal'];
     client.extraAgents = parseInt(extraAgents) || 0;
     client.extraPacks = parseInt(extraPacks) || 0;
@@ -2836,7 +2836,10 @@ function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, 
     client.maxAgents = limits.agents + client.extraAgents;
 
     // Enforce default capabilities of the fixed plans
-    if (plan === 'Néctar') {
+    if (plan === 'Gratuito') {
+      client.copilot = false;
+      client.autopilot = false;
+    } else if (plan === 'Néctar') {
       client.copilot = false;
       client.autopilot = false;
     } else if (plan === 'Panal') {
@@ -2848,16 +2851,36 @@ function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, 
     }
   }
 
-  localStorage.setItem('toca_simulated_admin_clients', JSON.stringify(adminClients));
-  showToast(`✓ Cambios guardados para ${client.businessName}.`);
-  
   // Si estamos suplantando a este cliente, actualizar los límites activos de inmediato
-  if (impersonatedClientId === clientId) {
+  if (String(impersonatedClientId) === String(clientId)) {
     currentActivePlan = plan;
+    purchasedExtraAgents = client.extraAgents;
+    purchasedExtraPacks = client.extraPacks;
     localStorage.setItem('toca_current_active_plan', plan);
+    localStorage.setItem('toca_extra_agents', String(client.extraAgents));
+    localStorage.setItem('toca_extra_packs', String(client.extraPacks));
   }
 
-  renderAllTabs();
+  if (window.TocaDB?.isConfigured()) {
+    const dbPlanStr = `${plan}|agents:${client.extraAgents}|packs:${client.extraPacks}`;
+    window.TocaDB.updateUserPlan(clientId, dbPlanStr)
+      .then(() => {
+        showToast(`✓ Cambios guardados en base de datos.`);
+        return window.TocaDB.loadAllProfiles();
+      })
+      .then(profiles => {
+        adminUsers = profiles;
+        renderAllTabs();
+      })
+      .catch(err => {
+        console.error(err);
+        showToast("Error guardando cambios en Supabase.");
+      });
+  } else {
+    localStorage.setItem('toca_simulated_admin_clients', JSON.stringify(adminClients));
+    showToast(`✓ Cambios guardados para ${client.businessName}.`);
+    renderAllTabs();
+  }
 }
 
 function adminValidatePayment(clientId) {
@@ -2877,33 +2900,59 @@ function adminValidatePayment(clientId) {
 }
 
 function adminCancelService(clientId) {
-  const client = adminClients.find(c => c.id === clientId);
+  const client = adminClients.find(c => String(c.id) === String(clientId));
   if (!client) return;
 
-  if (confirm(`¿Estás seguro de que deseas cancelar el servicio de ${client.businessName}?`)) {
-    client.status = "Cancelado";
+  if (!confirm(`⚠️ ¿Estás seguro de que deseas cancelar el servicio de ${client.businessName}?`)) {
+    return;
+  }
+
+  const keyword = prompt(`Para confirmar la baja de ${client.businessName}, escribe la palabra "BAJA" en mayúsculas:`);
+  if (keyword !== "BAJA") {
+    alert("⚠️ Confirmación incorrecta. El servicio NO ha sido cancelado.");
+    return;
+  }
+
+  client.status = "Cancelado";
+
+  if (window.TocaDB?.isConfigured()) {
+    window.TocaDB.getClient()
+      .from('profiles')
+      .update({ plan: 'Gratuito|agents:0|packs:0' })
+      .eq('id', clientId)
+      .then(() => {
+        showToast(`🗑️ Servicio dado de baja en base de datos.`);
+        return window.TocaDB.loadAllProfiles();
+      })
+      .then(profiles => {
+        adminUsers = profiles;
+        renderAllTabs();
+      })
+      .catch(err => {
+        console.error(err);
+        showToast("Error cancelando el servicio en Supabase.");
+      });
+  } else {
     localStorage.setItem('toca_simulated_admin_clients', JSON.stringify(adminClients));
     showToast(`🗑️ Servicio cancelado para ${client.businessName}.`);
-    
-    // Refresh modal if open
-    if (selectedAdminClientId === clientId) {
-      renderAllTabs();
-    }
+    renderAllTabs();
   }
 }
 
 function impersonateClient(clientId) {
-  const client = adminClients.find(c => c.id === clientId);
+  const client = adminClients.find(c => String(c.id) === String(clientId));
   if (!client) return;
 
   impersonatedClientId = clientId;
   localStorage.setItem('toca_impersonated_client_id', JSON.stringify(clientId));
 
-  // Cambiar el plan activo simulado en el sistema
   currentActivePlan = client.plan;
+  purchasedExtraAgents = client.extraAgents || 0;
+  purchasedExtraPacks = client.extraPacks || 0;
   localStorage.setItem('toca_current_active_plan', client.plan);
+  localStorage.setItem('toca_extra_agents', String(purchasedExtraAgents));
+  localStorage.setItem('toca_extra_packs', String(purchasedExtraPacks));
 
-  // Simular los datos del negocio y sus contactos correspondientes
   currentBusinessId = 999;
   localStorage.setItem('toca_current_business_id', 999);
 
@@ -2917,18 +2966,29 @@ function impersonateClient(clientId) {
     timezone: "America/Lima"
   };
 
-  // Cargar contactos semilla filtrados para el cliente suplantado
-  contacts = [
-    { id: 901, name: "Contacto Cliente Slim 1", company: "SlimCorp Tech", type: "Prospecto", context: "Espera catálogo de importaciones.", status: "Toque del día", fu1: TODAY_STR, whatsapp: "+51987654321", suggestedDate: TODAY_STR, lastContacted: "Hace 2 días", leadSource: "Instagram", createdAt: TODAY_STR, lastActivityDate: TODAY_STR, businessId: 999 },
-    { id: 902, name: "Contacto Cliente Slim 2", company: "Gamarra Mayorista", type: "Cliente", context: "Recompra quincenal activa.", status: "Esperando respuesta", whatsapp: "+51912345678", suggestedDate: "2026-07-15", lastContacted: "Ayer", cycleDays: 14, leadSource: "Referido", createdAt: TODAY_STR, lastActivityDate: TODAY_STR, businessId: 999 }
-  ];
-
-  showToast(`👁️ Suplantando sesión de: ${client.businessName}.`);
-  
-  // Salir de la pestaña admin y redirigir a inicio para ver el dashboard del cliente
-  switchTab('inicio');
-  renderAllTabs();
-  updateProfileUI();
+  if (window.TocaDB?.isConfigured()) {
+    window.TocaDB.loadContacts()
+      .then(dbContacts => {
+        contacts = dbContacts;
+        showToast(`👁️ Suplantando sesión de: ${client.businessName}.`);
+        switchTab('inicio');
+        renderAllTabs();
+        updateProfileUI();
+      })
+      .catch(err => {
+        console.error(err);
+        showToast("Error cargando contactos del cliente suplantado.");
+      });
+  } else {
+    contacts = [
+      { id: 901, name: "Contacto Cliente Slim 1", company: "SlimCorp Tech", type: "Prospecto", context: "Espera catálogo de importaciones.", status: "Toque del día", fu1: TODAY_STR, whatsapp: "+51987654321", suggestedDate: TODAY_STR, lastContacted: "Hace 2 días", leadSource: "Instagram", createdAt: TODAY_STR, lastActivityDate: TODAY_STR, businessId: 999 },
+      { id: 902, name: "Contacto Cliente Slim 2", company: "Gamarra Mayorista", type: "Cliente", context: "Recompra quincenal activa.", status: "Esperando respuesta", whatsapp: "+51912345678", suggestedDate: "2026-07-15", lastContacted: "Ayer", cycleDays: 14, leadSource: "Referido", createdAt: TODAY_STR, lastActivityDate: TODAY_STR, businessId: 999 }
+    ];
+    showToast(`👁️ Suplantando sesión de: ${client.businessName}.`);
+    switchTab('inicio');
+    renderAllTabs();
+    updateProfileUI();
+  }
 }
 
 function stopImpersonating() {
@@ -2954,6 +3014,45 @@ function stopImpersonating() {
   switchTab('admin');
   renderAllTabs();
   updateProfileUI();
+}
+
+async function adminDeleteUser(clientId) {
+  const client = adminClients.find(c => String(c.id) === String(clientId));
+  if (!client) return;
+
+  if (!confirm(`⚠️ ¿Estás seguro de que deseas eliminar permanentemente la cuenta de "${client.businessName}"? Esta acción no se puede deshacer y borrará todos sus datos.`)) {
+    return;
+  }
+
+  const keyword = prompt(`Para confirmar la eliminación permanente de "${client.businessName}", escribe la palabra "ELIMINAR" en mayúsculas:`);
+  if (keyword !== "ELIMINAR") {
+    alert("⚠️ Confirmación incorrecta. La cuenta NO ha sido eliminada.");
+    return;
+  }
+  
+  if (window.TocaDB?.isConfigured()) {
+    try {
+      const { error } = await window.TocaDB.getClient()
+        .from('profiles')
+        .delete()
+        .eq('id', clientId);
+      if (error) throw error;
+      
+      showToast("🗑️ Usuario eliminado de la base de datos.");
+      adminUsers = await window.TocaDB.loadAllProfiles();
+      selectClientForEdit(null);
+      renderAdminTab();
+    } catch (err) {
+      console.error(err);
+      showToast("Error al eliminar el usuario en Supabase.");
+    }
+  } else {
+    adminClients = adminClients.filter(c => String(c.id) !== String(clientId));
+    localStorage.setItem('toca_simulated_admin_clients', JSON.stringify(adminClients));
+    showToast("🗑️ Cliente simulado eliminado.");
+    selectClientForEdit(null);
+    renderAdminTab();
+  }
 }
 
 // Función unificada para procesar la apertura de un contacto en el dashboard
