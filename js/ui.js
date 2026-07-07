@@ -1573,8 +1573,8 @@ function renderProfileModalContent() {
       
       if (isAdmin) {
         // Owner/Admin can delete other agents
-        if (agent.role === 'Administrador' && agent.name === 'Javier Reyes') {
-          // Javier Reyes is the owner/main admin, can't delete self
+        if (agent.role === 'Administrador') {
+          // Owner/Admin is the owner/main admin, can't delete self
           actionsHtml = `<span style="color: var(--color-ontrack); font-weight: 700;">● Propietario</span>`;
         } else {
           // Can delete any other agent (active or pending)
@@ -1593,9 +1593,10 @@ function renderProfileModalContent() {
           }
         }
       } else {
-        // Simulated user is Agent (Sofía Castro)
-        if (agent.name === 'Sofía Castro') {
-          // Sofia can delete/unsubscribe herself
+        // Simulated user is Agent
+        const activeEmail = (typeof currentAuthUser !== 'undefined' && currentAuthUser) ? currentAuthUser.email : 'vendedor@empresa.com';
+        if (agent.email.toLowerCase() === activeEmail.toLowerCase()) {
+          // Agent can delete/unsubscribe themselves
           actionsHtml = `<div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
                            <span style="color: var(--color-ontrack); font-weight: 700; font-size: 0.76rem;">● Activo</span>
                            <button onclick="selfUnsubscribeAgent('${agent.email}')" style="background: #fee2e2; border: 1px solid #fecaca; color: #ef4444; font-size: 0.68rem; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;" title="Dar de baja mi acceso">🚪 Darse de baja</button>
@@ -1755,6 +1756,39 @@ function updateProfileDemoMessage() {
 function renderEstadisticasTab() {
   const container = document.getElementById('tab-estadisticas');
   if (!container) return;
+
+  if (currentActivePlan === 'Gratuito') {
+    container.innerHTML = `
+      <div style="position: relative; width: 100%; min-height: 500px; padding: 20px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 16px;">
+        <!-- Blurred background simulation of statistics -->
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; filter: blur(8px) grayscale(40%); opacity: 0.15; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 20px; pointer-events: none; user-select: none;">
+          ${Array(4).fill(0).map(() => `
+            <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; height: 120px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="width: 40%; height: 12px; background: #e5e7eb; border-radius: 4px;"></div>
+              <div style="width: 80%; height: 32px; background: #e5e7eb; border-radius: 6px;"></div>
+            </div>
+          `).join('')}
+          <div style="grid-column: span 4; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; height: 300px; padding: 20px;">
+            <div style="width: 20%; height: 16px; background: #e5e7eb; border-radius: 4px; margin-bottom: 20px;"></div>
+            <div style="width: 100%; height: 200px; background: #f3f4f6; border-radius: 8px;"></div>
+          </div>
+        </div>
+
+        <!-- Lock Message Panel -->
+        <div style="position: relative; z-index: 10; background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-color); padding: 40px 30px; border-radius: 20px; box-shadow: var(--shadow-lg); text-align: center; max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 16px;">
+          <div style="font-size: 3rem;">📊🔒</div>
+          <h3 style="font-family: var(--font-title); font-size: 1.25rem; font-weight: 700; color: #111827; margin: 0;">Panel de Estadísticas Bloqueado</h3>
+          <p style="font-family: var(--font-body); font-size: 0.85rem; color: #4b5563; line-height: 1.5; margin: 0;">
+            El análisis de conversión, métricas de seguimiento y consistencia de cierres solo están disponibles en planes de pago.
+          </p>
+          <button class="btn-primary" style="margin-top: 8px; width: 100%; background: var(--color-accent); color: #0a0a0a; font-weight: 600; padding: 12px 24px; border-radius: 999px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.88rem;" onclick="openProfileConfigModal(); switchProfileModalTab('plan');">
+            🚀 Subir a Plan Panal o Superior
+          </button>
+        </div>
+      </div>
+    `;
+    return;
+  }
 
   // 1. Calculate Period Boundaries based on currentStatsPeriod
   const periodDaysMap = {

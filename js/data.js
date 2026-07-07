@@ -19,13 +19,14 @@ let currentStatsPeriod = 'mes';
 let currentProfileModalTab = 'perfil';
 let tempExtraAgents = 0;
 const PLAN_LIMITS = {
+  'Gratuito': { name: 'Plan Gratuito', tag: '🌱', businesses: 1, agents: 1, contacts: 5 },
   'Néctar': { name: 'Plan Néctar', tag: '🌸', businesses: 1, agents: 1, contacts: 50 },
   'Panal': { name: 'Plan Panal', tag: '🍯', businesses: 2, agents: 3, contacts: 200 },
   'Colmena': { name: 'Plan Colmena', tag: '🐝', businesses: 5, agents: 8, contacts: 600 },
   'Apiario': { name: 'Plan Apiario', tag: '👑', businesses: 999, agents: 999, contacts: 99999 }
 };
 
-let currentActivePlan = localStorage.getItem('toca_current_active_plan') || 'Panal';
+let currentActivePlan = localStorage.getItem('toca_current_active_plan') || 'Gratuito';
 let purchasedExtraAgents = parseInt(localStorage.getItem('toca_extra_agents')) || 0;
 let purchasedExtraPacks = parseInt(localStorage.getItem('toca_extra_packs')) || 0;
 
