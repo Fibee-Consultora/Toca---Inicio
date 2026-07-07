@@ -44,6 +44,14 @@ body.view-mobile .toca-sidebar {
   margin-bottom: 32px;
 }
 
+.sidebar-brand-logo {
+  height: 64px;
+  width: auto;
+  max-width: 100%;
+  display: block;
+  object-fit: contain;
+}
+
 .workspace-switcher-trigger {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -75,28 +83,6 @@ body.view-mobile .toca-sidebar {
 .workspace-switcher-trigger:disabled {
   opacity: 0.6;
   cursor: default;
-}
-
-.brand-logo {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--color-accent-gradient);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  color: #0A0A0A;
-  font-family: var(--font-title);
-  font-size: 0.95rem;
-}
-
-.brand-name {
-  font-family: var(--font-title);
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: #ffffff;
 }
 
 .nav-list {
