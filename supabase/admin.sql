@@ -66,3 +66,14 @@ begin
   end if;
 end;
 $$;
+
+-- RPC temporal para inspeccionar columnas de cualquier tabla
+create or replace function public.get_table_columns(tbl text)
+returns table(col text)
+language plpgsql
+security definer
+as $$
+begin
+  return query select column_name::text from information_schema.columns where table_schema = 'public' and table_name = tbl;
+end;
+$$;
