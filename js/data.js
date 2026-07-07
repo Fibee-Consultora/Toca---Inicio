@@ -36,20 +36,11 @@ let currentSimulatedUserRole = localStorage.getItem('toca_current_simulated_role
 let businesses = JSON.parse(localStorage.getItem('toca_businesses')) || [
   {
     id: 1,
-    name: "Polos Mayoristas Lima",
-    sector: "Venta de ropa al por mayor",
-    description: "Prendas de algodón peruano oversize de alta calidad para marcas independientes.",
-    tone: "Amigable",
-    promotion: "Envío gratis a todo el Perú por compras de 1 docena o más",
-    timezone: "America/Lima"
-  },
-  {
-    id: 2,
-    name: "Coolbox Express",
+    name: "Mi Negocio",
     sector: "Otro",
-    description: "Dispositivos tecnológicos, audífonos, parlantes y gadgets para el día a día.",
-    tone: "Directo",
-    promotion: "10% de descuento en tu primera compra online",
+    description: "",
+    tone: "Amigable",
+    promotion: "",
     timezone: "America/Lima"
   }
 ];
@@ -58,8 +49,7 @@ let currentBusinessId = parseInt(localStorage.getItem('toca_current_business_id'
 let businessProfile = businesses.find(b => b.id === currentBusinessId) || businesses[0];
 
 let teamAgents = JSON.parse(localStorage.getItem('toca_team_agents')) || [
-  { name: "Javier Reyes", email: "javier@poloslima.com", role: "Administrador", status: "Activo" },
-  { name: "Sofía Castro", email: "sofia@poloslima.com", role: "Agente", status: "Activo" }
+  { name: "Dueño Local", email: "admin@toca.app", role: "Administrador", status: "Activo" }
 ];
 
 // Auth — sesión real vía Supabase; fallback localStorage solo sin Supabase

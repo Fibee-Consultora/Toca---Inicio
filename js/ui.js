@@ -1280,6 +1280,11 @@ function renderProfileModalContent() {
           </div>
           
           <div class="form-group">
+            <label class="form-label" style="font-weight: 600;">Tu Nombre y Apellido</label>
+            <input type="text" id="profile-owner-name" class="form-input" value="${getCurrentOwnerName()}" placeholder="Ej. Javier Reyes" style="padding: 8px 12px; background: #ffffff;">
+          </div>
+
+          <div class="form-group">
             <label class="form-label" style="font-weight: 600;">Nombre del Negocio</label>
             <input type="text" id="profile-biz-name" class="form-input" value="${businessProfile.name}" placeholder="Ej. Polos Mayoristas Lima" style="padding: 8px 12px; background: #ffffff;">
           </div>
@@ -1292,20 +1297,6 @@ function renderProfileModalContent() {
               <option value="Servicios de consultoría" ${businessProfile.sector === 'Servicios de consultoría' ? 'selected' : ''}>Servicios de consultoría</option>
               <option value="Alimentos y Abarrotes" ${businessProfile.sector === 'Alimentos y Abarrotes' ? 'selected' : ''}>Alimentos y Abarrotes</option>
               <option value="Otro" ${!['Venta de ropa al por mayor', 'Suscripciones de streaming', 'Servicios de consultoría', 'Alimentos y Abarrotes'].includes(businessProfile.sector) ? 'selected' : ''}>Otro rubro / servicio</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" style="font-weight: 600;">Zona Horaria del Sistema</label>
-            <select id="profile-biz-timezone" class="form-input form-select" style="padding: 8px 12px; background: #ffffff;">
-              <option value="America/Lima" ${businessProfile.timezone === 'America/Lima' ? 'selected' : ''}>🇵🇪 Perú (America/Lima)</option>
-              <option value="America/Bogota" ${businessProfile.timezone === 'America/Bogota' ? 'selected' : ''}>🇨🇴 Colombia (America/Bogota)</option>
-              <option value="America/Mexico_City" ${businessProfile.timezone === 'America/Mexico_City' ? 'selected' : ''}>🇲🇽 México (America/Mexico_City)</option>
-              <option value="America/Santiago" ${businessProfile.timezone === 'America/Santiago' ? 'selected' : ''}>🇨🇱 Chile (America/Santiago)</option>
-              <option value="America/Buenos_Aires" ${businessProfile.timezone === 'America/Buenos_Aires' ? 'selected' : ''}>🇦🇷 Argentina (America/Buenos_Aires)</option>
-              <option value="America/Caracas" ${businessProfile.timezone === 'America/Caracas' ? 'selected' : ''}>🇻🇪 Venezuela (America/Caracas)</option>
-              <option value="Europe/Madrid" ${businessProfile.timezone === 'Europe/Madrid' ? 'selected' : ''}>🇪🇸 España (Europe/Madrid)</option>
-              <option value="America/New_York" ${businessProfile.timezone === 'America/New_York' ? 'selected' : ''}>🇺🇸 USA Este (America/New_York)</option>
             </select>
           </div>
 

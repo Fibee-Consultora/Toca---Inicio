@@ -22,6 +22,8 @@ function bootstrapAuthenticatedUser(user) {
   const displayName =
     meta.full_name || meta.name || user.email?.split('@')[0] || 'Usuario';
 
+  const agentKey = `toca_team_agents_${user.id}`;
+
   if (!localStorage.getItem(storageKey)) {
     businesses = [
       {
@@ -47,6 +49,7 @@ function bootstrapAuthenticatedUser(user) {
     localStorage.setItem(storageKey, 'true');
     localStorage.setItem(`toca_businesses_${user.id}`, JSON.stringify(businesses));
     localStorage.setItem(`toca_current_business_id_${user.id}`, String(currentBusinessId));
+    localStorage.setItem(agentKey, JSON.stringify(teamAgents));
     return;
   }
 
@@ -56,6 +59,20 @@ function bootstrapAuthenticatedUser(user) {
     currentBusinessId =
       parseInt(localStorage.getItem(`toca_current_business_id_${user.id}`), 10) || 1;
     businessProfile = businesses.find((b) => b.id === currentBusinessId) || businesses[0];
+  }
+  const savedAgents = localStorage.getItem(agentKey);
+  if (savedAgents) {
+    teamAgents = JSON.parse(savedAgents);
+  } else {
+    teamAgents = [
+      {
+        name: displayName,
+        email: user.email || '',
+        role: 'Administrador',
+        status: 'Activo',
+      },
+    ];
+    localStorage.setItem(agentKey, JSON.stringify(teamAgents));
   }
 }
 
@@ -69,6 +86,33 @@ document.addEventListener('visibilitychange', () => {
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // Clear old cached mock data to ensure a clean slate
+  const oldAgents = localStorage.getItem('toca_team_agents');
+  if (oldAgents && (oldAgents.includes('Javier Reyes') || oldAgents.includes('Sofía Castro'))) {
+    localStorage.removeItem('toca_team_agents');
+    teamAgents = [
+      { name: "Dueño Local", email: "admin@toca.app", role: "Administrador", status: "Activo" }
+    ];
+  }
+  const oldBiz = localStorage.getItem('toca_businesses');
+  if (oldBiz && (oldBiz.includes('Polos Mayoristas Lima') || oldBiz.includes('Coolbox Express'))) {
+    localStorage.removeItem('toca_businesses');
+    localStorage.removeItem('toca_business_profile');
+    businesses = [
+      {
+        id: 1,
+        name: "Mi Negocio",
+        sector: "Otro",
+        description: "",
+        tone: "Amigable",
+        promotion: "",
+        timezone: "America/Lima"
+      }
+    ];
+    currentBusinessId = 1;
+    businessProfile = businesses[0];
+  }
+
   try {
     if (window.TocaDB?.isConfigured()) {
       window.TocaDB.init();
@@ -143,8 +187,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!localStorage.getItem('toca_business_profile')) {
     localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
   }
-  if (!localStorage.getItem('toca_team_agents')) {
-    localStorage.setItem('toca_team_agents', JSON.stringify(teamAgents));
+  if (!localStorage.getItem(getTeamAgentsStorageKey())) {
+    localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
   }
   renderAllTabs();
   appInitialized = true;
@@ -1624,10 +1668,33 @@ function setProspectosFilter(filter) {
 function saveBusinessProfile() {
   const name = document.getElementById('profile-biz-name').value;
   const sector = document.getElementById('profile-biz-sector').value;
-  const timezone = document.getElementById('profile-biz-timezone').value;
+  const timezone = 'America/Lima'; // Siempre Perú
   const description = document.getElementById('profile-biz-desc').value;
   const tone = document.getElementById('profile-biz-tone').value;
   const promotion = document.getElementById('profile-biz-promo').value;
+
+  const ownerNameInput = document.getElementById('profile-owner-name');
+  if (ownerNameInput) {
+    const ownerName = ownerNameInput.value.trim() || 'Dueño';
+    let owner;
+    if (currentAuthUser) {
+      owner = teamAgents.find(a => a.email.toLowerCase() === currentAuthUser.email.toLowerCase());
+    } else {
+      owner = teamAgents.find(a => a.role === 'Administrador');
+    }
+    if (owner) {
+      owner.name = ownerName;
+    } else {
+      teamAgents.push({
+        name: ownerName,
+        email: currentAuthUser ? currentAuthUser.email : 'admin@toca.app',
+        role: 'Administrador',
+        status: 'Activo'
+      });
+    }
+    localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
+    updateProfileUI();
+  }
 
   // Find and update in businesses list
   const bizIdx = businesses.findIndex(b => b.id === currentBusinessId);
@@ -2319,7 +2386,7 @@ function submitAgentInvitation() {
   };
   
   teamAgents.push(newAgent);
-  localStorage.setItem('toca_team_agents', JSON.stringify(teamAgents));
+  localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
   
   showToast(`✉️ Invitación enviada a ${name} (${email})`);
   
@@ -2408,6 +2475,8 @@ function resetSimulatedAddons() {
   }
 }
 
+
+
 function updateProfileUI() {
   const nameEl = document.querySelector('.profile-name');
   const roleEl = document.getElementById('sidebar-profile-role');
@@ -2429,11 +2498,7 @@ function updateProfileUI() {
 
   if (currentAuthUser) {
     const meta = currentAuthUser.user_metadata || {};
-    const displayName =
-      meta.full_name ||
-      meta.name ||
-      currentAuthUser.email?.split('@')[0] ||
-      'Usuario';
+    const displayName = getCurrentOwnerName();
     const avatarUrl = meta.avatar_url || meta.picture;
     const initial = displayName.charAt(0).toUpperCase();
 
@@ -2456,10 +2521,12 @@ function updateProfileUI() {
     if (avatarEl) avatarEl.textContent = '🛡️';
     if (mobileBtnEl) mobileBtnEl.textContent = '🛡️';
   } else if (currentSimulatedUserRole === 'Administrador') {
-    if (nameEl) nameEl.textContent = 'Javier Reyes';
+    const displayName = getCurrentOwnerName();
+    const initial = displayName.charAt(0).toUpperCase();
+    if (nameEl) nameEl.textContent = displayName;
     if (roleEl) roleEl.textContent = planName;
-    if (avatarEl) avatarEl.textContent = 'J';
-    if (mobileBtnEl) mobileBtnEl.textContent = 'J';
+    if (avatarEl) avatarEl.textContent = initial;
+    if (mobileBtnEl) mobileBtnEl.textContent = initial;
   } else {
     if (nameEl) nameEl.textContent = 'Sofía Castro';
     if (roleEl) roleEl.textContent = `${planName} (Colaborador)`;
@@ -2500,7 +2567,7 @@ function deleteAgent(email) {
   const agentName = agent ? agent.name : email;
   if (confirm(`¿Estás seguro de que deseas eliminar a ${agentName} del equipo?`)) {
     teamAgents = teamAgents.filter(a => a.email.toLowerCase() !== email.toLowerCase());
-    localStorage.setItem('toca_team_agents', JSON.stringify(teamAgents));
+    localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
     showToast(`🗑️ Agente ${agentName} eliminado del equipo.`);
     renderProfileModalContent();
   }
@@ -2509,7 +2576,7 @@ function deleteAgent(email) {
 function selfUnsubscribeAgent(email) {
   if (confirm("¿Estás seguro de que deseas darte de baja del equipo? Perderás acceso al sistema de inmediato.")) {
     teamAgents = teamAgents.filter(a => a.email.toLowerCase() !== email.toLowerCase());
-    localStorage.setItem('toca_team_agents', JSON.stringify(teamAgents));
+    localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
     
     // Close modal
     closeProfileConfigModal();

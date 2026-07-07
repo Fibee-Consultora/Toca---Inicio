@@ -185,5 +185,17 @@ function normalizeString(str) {
     .replace(/\s+/g, " ")
     .trim();
 }
+function getTeamAgentsStorageKey() {
+  return typeof currentAuthUser !== 'undefined' && currentAuthUser ? `toca_team_agents_${currentAuthUser.id}` : 'toca_team_agents';
+}
 
-
+function getCurrentOwnerName() {
+  if (typeof teamAgents === 'undefined') return 'Dueño Local';
+  let owner;
+  if (typeof currentAuthUser !== 'undefined' && currentAuthUser) {
+    owner = teamAgents.find(a => a.email.toLowerCase() === currentAuthUser.email.toLowerCase());
+  } else {
+    owner = teamAgents.find(a => a.role === 'Administrador');
+  }
+  return owner ? owner.name : 'Dueño Local';
+}
