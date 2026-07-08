@@ -188,8 +188,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderAllTabs();
   appInitialized = true;
 
-  // Abrir automáticamente el modal de configuración de negocio si tiene el nombre por defecto o descripción vacía
-  if (isLoggedIn && businessProfile && (businessProfile.name === 'Mi negocio' || businessProfile.name === 'Mi Negocio' || !businessProfile.description || businessProfile.description.trim() === '')) {
+  // Abrir automáticamente el modal de configuración de negocio si tiene el nombre por defecto o descripción vacía (solo la primera vez y no para SuperAdmin)
+  const configModalShown = localStorage.getItem('toca_business_config_modal_shown') === 'true';
+  const isSuperAdminEmail = currentAuthUser?.email?.toLowerCase() === 'fibeeconsultoradigital@gmail.com';
+  if (isLoggedIn && !isSuperAdminEmail && !configModalShown && businessProfile && (businessProfile.name === 'Mi negocio' || businessProfile.name === 'Mi Negocio' || !businessProfile.description || businessProfile.description.trim() === '')) {
+    localStorage.setItem('toca_business_config_modal_shown', 'true');
     setTimeout(() => {
       openProfileConfigModal();
       switchProfileModalTab('negocio');
@@ -2027,6 +2030,7 @@ async function logout() {
 
   applyAuthUser(null);
   localStorage.removeItem('toca_is_logged_in');
+  localStorage.removeItem('toca_business_config_modal_shown');
   updateLoginScreen();
   setLoginButtonLoading(false);
 }
