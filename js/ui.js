@@ -431,18 +431,7 @@ function renderDailySection(list, totalUnfilteredCount) {
             </div>
             <div class="minimal-card-actions">
               <button class="btn-sug-ia" id="btn-sug-toggle-${c.id}" onclick="toggleSuggestionsInline(${c.id})">
-                ${compactActions ? `
-                <span class="btn-sug-ia-label">
-                  <span>✨ Sugerencias</span>
-                  <span>IA</span>
-                </span>
-                ` : `
-                <span class="btn-sug-ia-icon" aria-hidden="true">✨</span>
-                <span class="btn-sug-ia-label">
-                  <span>Sugerencias</span>
-                  <span>IA</span>
-                </span>
-                `}
+                ✨ Sugerencias IA
               </button>
               <button class="btn-hecho-check" onclick="moveToWaiting(${c.id})">
                 Hecho ✓
@@ -1142,7 +1131,7 @@ function generateIaSuggestionsHtml(id) {
   }
 
   return `
-    <div class="ia-suggestions-inline-box" style="margin-top: 10px; padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; animation: slideDown 0.25s ease-out;">
+    <div class="ia-suggestions-inline-box" style="margin-top: 10px; padding: 12px; background: #fdfcfa; border-radius: 12px; border: 1px solid rgba(124, 58, 237, 0.15); display: flex; flex-direction: column; gap: 8px; animation: slideDown 0.25s ease-out; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.04);">
       <div style="font-size: 0.75rem; color: #7c3aed; font-weight: 600; display: flex; align-items: center; gap: 6px;">
         <span>✨ Sugerencias de Mensajes IA</span>
       </div>
@@ -1150,31 +1139,37 @@ function generateIaSuggestionsHtml(id) {
         Contexto: "${c.context || 'Sin contexto registrado (usando plantilla base)'}"
       </div>
       
-      <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div class="ia-suggestion-card" style="padding: 8px; background: #ffffff; border-radius: 6px; border: 1px solid var(--border-color);">
-          <span class="ia-tag" style="font-size: 0.65rem; color: #7c3aed; background: rgba(124, 58, 237, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 600; display: inline-block;">Cercano ${bizTone === 'Amigable' ? '<span style="color:#c2410c; margin-left:4px; font-weight:700;">★ recomendado</span>' : ''}</span>
-          <p class="ia-text" id="sug-cercano-${id}" style="font-size: 0.78rem; margin: 4px 0; color: var(--color-text-primary);">${suggestions.Cercano}</p>
-          <div class="ia-card-actions" style="margin-top: 4px; display: flex; gap: 6px;">
-            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.72rem; background: #ffffff;" onclick="actionSendMessage(${id}, 'sug-cercano-${id}')">↗ WhatsApp</button>
-            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.72rem; background: #ffffff;" onclick="actionCopyMessage(${id}, 'sug-cercano-${id}', this)">⧉ Copiar</button>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+        <div class="ia-suggestion-card" style="padding: 10px; background: #ffffff; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between; gap: 8px;">
+          <div>
+            <span class="ia-tag" style="font-size: 0.65rem; color: #7c3aed; background: rgba(124, 58, 237, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 600; display: inline-block;">Cercano ${bizTone === 'Amigable' ? '<span style="color:#c2410c; margin-left:4px; font-weight:700;">★ recomendado</span>' : ''}</span>
+            <p class="ia-text" id="sug-cercano-${id}" style="font-size: 0.76rem; margin: 6px 0 0 0; color: var(--color-text-primary); line-height: 1.35;">${suggestions.Cercano}</p>
+          </div>
+          <div class="ia-card-actions" style="display: flex; gap: 6px;">
+            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.72rem; background: #ffffff; flex: 1;" onclick="actionSendMessage(${id}, 'sug-cercano-${id}')">↗ WhatsApp</button>
+            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.72rem; background: #ffffff; flex: 1;" onclick="actionCopyMessage(${id}, 'sug-cercano-${id}', this)">⧉ Copiar</button>
           </div>
         </div>
         
-        <div class="ia-suggestion-card" style="padding: 8px; background: #ffffff; border-radius: 6px; border: 1px solid var(--border-color);">
-          <span class="ia-tag" style="font-size: 0.65rem; color: #7c3aed; background: rgba(124, 58, 237, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 600; display: inline-block;">Directo ${bizTone === 'Directo' || bizTone === 'Formal' ? '<span style="color:#c2410c; margin-left:4px; font-weight:700;">★ recomendado</span>' : ''}</span>
-          <p class="ia-text" id="sug-directo-${id}" style="font-size: 0.78rem; margin: 4px 0; color: var(--color-text-primary);">${suggestions.Directo}</p>
-          <div class="ia-card-actions" style="margin-top: 4px; display: flex; gap: 6px;">
-            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.72rem; background: #ffffff;" onclick="actionSendMessage(${id}, 'sug-directo-${id}')">↗ WhatsApp</button>
-            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.72rem; background: #ffffff;" onclick="actionCopyMessage(${id}, 'sug-directo-${id}', this)">⧉ Copiar</button>
+        <div class="ia-suggestion-card" style="padding: 10px; background: #ffffff; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between; gap: 8px;">
+          <div>
+            <span class="ia-tag" style="font-size: 0.65rem; color: #7c3aed; background: rgba(124, 58, 237, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 600; display: inline-block;">Directo ${bizTone === 'Directo' || bizTone === 'Formal' ? '<span style="color:#c2410c; margin-left:4px; font-weight:700;">★ recomendado</span>' : ''}</span>
+            <p class="ia-text" id="sug-directo-${id}" style="font-size: 0.76rem; margin: 6px 0 0 0; color: var(--color-text-primary); line-height: 1.35;">${suggestions.Directo}</p>
+          </div>
+          <div class="ia-card-actions" style="display: flex; gap: 6px;">
+            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.72rem; background: #ffffff; flex: 1;" onclick="actionSendMessage(${id}, 'sug-directo-${id}')">↗ WhatsApp</button>
+            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.72rem; background: #ffffff; flex: 1;" onclick="actionCopyMessage(${id}, 'sug-directo-${id}', this)">⧉ Copiar</button>
           </div>
         </div>
         
-        <div class="ia-suggestion-card" style="padding: 8px; background: #ffffff; border-radius: 6px; border: 1px solid var(--border-color);">
-          <span class="ia-tag" style="font-size: 0.65rem; color: #7c3aed; background: rgba(124, 58, 237, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 600; display: inline-block;">Con gancho ${bizTone === 'Divertido' ? '<span style="color:#c2410c; margin-left:4px; font-weight:700;">★ recomendado</span>' : ''}</span>
-          <p class="ia-text" id="sug-gancho-${id}" style="font-size: 0.78rem; margin: 4px 0; color: var(--color-text-primary);">${suggestions["Con gancho"]}</p>
-          <div class="ia-card-actions" style="margin-top: 4px; display: flex; gap: 6px;">
-            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.72rem; background: #ffffff;" onclick="actionSendMessage(${id}, 'sug-gancho-${id}')">↗ WhatsApp</button>
-            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.72rem; background: #ffffff;" onclick="actionCopyMessage(${id}, 'sug-gancho-${id}', this)">⧉ Copiar</button>
+        <div class="ia-suggestion-card" style="padding: 10px; background: #ffffff; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between; gap: 8px;">
+          <div>
+            <span class="ia-tag" style="font-size: 0.65rem; color: #7c3aed; background: rgba(124, 58, 237, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 600; display: inline-block;">Con gancho ${bizTone === 'Divertido' ? '<span style="color:#c2410c; margin-left:4px; font-weight:700;">★ recomendado</span>' : ''}</span>
+            <p class="ia-text" id="sug-gancho-${id}" style="font-size: 0.76rem; margin: 6px 0 0 0; color: var(--color-text-primary); line-height: 1.35;">${suggestions["Con gancho"]}</p>
+          </div>
+          <div class="ia-card-actions" style="display: flex; gap: 6px;">
+            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.72rem; background: #ffffff; flex: 1;" onclick="actionSendMessage(${id}, 'sug-gancho-${id}')">↗ WhatsApp</button>
+            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.72rem; background: #ffffff; flex: 1;" onclick="actionCopyMessage(${id}, 'sug-gancho-${id}', this)">⧉ Copiar</button>
           </div>
         </div>
       </div>
@@ -1295,11 +1290,13 @@ function renderProfileModalContent() {
           <div class="form-group">
             <label class="form-label" style="font-weight: 600;">Rubro o Sector</label>
             <select id="profile-biz-sector" class="form-input form-select" style="padding: 8px 12px; background: #ffffff;">
-              <option value="Venta de ropa al por mayor" ${businessProfile.sector === 'Venta de ropa al por mayor' ? 'selected' : ''}>Venta de ropa al por mayor</option>
-              <option value="Suscripciones de streaming" ${businessProfile.sector === 'Suscripciones de streaming' ? 'selected' : ''}>Suscripciones de streaming</option>
-              <option value="Servicios de consultoría" ${businessProfile.sector === 'Servicios de consultoría' ? 'selected' : ''}>Servicios de consultoría</option>
-              <option value="Alimentos y Abarrotes" ${businessProfile.sector === 'Alimentos y Abarrotes' ? 'selected' : ''}>Alimentos y Abarrotes</option>
-              <option value="Otro" ${!['Venta de ropa al por mayor', 'Suscripciones de streaming', 'Servicios de consultoría', 'Alimentos y Abarrotes'].includes(businessProfile.sector) ? 'selected' : ''}>Otro rubro / servicio</option>
+              <option value="Comercio" ${businessProfile.sector === 'Comercio' ? 'selected' : ''}>Comercio (Venta de productos/Mercaderías)</option>
+              <option value="Servicios y Consultoría" ${businessProfile.sector === 'Servicios y Consultoría' ? 'selected' : ''}>Servicios y Consultoría</option>
+              <option value="Suscripciones y Membresías" ${businessProfile.sector === 'Suscripciones y Membresías' ? 'selected' : ''}>Suscripciones y Membresías</option>
+              <option value="Alimentos y Bebidas" ${businessProfile.sector === 'Alimentos y Bebidas' ? 'selected' : ''}>Alimentos y Bebidas</option>
+              <option value="Tecnología y Software" ${businessProfile.sector === 'Tecnología y Software' ? 'selected' : ''}>Tecnología y Software</option>
+              <option value="Educación y Cursos" ${businessProfile.sector === 'Educación y Cursos' ? 'selected' : ''}>Educación y Cursos</option>
+              <option value="Otro" ${!['Comercio', 'Servicios y Consultoría', 'Suscripciones y Membresías', 'Alimentos y Bebidas', 'Tecnología y Software', 'Educación y Cursos'].includes(businessProfile.sector) ? 'selected' : ''}>Otro rubro / servicio</option>
             </select>
           </div>
 

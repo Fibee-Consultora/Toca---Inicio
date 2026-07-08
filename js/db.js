@@ -128,10 +128,19 @@
   async function insertContact(contact) {
     const { data, error } = await client.from('contacts').insert(contactToRow(contact)).select().single();
     if (error) throw error;
+    
+    // Formatear fecha actual de manera dinámica
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const dateStr = `${dd}/${mm}/${yyyy}`;
+
     if (contact.context && contact.context.trim()) {
-      await addHistoryItem(data.id, { date: '15 JUN.', text: contact.context });
+      await addHistoryItem(data.id, { date: dateStr, text: `Necesidad / Contexto inicial: "${contact.context}"` });
     }
-    await addHistoryItem(data.id, { date: '10 JUN.', text: 'Contacto inicial registrado en el sistema Toca.' });
+    await addHistoryItem(data.id, { date: dateStr, text: `Contacto inicial registrado en el sistema. Origen: ${contact.leadSource || 'WhatsApp Directo'}.` });
+    
     const historyRows = await fetchHistoryForContacts([data.id]);
     return rowToContact(data, historyRows);
   }

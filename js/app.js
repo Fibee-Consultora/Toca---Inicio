@@ -188,6 +188,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderAllTabs();
   appInitialized = true;
 
+  // Abrir automáticamente el modal de configuración de negocio si tiene el nombre por defecto o descripción vacía
+  if (isLoggedIn && businessProfile && (businessProfile.name === 'Mi negocio' || businessProfile.name === 'Mi Negocio' || !businessProfile.description || businessProfile.description.trim() === '')) {
+    setTimeout(() => {
+      openProfileConfigModal();
+      switchProfileModalTab('negocio');
+    }, 800);
+  }
+
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('openModal') === 'true') {
     const name = urlParams.get('name');
@@ -592,6 +600,14 @@ function openNewContactModal(autoType = null) {
 
   document.getElementById('p-fu1').value = TODAY_STR;
   
+  // Reset leadsource selection
+  const leadsourceSelect = document.getElementById('p-leadsource');
+  if (leadsourceSelect) leadsourceSelect.value = 'WhatsApp Directo';
+  const leadsourceOtherGroup = document.getElementById('p-leadsource-other-group');
+  if (leadsourceOtherGroup) leadsourceOtherGroup.style.display = 'none';
+  const leadsourceOtherInput = document.getElementById('p-leadsource-other');
+  if (leadsourceOtherInput) leadsourceOtherInput.value = '';
+
   // Clear context input values
   const pContext = document.getElementById('p-context');
   if (pContext) pContext.value = '';
@@ -643,25 +659,33 @@ function closeNewContactModal() {
   document.getElementById('new-contact-modal').classList.remove('open');
 }
 
+function toggleLeadSourceOtherField() {
+  const select = document.getElementById('p-leadsource');
+  const otherGroup = document.getElementById('p-leadsource-other-group');
+  if (select && otherGroup) {
+    if (select.value === 'Otro') {
+      otherGroup.style.display = 'block';
+      const input = document.getElementById('p-leadsource-other');
+      if (input) input.focus();
+    } else {
+      otherGroup.style.display = 'none';
+    }
+  }
+}
+
 function selectContactType(type) {
   selectedTypeInModal = type;
   
   const cardProspecto = document.getElementById('type-card-prospecto');
   const cardCliente = document.getElementById('type-card-cliente');
-  const badgeProspecto = document.getElementById('prospecto-last-badge');
-  const badgeCliente = document.getElementById('cliente-last-badge');
 
   cardProspecto.classList.remove('selected');
   cardCliente.classList.remove('selected');
-  badgeProspecto.style.display = 'none';
-  badgeCliente.style.display = 'none';
 
   if (type === 'Prospecto') {
     cardProspecto.classList.add('selected');
-    badgeProspecto.style.display = 'block';
   } else {
     cardCliente.classList.add('selected');
-    badgeCliente.style.display = 'block';
   }
 }
 
@@ -699,7 +723,10 @@ function submitProspectForm(event) {
   const fu1 = document.getElementById('p-fu1').value;
   const fu2 = document.getElementById('p-fu2').value;
   const fu3 = document.getElementById('p-fu3').value;
-  const leadSource = document.getElementById('p-leadsource').value;
+  let leadSource = document.getElementById('p-leadsource').value;
+  if (leadSource === 'Otro') {
+    leadSource = document.getElementById('p-leadsource-other').value.trim() || 'Otro';
+  }
 
   // Validation
   if (!validateContextCoherence(context)) {
@@ -739,7 +766,12 @@ function submitProspectForm(event) {
         contacts.push({ ...saved, leadSource, createdAt: TODAY_STR, lastActivityDate: TODAY_STR, businessId: currentBusinessId });
       } else {
         const newId = contacts.length > 0 ? Math.max(...contacts.map(c => c.id)) + 1 : 1;
-        contacts.push({ ...newProspect, id: newId, history: [] });
+        const simulatedContact = { ...newProspect, id: newId, history: [] };
+        if (simulatedContact.context && simulatedContact.context.trim()) {
+          addSystemHistoryLog(simulatedContact, `Necesidad / Contexto inicial: "${simulatedContact.context}"`);
+        }
+        addSystemHistoryLog(simulatedContact, `Contacto inicial registrado en el sistema. Origen: ${simulatedContact.leadSource || 'WhatsApp Directo'}.`);
+        contacts.push(simulatedContact);
       }
     } catch (err) {
       console.error(err);
@@ -977,11 +1009,11 @@ function openContactDetailPanel(id) {
       <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:8px; margin-top:4px; display:flex; flex-direction:column; gap:8px;">
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" style="font-size:0.75rem;">Fecha fu1</label>
+            <label class="form-label" style="font-size:0.75rem;">Fecha Seg 1</label>
             <input type="date" class="form-input" id="detail-fu1-${c.id}" value="${c.fu1 || ''}" style="padding:6px 10px; font-size:0.8rem;">
           </div>
           <div class="form-group">
-            <label class="form-label" style="font-size:0.75rem;">Fecha fu2</label>
+            <label class="form-label" style="font-size:0.75rem;">Fecha Seg 2</label>
             <input type="date" class="form-input" id="detail-fu2-${c.id}" value="${c.fu2 || ''}" style="padding:6px 10px; font-size:0.8rem;">
           </div>
         </div>
@@ -1322,7 +1354,7 @@ function saveContactChanges(id) {
       if (oldFu1 !== c.fu1 || oldFu2 !== c.fu2) {
         const f1 = c.fu1 ? c.fu1.split('-').reverse().join('/') : 'Sin fecha';
         const f2 = c.fu2 ? c.fu2.split('-').reverse().join('/') : 'Sin fecha';
-        configLog = `Fechas de seguimiento actualizadas: fu1 (${f1}), fu2 (${f2}).`;
+        configLog = `Fechas de seguimiento actualizadas: Seg 1 (${f1}), Seg 2 (${f2}).`;
       }
     }
 
@@ -1739,6 +1771,7 @@ function saveBusinessProfile() {
   populateBusinessSwitchers();
 
   renderAllTabs();
+  closeProfileConfigModal();
 }
 
 function getSpinnerHtml(size = 'md') {
@@ -2303,9 +2336,9 @@ function handleContextInput(value) {
   
   suggestionDiv.style.display = 'block';
   if (isMentioned) {
-    suggestionDiv.innerHTML = `✨ IA sugiere fechas (mencionada): fu1 (${fmt1}), fu2 (${fmt2}), fu3 (${fmt3})`;
+    suggestionDiv.innerHTML = `✨ IA sugiere fechas: Seg 1 (${fmt1}), Seg 2 (${fmt2}), Seg 3 (${fmt3})`;
   } else {
-    suggestionDiv.innerHTML = `✨ IA sugiere fechas (por defecto): fu1 (${fmt1}), fu2 (${fmt2}), fu3 (${fmt3})`;
+    suggestionDiv.innerHTML = `✨ IA sugiere fechas (por defecto): Seg 1 (${fmt1}), Seg 2 (${fmt2}), Seg 3 (${fmt3})`;
   }
 }
 
@@ -3172,7 +3205,7 @@ function handleOpenContact(detail) {
       contact.fu3 = fu3Str;
       contact.suggestedDate = fu1Str;
       
-      addSystemHistoryLog(contact, `Seguimientos reprogramados automáticamente tras sincronizar WhatsApp: fu1 (${fu1Str.split('-').reverse().join('/')}), fu2 (${fu2Str.split('-').reverse().join('/')}), fu3 (${fu3Str.split('-').reverse().join('/')}).`);
+      addSystemHistoryLog(contact, `Seguimientos reprogramados automáticamente tras sincronizar WhatsApp: Seg 1 (${fu1Str.split('-').reverse().join('/')}), Seg 2 (${fu2Str.split('-').reverse().join('/')}), Seg 3 (${fu3Str.split('-').reverse().join('/')}).`);
       updated = true;
     } else if (contact.type === 'Cliente') {
       // Clientes: recalcular sugerido según su ciclo
@@ -3237,7 +3270,7 @@ function handleOpenContact(detail) {
           const fmt2 = fu2.split('-').reverse().join('/');
           const fmt3 = fu3.split('-').reverse().join('/');
           suggestionDiv.style.display = 'block';
-          suggestionDiv.innerHTML = `✨ IA sugiere fechas (mencionada): fu1 (${fmt1}), fu2 (${fmt2}), fu3 (${fmt3})`;
+          suggestionDiv.innerHTML = `✨ IA sugiere fechas: Seg 1 (${fmt1}), Seg 2 (${fmt2}), Seg 3 (${fmt3})`;
         }
       } else {
         handleContextInput(context);

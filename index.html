@@ -295,13 +295,13 @@
                 Todos <span class="filter-count" id="count-p-all">0</span>
               </button>
               <button class="filter-btn" id="btn-p-filter-S1" onclick="setProspectosFilter('S1')">
-                ❶ Contacto Inicial <span class="filter-count" id="count-p-s1">0</span>
+                ❶ Seg 1 <span class="filter-count" id="count-p-s1">0</span>
               </button>
               <button class="filter-btn" id="btn-p-filter-S2" onclick="setProspectosFilter('S2')">
-                ❷ Seguimiento <span class="filter-count" id="count-p-s2">0</span>
+                ❷ Seg 2 <span class="filter-count" id="count-p-s2">0</span>
               </button>
               <button class="filter-btn" id="btn-p-filter-S3" onclick="setProspectosFilter('S3')">
-                ❸ Cierre <span class="filter-count" id="count-p-s3">0</span>
+                ❸ Seg 3 <span class="filter-count" id="count-p-s3">0</span>
               </button>
               <button class="filter-btn" id="btn-p-filter-Vencidos" onclick="setProspectosFilter('Vencidos')">
                 ⚠️ Retrasados <span class="filter-count" id="count-p-vencidos">0</span>
@@ -384,13 +384,11 @@
         <div class="type-selection-grid">
           <div class="type-card selected" id="type-card-prospecto" onclick="selectContactType('Prospecto')">
             <div class="type-icon">👤</div>
-            <div class="type-name">Prospecto</div>
-            <div class="type-meta" id="prospecto-last-badge" style="display: none;">último usado</div>
+            <div class="type-name" style="margin-bottom: 0;">Prospecto</div>
           </div>
           <div class="type-card" id="type-card-cliente" onclick="selectContactType('Cliente')">
             <div class="type-icon">👥</div>
-            <div class="type-name">Cliente</div>
-            <div class="type-meta" id="cliente-last-badge" style="display: none;">último usado</div>
+            <div class="type-name" style="margin-bottom: 0;">Cliente</div>
           </div>
         </div>
         <div class="modal-footer" style="padding: 12px 0 0 0; margin-top: 16px;">
@@ -423,25 +421,30 @@
           </div>
           <div class="form-group">
             <label class="form-label">Origen del Lead</label>
-            <select class="form-input form-select" id="p-leadsource" style="padding: 8px 12px; background: #ffffff;">
+            <select class="form-input form-select" id="p-leadsource" style="padding: 8px 12px; background: #ffffff;" onchange="toggleLeadSourceOtherField()">
               <option value="WhatsApp Directo" selected>WhatsApp Directo</option>
               <option value="Instagram">Instagram</option>
               <option value="TikTok">TikTok</option>
               <option value="Facebook Ads">Facebook Ads</option>
               <option value="Referido">Referido</option>
+              <option value="Otro">Otro (Especificar)</option>
             </select>
           </div>
+          <div class="form-group" id="p-leadsource-other-group" style="display: none; margin-top: 8px;">
+            <label class="form-label" style="font-size: 0.72rem; color: var(--color-text-secondary);">¿De dónde lo sacaste?</label>
+            <input type="text" class="form-input" id="p-leadsource-other" placeholder="Ej. Recomendación en feria, grupo de Facebook..." style="padding: 8px 12px;">
+          </div>
           <div class="form-group">
-            <label class="form-label">Fecha de Seguimiento 1 (fu1)</label>
+            <label class="form-label">Fecha de Seguimiento 1 (Seg 1)</label>
             <input type="date" class="form-input" id="p-fu1" required>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Seguimiento 2 (fu2) - Opcional</label>
+              <label class="form-label">Seguimiento 2 (Seg 2) - Opcional</label>
               <input type="date" class="form-input" id="p-fu2">
             </div>
             <div class="form-group">
-              <label class="form-label">Seguimiento 3 (fu3) - Opcional</label>
+              <label class="form-label">Seguimiento 3 (Seg 3) - Opcional</label>
               <input type="date" class="form-input" id="p-fu3">
             </div>
           </div>
