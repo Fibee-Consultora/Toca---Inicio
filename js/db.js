@@ -81,6 +81,7 @@
       archivedDate: row.archived_date || '',
       waitingSince: row.waiting_since || '',
       daysWaiting: row.days_waiting,
+      businessId: row.workspace_id,
       history,
     };
   }
@@ -103,6 +104,7 @@
       archived_date: contact.archivedDate || null,
       waiting_since: contact.waitingSince || null,
       days_waiting: contact.days_waiting ?? contact.daysWaiting ?? null,
+      workspace_id: contact.businessId || window.currentBusinessId || null,
     };
   }
 
@@ -306,8 +308,43 @@
     if (error) throw error;
   }
 
+  async function loadWorkspaces() {
+    const { data, error } = await getClient()
+      .from('workspaces')
+      .select('*')
+      .order('created_at');
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function insertWorkspace(workspace) {
+    const { data, error } = await getClient()
+      .from('workspaces')
+      .insert(workspace)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  async function updateWorkspace(workspace) {
+    const { error } = await getClient()
+      .from('workspaces')
+      .update(workspace)
+      .eq('id', workspace.id);
+    if (error) throw error;
+  }
+
+  async function deleteWorkspace(id) {
+    const { error } = await getClient()
+      .from('workspaces')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  }
+
   async function updateSessionToken(userId, token) {
-    const { error } = await client
+    const { error } = await getClient()
       .from('profiles')
       .update({ last_session_id: token, updated_at: new Date().toISOString() })
       .eq('id', userId);
@@ -326,6 +363,10 @@
     loadAllProfiles,
     updateUserPlan,
     updateSessionToken,
+    loadWorkspaces,
+    insertWorkspace,
+    updateWorkspace,
+    deleteWorkspace,
     loadContacts,
     insertContact,
     updateContact,

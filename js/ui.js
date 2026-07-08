@@ -1216,8 +1216,8 @@ function renderProfileModalContent() {
             ${isActive ? '<span style="font-size: 0.6rem; background: #fef3c7; color: #b45309; padding: 1px 4px; border-radius: 4px; font-weight: 700; border: 1px solid #fde68a; margin-left: 4px;">Activo</span>' : ''}
           </div>
           <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-            ${!isActive ? `<button onclick="switchBusinessWorkspace(${b.id})" style="background: #f3f4f6; border: none; font-size: 0.68rem; padding: 3px 6px; border-radius: 4px; color: var(--color-text-secondary); cursor: pointer; font-weight: 600;">Editar</button>` : ''}
-            ${showDelete ? `<button onclick="deleteBusinessWorkspace(${b.id})" style="background: transparent; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 0.9rem; padding: 2px;" title="Eliminar negocio y contactos">🗑️</button>` : ''}
+            ${!isActive ? `<button onclick="switchBusinessWorkspace('${b.id}')" style="background: #f3f4f6; border: none; font-size: 0.68rem; padding: 3px 6px; border-radius: 4px; color: var(--color-text-secondary); cursor: pointer; font-weight: 600;">Editar</button>` : ''}
+            ${showDelete ? `<button onclick="deleteBusinessWorkspace('${b.id}')" style="background: transparent; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 0.9rem; padding: 2px;" title="Eliminar negocio y contactos">🗑️</button>` : ''}
           </div>
         </div>
       `;
@@ -1241,7 +1241,7 @@ function renderProfileModalContent() {
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(255, 204, 6, 0.08); border: 1px solid rgba(255, 204, 6, 0.3); padding: 10px 14px; border-radius: 8px; margin-bottom: 4px;">
             <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
               <span style="font-size: 0.65rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; letter-spacing: 0.03em;">Negocio en Edición</span>
-              <select id="modal-business-switcher" onchange="switchBusinessWorkspace(parseInt(this.value))" style="background: transparent; border: none; font-family: var(--font-title); font-size: 0.95rem; font-weight: 700; color: var(--color-text-primary); cursor: pointer; outline: none; padding: 0; width: 100%;">
+              <select id="modal-business-switcher" onchange="switchBusinessWorkspace(isNaN(this.value) ? this.value : parseInt(this.value))" style="background: transparent; border: none; font-family: var(--font-title); font-size: 0.95rem; font-weight: 700; color: var(--color-text-primary); cursor: pointer; outline: none; padding: 0; width: 100%;">
                 ${businesses.map(b => `<option value="${b.id}" ${b.id === currentBusinessId ? 'selected' : ''}>${b.name}</option>`).join('')}
               </select>
             </div>

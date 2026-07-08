@@ -50,14 +50,17 @@ function bootstrapAuthenticatedUser(user) {
     localStorage.setItem(`toca_businesses_${user.id}`, JSON.stringify(businesses));
     localStorage.setItem(`toca_current_business_id_${user.id}`, String(currentBusinessId));
     localStorage.setItem(agentKey, JSON.stringify(teamAgents));
+    if (window.TocaDB?.isConfigured()) {
+      syncWorkspacesFromSupabase(user);
+    }
     return;
   }
 
   const savedBusinesses = localStorage.getItem(`toca_businesses_${user.id}`);
   if (savedBusinesses) {
     businesses = JSON.parse(savedBusinesses);
-    currentBusinessId =
-      parseInt(localStorage.getItem(`toca_current_business_id_${user.id}`), 10) || 1;
+    const savedId = localStorage.getItem(`toca_current_business_id_${user.id}`);
+    currentBusinessId = savedId && savedId !== 'undefined' ? (isNaN(savedId) ? savedId : parseInt(savedId, 10)) : 1;
     businessProfile = businesses.find((b) => b.id === currentBusinessId) || businesses[0];
   }
   const savedAgents = localStorage.getItem(agentKey);
@@ -73,6 +76,60 @@ function bootstrapAuthenticatedUser(user) {
       },
     ];
     localStorage.setItem(agentKey, JSON.stringify(teamAgents));
+  }
+
+  if (window.TocaDB?.isConfigured()) {
+    syncWorkspacesFromSupabase(user);
+  }
+}
+
+async function syncWorkspacesFromSupabase(user) {
+  try {
+    let ws = await window.TocaDB.loadWorkspaces();
+    if (ws.length === 0) {
+      // Crear workspace por defecto en Supabase si no tiene
+      const newWs = await window.TocaDB.insertWorkspace({
+        name: 'Mi Negocio',
+        sector: 'Otro',
+        description: '',
+        tone: 'Amigable',
+        promotion: '',
+        timezone: 'America/Lima',
+        owner_id: user.id
+      });
+      ws = [newWs];
+    }
+    
+    // Mapear campos de BD a campos locales
+    businesses = ws.map(w => ({
+      id: w.id, // UUID string
+      name: w.name || 'Mi Negocio',
+      sector: w.sector || 'Otro',
+      description: w.description || '',
+      tone: w.tone || 'Amigable',
+      promotion: w.promotion || '',
+      timezone: w.timezone || 'America/Lima'
+    }));
+    
+    localStorage.setItem(`toca_businesses_${user.id}`, JSON.stringify(businesses));
+    
+    const savedId = localStorage.getItem(`toca_current_business_id_${user.id}`);
+    if (!businesses.some(b => b.id === savedId)) {
+      currentBusinessId = businesses[0].id;
+      localStorage.setItem(`toca_current_business_id_${user.id}`, String(currentBusinessId));
+    } else {
+      currentBusinessId = savedId;
+    }
+    businessProfile = businesses.find(b => b.id === currentBusinessId) || businesses[0];
+    localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
+    
+    // Sincronizar ID de negocio activo para la extensión de Chrome
+    localStorage.setItem('toca_current_business_id', String(currentBusinessId));
+    
+    renderAllTabs();
+    updateProfileUI();
+  } catch (err) {
+    console.error("Error syncing workspaces from Supabase:", err);
   }
 }
 
@@ -1762,7 +1819,22 @@ function saveBusinessProfile() {
       tone,
       promotion
     };
-    localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+    if (currentAuthUser) {
+      localStorage.setItem(`toca_businesses_${currentAuthUser.id}`, JSON.stringify(businesses));
+    } else {
+      localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+    }
+    if (dbReady) {
+      window.TocaDB.updateWorkspace({
+        id: currentBusinessId,
+        name,
+        sector,
+        timezone,
+        description,
+        tone,
+        promotion
+      }).catch(err => console.error("Error updating workspace in Supabase:", err));
+    }
   }
 
   businessProfile = businesses[bizIdx];
@@ -2687,7 +2759,7 @@ function populateBusinessSwitchers() {
     }
     
     menuHtml += `
-      <button onclick="${isLocked ? '' : `selectWorkspace(${b.id})`}" 
+      <button onclick="${isLocked ? '' : `selectWorkspace('${b.id}')`}" 
               ${isLocked ? 'disabled' : ''} 
               style="width: 100%; text-align: left; padding: 8px 12px; background: transparent; border: none; color: ${isActive ? 'var(--color-accent)' : '#ffffff'}; font-size: 0.8rem; font-family: var(--font-body); font-weight: ${isActive ? '700' : '500'}; cursor: ${isLocked ? 'not-allowed' : 'pointer'}; opacity: ${isLocked ? '0.4' : '1'}; display: flex; align-items: center; justify-content: space-between; transition: background 0.15s; outline: none;"
               onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
@@ -2752,7 +2824,11 @@ document.addEventListener('click', () => {
 
 function switchBusinessWorkspace(id) {
   currentBusinessId = id;
-  localStorage.setItem('toca_current_business_id', id);
+  if (currentAuthUser) {
+    localStorage.setItem(`toca_current_business_id_${currentAuthUser.id}`, id);
+  } else {
+    localStorage.setItem('toca_current_business_id', id);
+  }
   businessProfile = businesses.find(b => b.id === id) || businesses[0];
   
   const triggerText = document.getElementById('current-workspace-name');
@@ -2786,7 +2862,11 @@ function switchSimulatedPlan(plan) {
   if (activeIdx >= limit) {
     const mainBizId = businesses[0].id;
     currentBusinessId = mainBizId;
-    localStorage.setItem('toca_current_business_id', mainBizId);
+    if (currentAuthUser) {
+      localStorage.setItem(`toca_current_business_id_${currentAuthUser.id}`, mainBizId);
+    } else {
+      localStorage.setItem('toca_current_business_id', mainBizId);
+    }
     businessProfile = businesses[0];
     localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
     showToast(`⚠️ Límite del plan excedido. Cambiado al negocio principal: ${businessProfile.name}`);
@@ -2824,24 +2904,50 @@ function createBusinessWorkspace(name) {
     return;
   }
   
-  const newId = businesses.length > 0 ? Math.max(...businesses.map(b => b.id)) + 1 : 1;
-  const newBiz = {
-    id: newId,
-    name: name.trim(),
-    sector: "Otro",
-    description: "Descripción de mi nuevo negocio.",
-    tone: "Amigable",
-    promotion: "Envío a nivel nacional",
-    timezone: "America/Lima"
-  };
-  
-  businesses.push(newBiz);
-  localStorage.setItem('toca_businesses', JSON.stringify(businesses));
-  
-  showToast(`🏢 Nuevo negocio creado: ${newBiz.name}`);
-  
-  // Automatically switch to the newly created business
-  switchBusinessWorkspace(newId);
+  if (dbReady) {
+    showToast("Creando negocio...");
+    window.TocaDB.insertWorkspace({
+      name: name.trim(),
+      sector: "Otro",
+      description: "Descripción de mi nuevo negocio.",
+      tone: "Amigable",
+      promotion: "Envío a nivel nacional",
+      timezone: "America/Lima",
+      owner_id: currentAuthUser.id
+    }).then((newWs) => {
+      const newBiz = {
+        id: newWs.id,
+        name: newWs.name,
+        sector: newWs.sector,
+        description: newWs.description,
+        tone: newWs.tone,
+        promotion: newWs.promotion,
+        timezone: newWs.timezone
+      };
+      businesses.push(newBiz);
+      localStorage.setItem(`toca_businesses_${currentAuthUser.id}`, JSON.stringify(businesses));
+      showToast(`🏢 Nuevo negocio creado: ${newBiz.name}`);
+      switchBusinessWorkspace(newBiz.id);
+    }).catch(err => {
+      console.error(err);
+      showToast("Error al crear negocio en la base de datos.");
+    });
+  } else {
+    const newId = businesses.length > 0 ? Math.max(...businesses.map(b => b.id)) + 1 : 1;
+    const newBiz = {
+      id: newId,
+      name: name.trim(),
+      sector: "Otro",
+      description: "Descripción de mi nuevo negocio.",
+      tone: "Amigable",
+      promotion: "Envío a nivel nacional",
+      timezone: "America/Lima"
+    };
+    businesses.push(newBiz);
+    localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+    showToast(`🏢 Nuevo negocio creado: ${newBiz.name}`);
+    switchBusinessWorkspace(newId);
+  }
 }
 
 function deleteBusinessWorkspace(id) {
@@ -2859,20 +2965,33 @@ function deleteBusinessWorkspace(id) {
   const name = bizToDelete ? bizToDelete.name : `ID ${id}`;
 
   if (confirm(`¿Estás seguro de que deseas eliminar permanentemente el negocio "${name}" y TODOS sus contactos asociados?`)) {
-    // Delete contacts
-    contacts = contacts.filter(c => c.businessId !== id);
-    // Delete business
-    businesses = businesses.filter(b => b.id !== id);
-    
-    localStorage.setItem('toca_businesses', JSON.stringify(businesses));
-    showToast(`🗑️ Negocio "${name}" y sus contactos eliminados.`);
-    
-    // Refresh UI
-    populateBusinessSwitchers();
-    if (document.getElementById('profile-config-modal').classList.contains('open')) {
-      renderProfileModalContent();
+    if (dbReady) {
+      showToast("Eliminando negocio...");
+      window.TocaDB.deleteWorkspace(id).then(() => {
+        contacts = contacts.filter(c => c.businessId !== id);
+        businesses = businesses.filter(b => b.id !== id);
+        localStorage.setItem(`toca_businesses_${currentAuthUser.id}`, JSON.stringify(businesses));
+        showToast(`🗑️ Negocio "${name}" y sus contactos eliminados.`);
+        populateBusinessSwitchers();
+        if (document.getElementById('profile-config-modal').classList.contains('open')) {
+          renderProfileModalContent();
+        }
+        renderAllTabs();
+      }).catch(err => {
+        console.error(err);
+        showToast("Error al eliminar el negocio de la base de datos.");
+      });
+    } else {
+      contacts = contacts.filter(c => c.businessId !== id);
+      businesses = businesses.filter(b => b.id !== id);
+      localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+      showToast(`🗑️ Negocio "${name}" y sus contactos eliminados.`);
+      populateBusinessSwitchers();
+      if (document.getElementById('profile-config-modal').classList.contains('open')) {
+        renderProfileModalContent();
+      }
+      renderAllTabs();
     }
-    renderAllTabs();
   }
 }
 
