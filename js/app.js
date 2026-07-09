@@ -126,6 +126,20 @@ async function syncWorkspacesFromSupabase(user) {
     // Sincronizar ID de negocio activo para la extensión de Chrome
     localStorage.setItem('toca_current_business_id', String(currentBusinessId));
     
+    // Cargar agentes en vivo
+    try {
+      const members = await window.TocaDB.loadTeamMembers(currentBusinessId);
+      teamAgents = members.map(m => ({
+        name: m.name,
+        email: m.email,
+        role: m.role || 'Agente',
+        status: m.status || 'Pendiente'
+      }));
+      localStorage.setItem(`toca_team_agents_${user.id}`, JSON.stringify(teamAgents));
+    } catch (err) {
+      console.error("Error loading team members:", err);
+    }
+    
     renderAllTabs();
     updateProfileUI();
   } catch (err) {
@@ -1972,6 +1986,24 @@ async function syncUserPlanFromProfile() {
       updateProfileUI();
       return;
     }
+    let invitationsClaimed = false;
+    try {
+      const client = window.TocaDB.getClient();
+      const { data: pending } = await client
+        .from('workspace_members')
+        .select('id')
+        .eq('invite_email', currentAuthUser.email)
+        .eq('status', 'Pendiente');
+      
+      if (pending && pending.length > 0) {
+        await window.TocaDB.claimPendingInvitations(currentAuthUser.email, currentAuthUser.id);
+        invitationsClaimed = true;
+        showToast("¡Has sido añadido a un nuevo espacio de trabajo!");
+      }
+    } catch (inviteErr) {
+      console.error("Error al procesar invitaciones pendientes:", inviteErr);
+    }
+
     const profile = await window.TocaDB.loadMyProfile();
     if (!profile) {
       console.warn("Perfil eliminado de la base de datos. Cerrando sesión forzadamente...");
@@ -1989,7 +2021,12 @@ async function syncUserPlanFromProfile() {
       localStorage.setItem('toca_extra_packs', String(purchasedExtraPacks));
       updateProfileUI();
       populateBusinessSwitchers();
-      renderAllTabs();
+      
+      if (invitationsClaimed) {
+        await syncWorkspacesFromSupabase(currentAuthUser);
+      } else {
+        renderAllTabs();
+      }
     }
   } catch (err) {
     console.error(err);
@@ -2526,30 +2563,60 @@ function submitAgentInvitation() {
   }
   
   // Add to global state
-  const newAgent = {
-    name: name,
-    email: email,
-    role: role,
-    status: "Pendiente"
-  };
-  
-  teamAgents.push(newAgent);
-  localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
-  
-  showToast(`✉️ Invitación enviada a ${name} (${email})`);
-  
-  // Clear fields
-  nameInput.value = "";
-  emailInput.value = "";
-  
-  // Refresh modal tab content
-  renderProfileModalContent();
+  if (dbReady) {
+    showToast("Enviando invitación...");
+    window.TocaDB.inviteTeamMember({
+      workspaceId: currentBusinessId,
+      name: name,
+      email: email,
+      role: role,
+      invitedBy: currentAuthUser.id
+    }).then(() => {
+      showToast(`✉️ Invitación registrada. Indícale que se registre con: ${email}`);
+      nameInput.value = "";
+      emailInput.value = "";
+      return window.TocaDB.loadTeamMembers(currentBusinessId);
+    }).then((members) => {
+      teamAgents = members.map(m => ({
+        name: m.name,
+        email: m.email,
+        role: m.role || 'Agente',
+        status: m.status || 'Pendiente'
+      }));
+      localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
+      renderProfileModalContent();
+    }).catch(err => {
+      console.error(err);
+      showToast("Error al registrar la invitación en la base de datos.");
+    });
+  } else {
+    const newAgent = {
+      name: name,
+      email: email,
+      role: role,
+      status: "Pendiente"
+    };
+    
+    teamAgents.push(newAgent);
+    localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
+    
+    showToast(`✉️ Invitación enviada a ${name} (${email})`);
+    
+    nameInput.value = "";
+    emailInput.value = "";
+    
+    renderProfileModalContent();
+  }
 }
 
 function resendAgentInvitation(email) {
   const agent = teamAgents.find(a => a.email === email);
   if (agent) {
-    showToast(`✉️ Invitación reenviada a ${agent.name} (${email})`);
+    if (dbReady) {
+      showToast(`✉️ Invitación reenviada (indícale que se registre con el correo: ${email})`);
+    } else {
+      showToast(`✉️ Invitación reenviada a ${agent.name} (${email})`);
+    }
   } else {
     showToast("No se encontró el agente especificado.");
   }
@@ -2851,11 +2918,34 @@ function switchBusinessWorkspace(id) {
   showToast(`🏢 Espacio de trabajo cambiado a: ${businessProfile.name}`);
   
   const modal = document.getElementById('profile-config-modal');
-  if (modal && modal.classList.contains('open')) {
-    renderProfileModalContent();
+  if (dbReady) {
+    window.TocaDB.loadTeamMembers(id).then((members) => {
+      teamAgents = members.map(m => ({
+        name: m.name,
+        email: m.email,
+        role: m.role || 'Agente',
+        status: m.status || 'Pendiente'
+      }));
+      if (currentAuthUser) {
+        localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
+      }
+      renderAllTabs();
+      if (modal && modal.classList.contains('open')) {
+        renderProfileModalContent();
+      }
+    }).catch(err => {
+      console.error(err);
+      renderAllTabs();
+      if (modal && modal.classList.contains('open')) {
+        renderProfileModalContent();
+      }
+    });
+  } else {
+    renderAllTabs();
+    if (modal && modal.classList.contains('open')) {
+      renderProfileModalContent();
+    }
   }
-  
-  renderAllTabs();
 }
 
 function switchSimulatedPlan(plan) {

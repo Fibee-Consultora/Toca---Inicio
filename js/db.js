@@ -344,6 +344,80 @@
     if (error) throw error;
   }
 
+  async function loadTeamMembers(workspaceId) {
+    const { data, error } = await getClient()
+      .from('workspace_team')
+      .select('*')
+      .eq('workspace_id', workspaceId);
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function inviteTeamMember(invitation) {
+    const client = getClient();
+    const { data: teamData, error: teamError } = await client
+      .from('workspace_team')
+      .insert({
+        workspace_id: invitation.workspaceId,
+        name: invitation.name,
+        email: invitation.email,
+        role: invitation.role,
+        status: 'Pendiente'
+      })
+      .select()
+      .single();
+    if (teamError) throw teamError;
+
+    const { error: memberError } = await client
+      .from('workspace_members')
+      .insert({
+        workspace_id: invitation.workspaceId,
+        user_id: null,
+        invite_email: invitation.email,
+        role: invitation.role,
+        invited_by: invitation.invitedBy,
+        status: 'Pendiente'
+      });
+    if (memberError) {
+      await client.from('workspace_team').delete().eq('id', teamData.id);
+      throw memberError;
+    }
+    return teamData;
+  }
+
+  async function claimPendingInvitations(email, userId) {
+    const client = getClient();
+    const { data: pendingMembers, error: findError } = await client
+      .from('workspace_members')
+      .select('*')
+      .eq('invite_email', email)
+      .eq('status', 'Pendiente');
+    if (findError) throw findError;
+
+    if (pendingMembers && pendingMembers.length > 0) {
+      for (const member of pendingMembers) {
+        const { error: memberErr } = await client
+          .from('workspace_members')
+          .update({
+            user_id: userId,
+            status: 'Activo'
+          })
+          .eq('id', member.id);
+        if (memberErr) console.error("Error claiming member:", memberErr);
+
+        const { error: teamErr } = await client
+          .from('workspace_team')
+          .update({
+            user_id: userId,
+            status: 'Activo'
+          })
+          .eq('workspace_id', member.workspace_id)
+          .eq('email', email);
+        if (teamErr) console.error("Error claiming team:", teamErr);
+      }
+    }
+  }
+
   async function updateSessionToken(userId, token) {
     const { error } = await getClient()
       .from('profiles')
@@ -368,6 +442,9 @@
     insertWorkspace,
     updateWorkspace,
     deleteWorkspace,
+    loadTeamMembers,
+    inviteTeamMember,
+    claimPendingInvitations,
     loadContacts,
     insertContact,
     updateContact,
