@@ -87,14 +87,14 @@ async function syncWorkspacesFromSupabase(user) {
   try {
     let ws = await window.TocaDB.loadWorkspaces();
     if (ws.length === 0) {
-      // Crear workspace por defecto en Supabase si no tiene
+      const localBiz = (businesses && businesses.length > 0) ? businesses[0] : null;
       const newWs = await window.TocaDB.insertWorkspace({
-        name: 'Mi Negocio',
-        sector: 'Otro',
-        description: '',
-        tone: 'Amigable',
-        promotion: '',
-        timezone: 'America/Lima',
+        name: (localBiz && localBiz.name) ? localBiz.name : 'Mi Negocio',
+        sector: (localBiz && localBiz.sector) ? localBiz.sector : 'Otro',
+        description: (localBiz && localBiz.description) ? localBiz.description : '',
+        tone: (localBiz && localBiz.tone) ? localBiz.tone : 'Amigable',
+        promotion: (localBiz && localBiz.promotion) ? localBiz.promotion : '',
+        timezone: (localBiz && localBiz.timezone) ? localBiz.timezone : 'America/Lima',
         owner_id: user.id
       });
       ws = [newWs];
@@ -1900,7 +1900,8 @@ async function saveAllProfileSettings() {
         const payDate = profile?.last_payment_date || '2026-07-01';
         const factura = profile?.factura !== false;
 
-        const formattedName = `${ownerName}|plan:${planName}|agents:${extraAgents}|packs:${extraPacks}|status:${status}|pay:${payDate}|factura:${factura}`;
+        const activeWorkspacesStr = currentActiveWorkspaces ? `|active_workspaces:${currentActiveWorkspaces.join(',')}` : '';
+        const formattedName = `${ownerName}|plan:${planName}|agents:${extraAgents}|packs:${extraPacks}|status:${status}|pay:${payDate}|factura:${factura}${activeWorkspacesStr}`;
         
         const client = window.TocaDB.getClient();
         const { error } = await client
@@ -1937,10 +1938,9 @@ async function saveAllProfileSettings() {
           tone,
           promotion
         };
+        localStorage.setItem('toca_businesses', JSON.stringify(businesses));
         if (currentAuthUser) {
           localStorage.setItem(`toca_businesses_${currentAuthUser.id}`, JSON.stringify(businesses));
-        } else {
-          localStorage.setItem('toca_businesses', JSON.stringify(businesses));
         }
         if (dbReady) {
           await window.TocaDB.updateWorkspace({
@@ -2195,19 +2195,6 @@ async function initAuth() {
     showToast('Inicio de sesión cancelado.');
   }
 
-  const { data: { session } } = await window.TocaDB.getSession();
-  applyAuthUser(session?.user ?? null);
-  
-  if (session?.user) {
-    try {
-      await window.TocaDB.updateSessionToken(session.user.id, currentSessionToken);
-    } catch (err) {
-      console.error("Error updating session token on load:", err);
-    }
-  }
-  
-  if (!session?.user) resetLoginButtonIfNeeded();
-
   let authReady = false;
   window.TocaDB.onAuthStateChange(async (event, session) => {
     const user = session?.user ?? null;
@@ -2215,11 +2202,11 @@ async function initAuth() {
 
     if (user) {
       applyAuthUser(user);
-      if (event === 'SIGNED_IN') {
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
         try {
           await window.TocaDB.updateSessionToken(user.id, currentSessionToken);
         } catch (err) {
-          console.error("Error updating session token on SIGNED_IN:", err);
+          console.error("Error updating session token:", err);
         }
       }
       if (authReady && event === 'SIGNED_IN' && !wasLoggedIn) {
@@ -2233,8 +2220,9 @@ async function initAuth() {
           console.error(err);
         }
       }
-    } else if (event === 'SIGNED_OUT') {
+    } else {
       applyAuthUser(null);
+      resetLoginButtonIfNeeded();
     }
   });
 
@@ -3037,17 +3025,16 @@ document.addEventListener('click', () => {
 
 function switchBusinessWorkspace(id) {
   currentBusinessId = id;
+  localStorage.setItem('toca_current_business_id', id);
   if (currentAuthUser) {
     localStorage.setItem(`toca_current_business_id_${currentAuthUser.id}`, id);
-  } else {
-    localStorage.setItem('toca_current_business_id', id);
   }
-  businessProfile = businesses.find(b => b.id === id) || businesses[0];
+  businessProfile = businesses.find(b => String(b.id) === String(id)) || businesses[0];
   
   const triggerText = document.getElementById('current-workspace-name');
   if (triggerText) {
     const limit = getActiveBusinessLimit();
-    const idx = businesses.findIndex(b => b.id === id);
+    const idx = businesses.findIndex(b => String(b.id) === String(id));
     const isLocked = idx >= limit;
     triggerText.textContent = isLocked ? `${businessProfile.name} 🔒` : businessProfile.name;
   }
@@ -3237,16 +3224,17 @@ function deleteBusinessWorkspace(id) {
     return;
   }
 
-  const bizToDelete = businesses.find(b => b.id === id);
+  const bizToDelete = businesses.find(b => String(b.id) === String(id));
   const name = bizToDelete ? bizToDelete.name : `ID ${id}`;
 
   if (confirm(`¿Estás seguro de que deseas eliminar permanentemente el negocio "${name}" y TODOS sus contactos asociados?`)) {
     if (dbReady) {
       showToast("Eliminando negocio...");
       window.TocaDB.deleteWorkspace(id).then(() => {
-        contacts = contacts.filter(c => c.businessId !== id);
-        businesses = businesses.filter(b => b.id !== id);
+        contacts = contacts.filter(c => String(c.businessId) !== String(id));
+        businesses = businesses.filter(b => String(b.id) !== String(id));
         localStorage.setItem(`toca_businesses_${currentAuthUser.id}`, JSON.stringify(businesses));
+        localStorage.setItem('toca_businesses', JSON.stringify(businesses));
         showToast(`🗑️ Negocio "${name}" y sus contactos eliminados.`);
         populateBusinessSwitchers();
         if (document.getElementById('profile-config-modal').classList.contains('open')) {
@@ -3258,8 +3246,8 @@ function deleteBusinessWorkspace(id) {
         showToast("Error al eliminar el negocio de la base de datos.");
       });
     } else {
-      contacts = contacts.filter(c => c.businessId !== id);
-      businesses = businesses.filter(b => b.id !== id);
+      contacts = contacts.filter(c => String(c.businessId) !== String(id));
+      businesses = businesses.filter(b => String(b.id) !== String(id));
       localStorage.setItem('toca_businesses', JSON.stringify(businesses));
       showToast(`🗑️ Negocio "${name}" y sus contactos eliminados.`);
       populateBusinessSwitchers();
