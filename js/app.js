@@ -83,7 +83,14 @@ function bootstrapAuthenticatedUser(user) {
   }
 }
 
+let isSyncingWorkspaces = false;
+
 async function syncWorkspacesFromSupabase(user) {
+  if (isSyncingWorkspaces) {
+    console.log("syncWorkspacesFromSupabase: Ya se está ejecutando un proceso de sincronización. Omitiendo llamada duplicada.");
+    return;
+  }
+  isSyncingWorkspaces = true;
   try {
     let ws = await window.TocaDB.loadWorkspaces();
     
@@ -173,6 +180,8 @@ async function syncWorkspacesFromSupabase(user) {
     updateProfileUI();
   } catch (err) {
     console.error("Error syncing workspaces from Supabase:", err);
+  } finally {
+    isSyncingWorkspaces = false;
   }
 }
 
@@ -2066,11 +2075,14 @@ function startSessionLockChecker(userId) {
 }
 
 function applyAuthUser(user) {
+  const isSameUser = currentAuthUser && user && currentAuthUser.id === user.id;
   currentAuthUser = user || null;
   isLoggedIn = !!user;
   if (user) {
-    bootstrapAuthenticatedUser(user);
-    startSessionLockChecker(user.id);
+    if (!isSameUser) {
+      bootstrapAuthenticatedUser(user);
+      startSessionLockChecker(user.id);
+    }
   } else {
     if (sessionCheckInterval) {
       clearInterval(sessionCheckInterval);
@@ -2080,7 +2092,7 @@ function applyAuthUser(user) {
   updateAdminNavVisibility();
   updateLoginScreen();
   updateProfileUI();
-  if (user) syncUserPlanFromProfile();
+  if (user && !isSameUser) syncUserPlanFromProfile();
 }
 
 function updateAdminNavVisibility() {

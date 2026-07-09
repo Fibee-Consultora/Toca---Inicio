@@ -48,8 +48,9 @@ let businesses = JSON.parse(localStorage.getItem('toca_businesses')) || [
   }
 ];
 
-let currentBusinessId = parseInt(localStorage.getItem('toca_current_business_id')) || 1;
-let businessProfile = businesses.find(b => b.id === currentBusinessId) || businesses[0];
+const savedGlobalId = localStorage.getItem('toca_current_business_id');
+let currentBusinessId = savedGlobalId && savedGlobalId !== 'undefined' ? (isNaN(savedGlobalId) ? savedGlobalId : parseInt(savedGlobalId, 10)) : 1;
+let businessProfile = businesses.find(b => String(b.id) === String(currentBusinessId)) || businesses[0];
 
 let teamAgents = JSON.parse(localStorage.getItem('toca_team_agents')) || [
   { name: "Dueño Local", email: "admin@toca.app", role: "Administrador", status: "Activo" }
