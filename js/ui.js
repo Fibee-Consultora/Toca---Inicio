@@ -1235,9 +1235,18 @@ function renderProfileModalContent() {
       <div style="max-width: 600px; margin: 0 auto;" id="profile-columns-layout">
         <!-- Configuration Form -->
         <div class="detail-card" style="background: #ffffff; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px;">
-          <h3 style="font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary); margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
-            <span>⚙️ Configuración de IA y Sistema</span>
-            <span style="font-size: 0.65rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 999px; font-weight: 600;">Plan Activo: ${PLAN_LIMITS[currentActivePlan]?.name || currentActivePlan}</span>
+          <h3 style="font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary); margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span>⚙️ Configuración de IA y Sistema</span>
+              <span style="font-size: 0.65rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 999px; font-weight: 600;">Plan Activo: ${PLAN_LIMITS[currentActivePlan]?.name || currentActivePlan}</span>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--color-text-muted); font-weight: 500; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+              <span>Email: <strong>${currentAuthUser?.email || 'Modo Local'}</strong></span>
+              <span style="color: var(--border-color);">|</span>
+              <span>BD Plan: <strong>${window.lastLoadedRawProfile?.plan || 'null'}</strong></span>
+              <span style="color: var(--border-color);">|</span>
+              <span style="word-break: break-all;">BD Name: <strong>${window.lastLoadedRawProfile?.full_name || 'null'}</strong></span>
+            </div>
           </h3>
           
           <!-- Workspace Switcher & Limits -->

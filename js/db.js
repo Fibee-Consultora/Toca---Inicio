@@ -220,6 +220,7 @@
       .maybeSingle();
     if (error) throw error;
     if (data) {
+      window.lastLoadedRawProfile = { full_name: data.full_name, plan: data.plan };
       console.log("TOCA_DEBUG: loaded raw profiles data:", { full_name: data.full_name, plan: data.plan });
       const parsed = parseDbProfile(data.full_name, data.plan);
       console.log("TOCA_DEBUG: resolved profile parsed:", parsed);
