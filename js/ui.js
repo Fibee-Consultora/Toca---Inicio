@@ -1235,7 +1235,10 @@ function renderProfileModalContent() {
       <div style="max-width: 600px; margin: 0 auto;" id="profile-columns-layout">
         <!-- Configuration Form -->
         <div class="detail-card" style="background: #ffffff; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px;">
-          <h3 style="font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary); margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">⚙️ Configuración de IA y Sistema</h3>
+          <h3 style="font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary); margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+            <span>⚙️ Configuración de IA y Sistema</span>
+            <span style="font-size: 0.65rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 999px; font-weight: 600;">Plan Activo: ${PLAN_LIMITS[currentActivePlan]?.name || currentActivePlan}</span>
+          </h3>
           
           <!-- Workspace Switcher & Limits -->
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(255, 204, 6, 0.08); border: 1px solid rgba(255, 204, 6, 0.3); padding: 10px 14px; border-radius: 8px; margin-bottom: 4px;">
