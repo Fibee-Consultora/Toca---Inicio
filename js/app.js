@@ -1798,29 +1798,6 @@ function saveBusinessProfile() {
   const tone = document.getElementById('profile-biz-tone').value;
   const promotion = document.getElementById('profile-biz-promo').value;
 
-  const ownerNameInput = document.getElementById('profile-owner-name');
-  if (ownerNameInput) {
-    const ownerName = ownerNameInput.value.trim() || 'Dueño';
-    let owner;
-    if (currentAuthUser) {
-      owner = teamAgents.find(a => a.email.toLowerCase() === currentAuthUser.email.toLowerCase());
-    } else {
-      owner = teamAgents.find(a => a.role === 'Administrador');
-    }
-    if (owner) {
-      owner.name = ownerName;
-    } else {
-      teamAgents.push({
-        name: ownerName,
-        email: currentAuthUser ? currentAuthUser.email : 'admin@toca.app',
-        role: 'Administrador',
-        status: 'Activo'
-      });
-    }
-    localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
-    updateProfileUI();
-  }
-
   // Find and update in businesses list
   const bizIdx = businesses.findIndex(b => b.id === currentBusinessId);
   if (bizIdx !== -1) {
@@ -1861,6 +1838,67 @@ function saveBusinessProfile() {
 
   renderAllTabs();
   closeProfileConfigModal();
+}
+
+async function saveUserProfile() {
+  const ownerNameInput = document.getElementById('profile-owner-name');
+  if (!ownerNameInput) return;
+  const ownerName = ownerNameInput.value.trim() || 'Dueño';
+
+  // 1. Update in teamAgents locally
+  let owner;
+  if (currentAuthUser) {
+    owner = teamAgents.find(a => a.email.toLowerCase() === currentAuthUser.email.toLowerCase());
+  } else {
+    owner = teamAgents.find(a => a.role === 'Administrador');
+  }
+  if (owner) {
+    owner.name = ownerName;
+  } else {
+    teamAgents.push({
+      name: ownerName,
+      email: currentAuthUser ? currentAuthUser.email : 'admin@toca.app',
+      role: 'Administrador',
+      status: 'Activo'
+    });
+  }
+  localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
+  updateProfileUI();
+
+  // 2. Update in Supabase profiles table
+  if (window.TocaDB?.isConfigured() && currentAuthUser) {
+    try {
+      showToast("Guardando perfil de usuario...");
+      const profile = await window.TocaDB.loadMyProfile();
+      const planName = profile?.plan || 'Gratuito';
+      const extraAgents = profile?.extra_agents || 0;
+      const extraPacks = profile?.extra_packs || 0;
+      const status = profile?.status || 'Activo';
+      const payDate = profile?.last_payment_date || '2026-07-01';
+      const factura = profile?.factura !== false;
+
+      const formattedName = `${ownerName}|plan:${planName}|agents:${extraAgents}|packs:${extraPacks}|status:${status}|pay:${payDate}|factura:${factura}`;
+      
+      const client = window.TocaDB.getClient();
+      const { error } = await client
+        .from('profiles')
+        .update({ 
+          full_name: formattedName,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentAuthUser.id);
+      
+      if (error) throw error;
+      showToast("✓ Nombre de usuario actualizado en base de datos.");
+      closeProfileConfigModal();
+    } catch (err) {
+      console.error(err);
+      showToast("Error al guardar perfil en la base de datos.");
+    }
+  } else {
+    showToast("✓ Nombre de usuario actualizado localmente.");
+    closeProfileConfigModal();
+  }
 }
 
 function getSpinnerHtml(size = 'md') {

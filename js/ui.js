@@ -1225,6 +1225,11 @@ function renderProfileModalContent() {
 
     container.innerHTML = `
       <style>
+        #profile-columns-layout {
+          display: grid;
+          grid-template-columns: 1.2fr 1fr;
+          gap: 20px;
+        }
         @media (max-width: 768px) {
           #profile-columns-layout {
             grid-template-columns: 1fr !important;
@@ -1232,110 +1237,119 @@ function renderProfileModalContent() {
         }
       </style>
       
-      <div style="max-width: 600px; margin: 0 auto;" id="profile-columns-layout">
-        <!-- Configuration Form -->
-        <div class="detail-card" style="background: #ffffff; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px;">
-          <h3 style="font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary); margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 6px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-              <span>⚙️ Configuración de IA y Sistema</span>
-              <span style="font-size: 0.65rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 999px; font-weight: 600;">Plan Activo: ${PLAN_LIMITS[currentActivePlan]?.name || currentActivePlan}</span>
-            </div>
-            <div style="font-size: 0.65rem; color: var(--color-text-muted); font-weight: 500; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-              <span>Email: <strong>${currentAuthUser?.email || 'Modo Local'}</strong></span>
-              <span style="color: var(--border-color);">|</span>
-              <span>BD Plan: <strong>${window.lastLoadedRawProfile?.plan || 'null'}</strong></span>
-              <span style="color: var(--border-color);">|</span>
-              <span style="word-break: break-all;">BD Name: <strong>${window.lastLoadedRawProfile?.full_name || 'null'}</strong></span>
-            </div>
-          </h3>
+      <div style="max-width: 1000px; margin: 0 auto;" id="profile-columns-layout">
+        <!-- Left Column: User & Brand Config Stack -->
+        <div style="display: flex; flex-direction: column; gap: 16px;">
           
-          <!-- Workspace Switcher & Limits -->
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(255, 204, 6, 0.08); border: 1px solid rgba(255, 204, 6, 0.3); padding: 10px 14px; border-radius: 8px; margin-bottom: 4px;">
-            <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
-              <span style="font-size: 0.65rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; letter-spacing: 0.03em;">Negocio en Edición</span>
-              <select id="modal-business-switcher" onchange="switchBusinessWorkspace(isNaN(this.value) ? this.value : parseInt(this.value))" style="background: transparent; border: none; font-family: var(--font-title); font-size: 0.95rem; font-weight: 700; color: var(--color-text-primary); cursor: pointer; outline: none; padding: 0; width: 100%;">
-                ${businesses.map(b => `<option value="${b.id}" ${b.id === currentBusinessId ? 'selected' : ''}>${b.name}</option>`).join('')}
+          <!-- Card 1: Perfil de Usuario (General) -->
+          <div class="detail-card" style="background: #ffffff; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px;">
+            <h3 style="font-family: var(--font-title); font-size: 1rem; font-weight: 700; color: var(--color-text-primary); margin: 0; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+              <span>👤 Perfil del Usuario</span>
+              <span style="font-size: 0.65rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 999px; font-weight: 600;">Plan: ${PLAN_LIMITS[currentActivePlan]?.name || currentActivePlan}</span>
+            </h3>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Tu Nombre y Apellido</label>
+              <input type="text" id="profile-owner-name" class="form-input" value="${getCurrentOwnerName()}" placeholder="Ej. Javier Reyes" style="padding: 8px 12px; background: #ffffff;">
+            </div>
+            <button class="btn-primary" style="align-self: flex-start; margin-top: 4px; background: var(--color-accent); color: #0a0a0a; font-weight: 600; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.72rem;" onclick="saveUserProfile()">
+              💾 Guardar Perfil de Usuario
+            </button>
+          </div>
+
+          <!-- Card 2: Perfil del Negocio (Individual) -->
+          <div class="detail-card" style="background: #ffffff; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px;">
+            <h3 style="font-family: var(--font-title); font-size: 1rem; font-weight: 700; color: var(--color-text-primary); margin: 0; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+              🏢 Información de la Marca
+            </h3>
+            
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Nombre del Negocio</label>
+              <input type="text" id="profile-biz-name" class="form-input" value="${businessProfile.name}" placeholder="Ej. Polos Mayoristas Lima" style="padding: 8px 12px; background: #ffffff;">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Rubro o Sector</label>
+              <select id="profile-biz-sector" class="form-input form-select" style="padding: 8px 12px; background: #ffffff;">
+                <option value="Comercio" ${businessProfile.sector === 'Comercio' ? 'selected' : ''}>Comercio (Venta de productos/Mercaderías)</option>
+                <option value="Servicios y Consultoría" ${businessProfile.sector === 'Servicios y Consultoría' ? 'selected' : ''}>Servicios y Consultoría</option>
+                <option value="Suscripciones y Membresías" ${businessProfile.sector === 'Suscripciones y Membresías' ? 'selected' : ''}>Suscripciones y Membresías</option>
+                <option value="Alimentos y Bebidas" ${businessProfile.sector === 'Alimentos y Bebidas' ? 'selected' : ''}>Alimentos y Bebidas</option>
+                <option value="Tecnología y Software" ${businessProfile.sector === 'Tecnología y Software' ? 'selected' : ''}>Tecnología y Software</option>
+                <option value="Educación y Cursos" ${businessProfile.sector === 'Educación y Cursos' ? 'selected' : ''}>Educación y Cursos</option>
+                <option value="Otro" ${!['Comercio', 'Servicios y Consultoría', 'Suscripciones y Membresías', 'Alimentos y Bebidas', 'Tecnología y Software', 'Educación y Cursos'].includes(businessProfile.sector) ? 'selected' : ''}>Otro rubro / servicio</option>
               </select>
             </div>
-            <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 110px;">
-              <span style="font-size: 0.72rem; font-weight: 700; color: var(--color-text-primary);">Límite: ${businesses.length}/${displayLimit} Negocios</span>
-              ${bizLimit !== 999 && businesses.length >= bizLimit ? `<span style="font-size: 0.62rem; color: #b45309; font-weight: 600; cursor: pointer; text-decoration: underline;" onclick="switchProfileModalTab('plan')" title="Subir plan para agregar más marcas">📈 Upgrade Plan</span>` : ''}
+
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Descripción del Producto/Servicio Principal</label>
+              <textarea id="profile-biz-desc" class="form-input" rows="3" placeholder="Describe qué vendes..." style="padding: 8px 12px; background: #ffffff; resize: vertical; font-family: var(--font-body);">${businessProfile.description}</textarea>
             </div>
+
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 12px;">
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Tono de la Marca</label>
+                <select id="profile-biz-tone" class="form-input form-select" style="padding: 8px 12px; background: #ffffff;">
+                  <option value="Amigable" ${businessProfile.tone === 'Amigable' ? 'selected' : ''}>Amigable 😊</option>
+                  <option value="Formal" ${businessProfile.tone === 'Formal' ? 'selected' : ''}>Formal 💼</option>
+                  <option value="Directo" ${businessProfile.tone === 'Directo' ? 'selected' : ''}>Directo 🎯</option>
+                  <option value="Divertido" ${businessProfile.tone === 'Divertido' ? 'selected' : ''}>Divertido ⚡</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Oferta / Promoción Clave</label>
+                <input type="text" id="profile-biz-promo" class="form-input" value="${businessProfile.promotion}" placeholder="Ej. Envío gratis a todo el Perú" style="padding: 8px 12px; background: #ffffff;">
+              </div>
+            </div>
+
+            <button class="btn-primary" style="align-self: flex-start; margin-top: 4px; background: var(--color-accent); color: #0a0a0a; font-weight: 600; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.72rem;" onclick="saveBusinessProfile()">
+              💾 Guardar Información del Negocio
+            </button>
           </div>
-          
-          <!-- Workspace Management List -->
-          <div style="background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
-            <span style="font-size: 0.68rem; font-weight: 700; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.02em;">Gestión de Espacios de Trabajo</span>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-              ${bizListHtml}
+        </div>
+
+        <!-- Right Column: Workspace switcher & lists -->
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="detail-card" style="background: #ffffff; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px;">
+            <!-- Workspace Switcher & Limits -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(255, 204, 6, 0.08); border: 1px solid rgba(255, 204, 6, 0.3); padding: 10px 14px; border-radius: 8px; margin-bottom: 4px;">
+              <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+                <span style="font-size: 0.65rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; letter-spacing: 0.03em;">Negocio en Edición</span>
+                <select id="modal-business-switcher" onchange="switchBusinessWorkspace(isNaN(this.value) ? this.value : parseInt(this.value))" style="background: transparent; border: none; font-family: var(--font-title); font-size: 0.95rem; font-weight: 700; color: var(--color-text-primary); cursor: pointer; outline: none; padding: 0; width: 100%;">
+                  ${businesses.map(b => `<option value="${b.id}" ${b.id === currentBusinessId ? 'selected' : ''}>${b.name}</option>`).join('')}
+                </select>
+              </div>
+              <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 110px;">
+                <span style="font-size: 0.72rem; font-weight: 700; color: var(--color-text-primary);">Límite: ${businesses.length}/${displayLimit} Negocios</span>
+                ${bizLimit !== 999 && businesses.length >= bizLimit ? `<span style="font-size: 0.62rem; color: #b45309; font-weight: 600; cursor: pointer; text-decoration: underline;" onclick="switchProfileModalTab('plan')" title="Subir plan para agregar más marcas">📈 Upgrade Plan</span>` : ''}
+              </div>
             </div>
             
-            <!-- Add New Workspace button -->
-            ${currentSimulatedUserRole === 'Administrador' ? `
-              ${businesses.length < bizLimit ? `
-                <div style="display: flex; gap: 6px; margin-top: 4px;">
-                  <input type="text" id="new-biz-name-input" placeholder="Nombre de nueva marca (Ej: Lima Growth)" style="flex-grow: 1; font-size: 0.72rem; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff;">
-                  <button onclick="createBusinessWorkspace(document.getElementById('new-biz-name-input').value)" style="background: var(--color-accent); border: none; color: #0a0a0a; font-size: 0.72rem; font-weight: 600; padding: 5px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap;">➕ Agregar</button>
-                </div>
+            <!-- Workspace Management List -->
+            <div style="background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-size: 0.68rem; font-weight: 700; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.02em;">Gestión de Espacios de Trabajo</span>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                ${bizListHtml}
+              </div>
+              
+              <!-- Add New Workspace button -->
+              ${currentSimulatedUserRole === 'Administrador' ? `
+                ${businesses.length < bizLimit ? `
+                  <div style="display: flex; gap: 6px; margin-top: 4px;">
+                    <input type="text" id="new-biz-name-input" placeholder="Nombre de nueva marca (Ej: Lima Growth)" style="flex-grow: 1; font-size: 0.72rem; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff;">
+                    <button onclick="createBusinessWorkspace(document.getElementById('new-biz-name-input').value)" style="background: var(--color-accent); border: none; color: #0a0a0a; font-size: 0.72rem; font-weight: 600; padding: 5px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap;">➕ Agregar</button>
+                  </div>
+                ` : `
+                  <div style="font-size: 0.7rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px; text-align: center; font-weight: 600; margin-top: 2px;">
+                    🔒 Límite de negocios alcanzado (${businesses.length}/${displayLimit}). <span style="text-decoration: underline; cursor: pointer;" onclick="switchProfileModalTab('plan')">Sube de plan para agregar más.</span>
+                  </div>
+                `}
               ` : `
-                <div style="font-size: 0.7rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px; text-align: center; font-weight: 600; margin-top: 2px;">
-                  🔒 Límite de negocios alcanzado (${businesses.length}/${displayLimit}). <span style="text-decoration: underline; cursor: pointer;" onclick="switchProfileModalTab('plan')">Sube de plan para agregar más.</span>
+                <div style="font-size: 0.68rem; color: var(--color-text-muted); text-align: center; padding: 4px;">
+                  🔒 Solo el propietario puede administrar los negocios.
                 </div>
               `}
-            ` : `
-              <div style="font-size: 0.68rem; color: var(--color-text-muted); text-align: center; padding: 4px;">
-                🔒 Solo el propietario puede administrar los negocios.
-              </div>
-            `}
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label" style="font-weight: 600;">Tu Nombre y Apellido</label>
-            <input type="text" id="profile-owner-name" class="form-input" value="${getCurrentOwnerName()}" placeholder="Ej. Javier Reyes" style="padding: 8px 12px; background: #ffffff;">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" style="font-weight: 600;">Nombre del Negocio</label>
-            <input type="text" id="profile-biz-name" class="form-input" value="${businessProfile.name}" placeholder="Ej. Polos Mayoristas Lima" style="padding: 8px 12px; background: #ffffff;">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" style="font-weight: 600;">Rubro o Sector</label>
-            <select id="profile-biz-sector" class="form-input form-select" style="padding: 8px 12px; background: #ffffff;">
-              <option value="Comercio" ${businessProfile.sector === 'Comercio' ? 'selected' : ''}>Comercio (Venta de productos/Mercaderías)</option>
-              <option value="Servicios y Consultoría" ${businessProfile.sector === 'Servicios y Consultoría' ? 'selected' : ''}>Servicios y Consultoría</option>
-              <option value="Suscripciones y Membresías" ${businessProfile.sector === 'Suscripciones y Membresías' ? 'selected' : ''}>Suscripciones y Membresías</option>
-              <option value="Alimentos y Bebidas" ${businessProfile.sector === 'Alimentos y Bebidas' ? 'selected' : ''}>Alimentos y Bebidas</option>
-              <option value="Tecnología y Software" ${businessProfile.sector === 'Tecnología y Software' ? 'selected' : ''}>Tecnología y Software</option>
-              <option value="Educación y Cursos" ${businessProfile.sector === 'Educación y Cursos' ? 'selected' : ''}>Educación y Cursos</option>
-              <option value="Otro" ${!['Comercio', 'Servicios y Consultoría', 'Suscripciones y Membresías', 'Alimentos y Bebidas', 'Tecnología y Software', 'Educación y Cursos'].includes(businessProfile.sector) ? 'selected' : ''}>Otro rubro / servicio</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" style="font-weight: 600;">Descripción del Producto/Servicio Principal</label>
-            <textarea id="profile-biz-desc" class="form-input" rows="3" placeholder="Describe qué vendes..." style="padding: 8px 12px; background: #ffffff; resize: vertical; font-family: var(--font-body);">${businessProfile.description}</textarea>
-          </div>
-
-          <div class="form-row" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 12px;">
-            <div class="form-group">
-              <label class="form-label" style="font-weight: 600;">Tono de la Marca</label>
-              <select id="profile-biz-tone" class="form-input form-select" style="padding: 8px 12px; background: #ffffff;">
-                <option value="Amigable" ${businessProfile.tone === 'Amigable' ? 'selected' : ''}>Amigable 😊</option>
-                <option value="Formal" ${businessProfile.tone === 'Formal' ? 'selected' : ''}>Formal 💼</option>
-                <option value="Directo" ${businessProfile.tone === 'Directo' ? 'selected' : ''}>Directo 🎯</option>
-                <option value="Divertido" ${businessProfile.tone === 'Divertido' ? 'selected' : ''}>Divertido ⚡</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label" style="font-weight: 600;">Oferta / Promoción Clave</label>
-              <input type="text" id="profile-biz-promo" class="form-input" value="${businessProfile.promotion}" placeholder="Ej. Envío gratis a todo el Perú" style="padding: 8px 12px; background: #ffffff;">
             </div>
           </div>
-
-          <button class="btn-primary" style="align-self: flex-start; margin-top: 10px; background: var(--color-accent); color: #0a0a0a; font-weight: 600; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;" onclick="saveBusinessProfile()">
-            💾 Guardar Configuración
-          </button>
         </div>
       </div>
     `;

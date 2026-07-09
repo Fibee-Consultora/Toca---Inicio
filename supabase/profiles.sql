@@ -26,12 +26,13 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, email, full_name, avatar_url)
+  insert into public.profiles (id, email, full_name, avatar_url, plan)
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name') || '|plan:Gratuito|agents:0|packs:0',
-    new.raw_user_meta_data->>'avatar_url'
+    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)) || '|plan:Gratuito|agents:0|packs:0|status:Activo|pay:2026-07-01|factura:true',
+    new.raw_user_meta_data->>'avatar_url',
+    'Néctar'
   )
   on conflict (id) do nothing;
   return new;

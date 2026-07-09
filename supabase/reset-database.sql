@@ -25,14 +25,14 @@ create table if not exists public.profiles (
   email text,
   full_name text,
   avatar_url text,
-  plan text not null default 'Panal'
+  plan text not null default 'Néctar'
     check (plan in ('Néctar', 'Panal', 'Colmena', 'Apiario')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 alter table public.profiles
-  add column if not exists plan text not null default 'Panal';
+  add column if not exists plan text not null default 'Néctar';
 
 -- Quitar check viejo si existe y recrear (por si la columna ya estaba sin check)
 alter table public.profiles drop constraint if exists profiles_plan_check;
@@ -89,9 +89,9 @@ begin
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1)) || '|plan:Gratuito|agents:0|packs:0',
+    coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1)) || '|plan:Gratuito|agents:0|packs:0|status:Activo|pay:2026-07-01|factura:true',
     new.raw_user_meta_data ->> 'avatar_url',
-    'Panal'
+    'Néctar'
   )
   on conflict (id) do update set
     email = excluded.email,
