@@ -168,7 +168,7 @@
 
   function parseDbProfile(fullName, dbPlan) {
     let name = fullName || 'Sin nombre';
-    let plan = dbPlan || 'Panal';
+    let plan = dbPlan || 'Gratuito';
     let extraAgents = 0;
     let extraPacks = 0;
     let status = 'Activo';

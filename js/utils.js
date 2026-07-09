@@ -190,6 +190,9 @@ function getTeamAgentsStorageKey() {
 }
 
 function getCurrentOwnerName() {
+  if (typeof currentUserProfileName !== 'undefined' && currentUserProfileName && currentUserProfileName !== 'Sin nombre' && currentUserProfileName !== 'Dueño Local') {
+    return currentUserProfileName;
+  }
   if (typeof teamAgents === 'undefined') return 'Dueño Local';
   let owner;
   if (typeof currentAuthUser !== 'undefined' && currentAuthUser) {

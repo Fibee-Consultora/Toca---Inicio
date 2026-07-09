@@ -1251,9 +1251,6 @@ function renderProfileModalContent() {
               <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Tu Nombre y Apellido</label>
               <input type="text" id="profile-owner-name" class="form-input" value="${getCurrentOwnerName()}" placeholder="Ej. Javier Reyes" style="padding: 8px 12px; background: #ffffff;">
             </div>
-            <button class="btn-primary" style="align-self: flex-start; margin-top: 4px; background: var(--color-accent); color: #0a0a0a; font-weight: 600; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.72rem;" onclick="saveUserProfile()">
-              💾 Guardar Perfil de Usuario
-            </button>
           </div>
 
           <!-- Card 2: Perfil del Negocio (Individual) -->
@@ -1300,11 +1297,12 @@ function renderProfileModalContent() {
                 <input type="text" id="profile-biz-promo" class="form-input" value="${businessProfile.promotion}" placeholder="Ej. Envío gratis a todo el Perú" style="padding: 8px 12px; background: #ffffff;">
               </div>
             </div>
-
-            <button class="btn-primary" style="align-self: flex-start; margin-top: 4px; background: var(--color-accent); color: #0a0a0a; font-weight: 600; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.72rem;" onclick="saveBusinessProfile()">
-              💾 Guardar Información del Negocio
-            </button>
           </div>
+
+          <!-- Single Save Button at the Bottom of Left Column -->
+          <button class="btn-primary" style="align-self: flex-start; background: var(--color-accent); color: #0a0a0a; font-weight: 600; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.75rem;" onclick="saveAllProfileSettings()">
+            💾 Guardar Configuración
+          </button>
         </div>
 
         <!-- Right Column: Workspace switcher & lists -->

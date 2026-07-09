@@ -1840,64 +1840,112 @@ function saveBusinessProfile() {
   closeProfileConfigModal();
 }
 
-async function saveUserProfile() {
-  const ownerNameInput = document.getElementById('profile-owner-name');
-  if (!ownerNameInput) return;
-  const ownerName = ownerNameInput.value.trim() || 'Dueño';
+async function saveAllProfileSettings() {
+  showToast("Guardando toda la configuración...");
+  
+  try {
+    // 1. Save User Profile Settings (Name)
+    const ownerNameInput = document.getElementById('profile-owner-name');
+    if (ownerNameInput) {
+      const ownerName = ownerNameInput.value.trim() || 'Dueño';
 
-  // 1. Update in teamAgents locally
-  let owner;
-  if (currentAuthUser) {
-    owner = teamAgents.find(a => a.email.toLowerCase() === currentAuthUser.email.toLowerCase());
-  } else {
-    owner = teamAgents.find(a => a.role === 'Administrador');
-  }
-  if (owner) {
-    owner.name = ownerName;
-  } else {
-    teamAgents.push({
-      name: ownerName,
-      email: currentAuthUser ? currentAuthUser.email : 'admin@toca.app',
-      role: 'Administrador',
-      status: 'Activo'
-    });
-  }
-  localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
-  updateProfileUI();
+      // Update in teamAgents locally
+      let owner;
+      if (currentAuthUser) {
+        owner = teamAgents.find(a => a.email.toLowerCase() === currentAuthUser.email.toLowerCase());
+      } else {
+        owner = teamAgents.find(a => a.role === 'Administrador');
+      }
+      if (owner) {
+        owner.name = ownerName;
+      } else {
+        teamAgents.push({
+          name: ownerName,
+          email: currentAuthUser ? currentAuthUser.email : 'admin@toca.app',
+          role: 'Administrador',
+          status: 'Activo'
+        });
+      }
+      localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
+      currentUserProfileName = ownerName;
+      localStorage.setItem('toca_user_profile_name', ownerName);
+      updateProfileUI();
 
-  // 2. Update in Supabase profiles table
-  if (window.TocaDB?.isConfigured() && currentAuthUser) {
-    try {
-      showToast("Guardando perfil de usuario...");
-      const profile = await window.TocaDB.loadMyProfile();
-      const planName = profile?.plan || 'Gratuito';
-      const extraAgents = profile?.extra_agents || 0;
-      const extraPacks = profile?.extra_packs || 0;
-      const status = profile?.status || 'Activo';
-      const payDate = profile?.last_payment_date || '2026-07-01';
-      const factura = profile?.factura !== false;
+      // Update in Supabase profiles table
+      if (window.TocaDB?.isConfigured() && currentAuthUser) {
+        const profile = await window.TocaDB.loadMyProfile();
+        const planName = profile?.plan || 'Gratuito';
+        const extraAgents = profile?.extra_agents || 0;
+        const extraPacks = profile?.extra_packs || 0;
+        const status = profile?.status || 'Activo';
+        const payDate = profile?.last_payment_date || '2026-07-01';
+        const factura = profile?.factura !== false;
 
-      const formattedName = `${ownerName}|plan:${planName}|agents:${extraAgents}|packs:${extraPacks}|status:${status}|pay:${payDate}|factura:${factura}`;
-      
-      const client = window.TocaDB.getClient();
-      const { error } = await client
-        .from('profiles')
-        .update({ 
-          full_name: formattedName,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', currentAuthUser.id);
-      
-      if (error) throw error;
-      showToast("✓ Nombre de usuario actualizado en base de datos.");
-      closeProfileConfigModal();
-    } catch (err) {
-      console.error(err);
-      showToast("Error al guardar perfil en la base de datos.");
+        const formattedName = `${ownerName}|plan:${planName}|agents:${extraAgents}|packs:${extraPacks}|status:${status}|pay:${payDate}|factura:${factura}`;
+        
+        const client = window.TocaDB.getClient();
+        const { error } = await client
+          .from('profiles')
+          .update({ 
+            full_name: formattedName,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', currentAuthUser.id);
+        
+        if (error) throw error;
+      }
     }
-  } else {
-    showToast("✓ Nombre de usuario actualizado localmente.");
+
+    // 2. Save Business Workspace Settings
+    const bizNameInput = document.getElementById('profile-biz-name');
+    if (bizNameInput) {
+      const name = bizNameInput.value.trim() || 'Mi Negocio';
+      const sector = document.getElementById('profile-biz-sector').value;
+      const timezone = 'America/Lima'; // Siempre Perú
+      const description = document.getElementById('profile-biz-desc').value;
+      const tone = document.getElementById('profile-biz-tone').value;
+      const promotion = document.getElementById('profile-biz-promo').value;
+
+      // Find and update in businesses list
+      const bizIdx = businesses.findIndex(b => String(b.id) === String(currentBusinessId));
+      if (bizIdx !== -1) {
+        businesses[bizIdx] = {
+          id: currentBusinessId,
+          name,
+          sector,
+          timezone,
+          description,
+          tone,
+          promotion
+        };
+        if (currentAuthUser) {
+          localStorage.setItem(`toca_businesses_${currentAuthUser.id}`, JSON.stringify(businesses));
+        } else {
+          localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+        }
+        if (dbReady) {
+          await window.TocaDB.updateWorkspace({
+            id: currentBusinessId,
+            name,
+            sector,
+            timezone,
+            description,
+            tone,
+            promotion
+          });
+        }
+        businessProfile = businesses[bizIdx];
+        localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
+      }
+    }
+
+    showToast("✓ Configuración guardada correctamente.");
+    populateBusinessSwitchers();
+    renderAllTabs();
     closeProfileConfigModal();
+  } catch (err) {
+    console.error("Error al guardar la configuración completa:", err);
+    showToast("Error al guardar cambios. Por favor intenta de nuevo.");
   }
 }
 
@@ -2050,11 +2098,13 @@ async function syncUserPlanFromProfile() {
     }
     if (profile?.plan && PLAN_LIMITS[profile.plan]) {
       currentActivePlan = profile.plan;
+      currentUserProfileName = profile.full_name || 'Sin nombre';
       currentAccountStatus = profile.status || 'Activo';
       currentLastPaymentDate = profile.last_payment_date || TODAY_STR;
       purchasedExtraAgents = profile.extra_agents || 0;
       purchasedExtraPacks = profile.extra_packs || 0;
       localStorage.setItem('toca_current_active_plan', profile.plan);
+      localStorage.setItem('toca_user_profile_name', currentUserProfileName);
       localStorage.setItem('toca_extra_agents', String(purchasedExtraAgents));
       localStorage.setItem('toca_extra_packs', String(purchasedExtraPacks));
       updateProfileUI();
