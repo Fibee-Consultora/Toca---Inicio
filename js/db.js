@@ -195,7 +195,7 @@
         }
       }
     } else {
-      plan = 'Gratuito';
+      plan = dbPlan || 'Gratuito';
       status = 'Activo';
       lastPaymentDate = '2026-07-01';
       factura = true;

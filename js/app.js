@@ -1982,8 +1982,14 @@ async function syncUserPlanFromProfile() {
       currentActivePlan = profile.plan;
       currentAccountStatus = profile.status || 'Activo';
       currentLastPaymentDate = profile.last_payment_date || TODAY_STR;
+      purchasedExtraAgents = profile.extra_agents || 0;
+      purchasedExtraPacks = profile.extra_packs || 0;
       localStorage.setItem('toca_current_active_plan', profile.plan);
+      localStorage.setItem('toca_extra_agents', String(purchasedExtraAgents));
+      localStorage.setItem('toca_extra_packs', String(purchasedExtraPacks));
       updateProfileUI();
+      populateBusinessSwitchers();
+      renderAllTabs();
     }
   } catch (err) {
     console.error(err);
