@@ -213,12 +213,27 @@
   async function loadMyProfile() {
     const { data: { user } } = await getClient().auth.getUser();
     if (!user) return null;
-    const { data, error } = await client
+    
+    let data = null;
+    const { data: selectData, error } = await client
       .from('profiles')
       .select('id, email, full_name, avatar_url, plan, created_at, last_session_id')
       .eq('id', user.id)
       .maybeSingle();
-    if (error) throw error;
+      
+    if (error) {
+      console.warn("Error loading profile with last_session_id, attempting fallback select:", error);
+      const { data: fallbackData, error: fallbackError } = await client
+        .from('profiles')
+        .select('id, email, full_name, avatar_url, plan, created_at')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (fallbackError) throw fallbackError;
+      data = fallbackData;
+    } else {
+      data = selectData;
+    }
+    
     if (data) {
       window.lastLoadedRawProfile = { full_name: data.full_name, plan: data.plan };
       console.log("TOCA_DEBUG: loaded raw profiles data:", { full_name: data.full_name, plan: data.plan });
