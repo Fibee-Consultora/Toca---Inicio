@@ -140,6 +140,7 @@ async function syncWorkspacesFromSupabase(user) {
       console.error("Error loading team members:", err);
     }
     
+    populateBusinessSwitchers();
     renderAllTabs();
     updateProfileUI();
   } catch (err) {
@@ -2234,6 +2235,12 @@ async function logout() {
   applyAuthUser(null);
   localStorage.removeItem('toca_is_logged_in');
   localStorage.removeItem('toca_business_config_modal_shown');
+  localStorage.removeItem('toca_current_active_plan');
+  localStorage.removeItem('toca_user_profile_name');
+  localStorage.removeItem('toca_extra_agents');
+  localStorage.removeItem('toca_extra_packs');
+  currentActivePlan = 'Gratuito';
+  currentUserProfileName = 'Sin nombre';
   updateLoginScreen();
   setLoginButtonLoading(false);
 }
