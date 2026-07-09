@@ -542,8 +542,8 @@ async function renderAdminTab() {
           maxAgents: maxAgents,
           contactsCount: u.contacts_count || 0,
           agentsCount: u.agents_count || 0,
-          status: "Activo",
-          lastPaymentDate: "2026-07-01",
+          status: u.status || "Activo",
+          lastPaymentDate: u.last_payment_date || "2026-07-01",
           copilot: planVal !== 'Néctar' && planVal !== 'Gratuito',
           autopilot: planVal === 'Colmena' || planVal === 'Apiario',
           created_at: u.created_at,
@@ -562,15 +562,15 @@ async function renderAdminTab() {
   const planCounts = { Gratuito: 0, Néctar: 0, Panal: 0, Colmena: 0, Apiario: 0 };
   let estimatedRevenue = 0;
   
-  const PLAN_PRICES = { Gratuito: 0, Néctar: 49, Panal: 119, Colmena: 249, Apiario: 499 };
+  const PLAN_PRICES = { Gratuito: 0, Néctar: 49, Panal: 119, Colmena: 249, Apiario: 499, SuperAdmin: 0 };
 
   adminClients.forEach(c => {
     if (c.status === "Activo") {
       if (planCounts[c.plan] !== undefined) planCounts[c.plan]++;
       
       // El SuperAdmin no genera MRR y las cuentas sin facturación tampoco
-      if (c.email.toLowerCase() !== 'fibeeconsultoradigital@gmail.com' && c.factura !== false) {
-        const basePrice = PLAN_PRICES[c.plan] || 119;
+      if (c.plan !== 'SuperAdmin' && c.email.toLowerCase() !== 'fibeeconsultoradigital@gmail.com' && c.factura !== false) {
+        const basePrice = PLAN_PRICES[c.plan] || 0;
         const extraAgentsCost = (c.extraAgents || 0) * 24.90;
         const extraPacksCost = (c.extraPacks || 0) * 19.90;
         estimatedRevenue += basePrice + extraAgentsCost + extraPacksCost;
@@ -846,7 +846,7 @@ function getAdminModalHtml(client) {
           <button onclick="selectClientForEdit(null)" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 18px; font-size: 0.82rem; font-weight: 600; cursor: pointer; color: var(--color-text-primary); transition: background 0.15s;">
             Cancelar
           </button>
-          <button onclick="adminApplyClientEditChanges(${client.id})" style="background: var(--color-accent); border: none; color: #0a0a0a; font-weight: 600; padding: 10px 18px; font-size: 0.82rem; border-radius: 8px; cursor: pointer; transition: opacity 0.15s;">
+          <button onclick="adminApplyClientEditChanges('${client.id}')" style="background: var(--color-accent); border: none; color: #0a0a0a; font-weight: 600; padding: 10px 18px; font-size: 0.82rem; border-radius: 8px; cursor: pointer; transition: opacity 0.15s;">
             Guardar Cambios
           </button>
         </div>

@@ -268,6 +268,7 @@
         row.extra_packs = parsed.extraPacks;
         row.status = parsed.status;
         row.last_payment_date = parsed.lastPaymentDate;
+        row.factura = parsed.factura;
       });
     }
     return selectData || [];
