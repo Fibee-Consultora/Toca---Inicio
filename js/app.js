@@ -142,12 +142,19 @@ async function syncWorkspacesFromSupabase(user) {
     // Enforce business limit redirection if active workspace is locked under current plan
     const limit = getActiveBusinessLimit();
     const activeIdx = businesses.findIndex(b => String(b.id) === String(currentBusinessId));
-    if (businesses.length > 0 && activeIdx >= limit) {
-      const mainBizId = businesses[0].id;
+    const isLocked = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(currentBusinessId)) : activeIdx >= limit;
+    
+    if (businesses.length > 0 && isLocked) {
+      let firstUnlocked = businesses.find((b, idx) => {
+        const isL = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(b.id)) : idx >= limit;
+        return !isL;
+      });
+      if (!firstUnlocked) firstUnlocked = businesses[0];
+      const mainBizId = firstUnlocked.id;
       currentBusinessId = mainBizId;
       localStorage.setItem(`toca_current_business_id_${user.id}`, String(mainBizId));
       localStorage.setItem('toca_current_business_id', String(mainBizId));
-      businessProfile = businesses[0];
+      businessProfile = firstUnlocked;
       localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
     }
     
@@ -2120,15 +2127,29 @@ async function syncUserPlanFromProfile() {
       localStorage.setItem('toca_extra_agents', String(purchasedExtraAgents));
       localStorage.setItem('toca_extra_packs', String(purchasedExtraPacks));
       
+      currentActiveWorkspaces = profile.active_workspaces || null;
+      if (currentActiveWorkspaces) {
+        localStorage.setItem('toca_active_workspaces', currentActiveWorkspaces.join(','));
+      } else {
+        localStorage.removeItem('toca_active_workspaces');
+      }
+      
       // Enforce business limit redirection if active workspace is locked under current plan
       const limit = PLAN_LIMITS[currentActivePlan]?.businesses || 1;
       const activeIdx = businesses.findIndex(b => String(b.id) === String(currentBusinessId));
-      if (businesses.length > 0 && activeIdx >= limit) {
-        const mainBizId = businesses[0].id;
+      const isLocked = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(currentBusinessId)) : activeIdx >= limit;
+      
+      if (businesses.length > 0 && isLocked) {
+        let firstUnlocked = businesses.find((b, idx) => {
+          const isL = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(b.id)) : idx >= limit;
+          return !isL;
+        });
+        if (!firstUnlocked) firstUnlocked = businesses[0];
+        const mainBizId = firstUnlocked.id;
         currentBusinessId = mainBizId;
         localStorage.setItem(`toca_current_business_id_${currentAuthUser.id}`, String(mainBizId));
         localStorage.setItem('toca_current_business_id', String(mainBizId));
-        businessProfile = businesses[0];
+        businessProfile = firstUnlocked;
         localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
       }
 
@@ -2943,7 +2964,7 @@ function populateBusinessSwitchers() {
   // 1. Populate custom dropdown menu in sidebar
   let menuHtml = '';
   businesses.forEach((b, idx) => {
-    const isLocked = idx >= limit;
+    const isLocked = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(b.id)) : idx >= limit;
     const isActive = b.id === currentBusinessId;
     
     if (isActive && triggerText) {
@@ -2972,7 +2993,7 @@ function populateBusinessSwitchers() {
   // 2. Populate native select in modal configuration
   let optionsHtml = '';
   businesses.forEach((b, idx) => {
-    const isLocked = idx >= limit;
+    const isLocked = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(b.id)) : idx >= limit;
     const label = isLocked ? `${b.name} 🔒 (Subir Plan)` : b.name;
     const disabledAttr = isLocked ? 'disabled' : '';
     const selectedAttr = b.id === currentBusinessId ? 'selected' : '';
@@ -3141,6 +3162,46 @@ function createBusinessWorkspace(name) {
       };
       businesses.push(newBiz);
       localStorage.setItem(`toca_businesses_${currentAuthUser.id}`, JSON.stringify(businesses));
+      
+      if (currentActiveWorkspaces) {
+        currentActiveWorkspaces.push(String(newBiz.id));
+        localStorage.setItem('toca_active_workspaces', currentActiveWorkspaces.join(','));
+      }
+      
+      // Update profile in Supabase to include the new workspace in active_workspaces metadata
+      if (window.TocaDB?.isConfigured() && currentAuthUser) {
+        window.TocaDB.loadMyProfile().then(profile => {
+          if (profile) {
+            const ownerName = currentUserProfileName;
+            const planName = profile.plan || 'Gratuito';
+            const extraAgents = profile.extra_agents || 0;
+            const extraPacks = profile.extra_packs || 0;
+            const status = profile.status || 'Activo';
+            const payDate = profile.last_payment_date || '2026-07-01';
+            const factura = profile.factura !== false;
+            
+            let activeList = currentActiveWorkspaces ? [...currentActiveWorkspaces] : [];
+            if (activeList.length === 0) {
+              activeList = businesses.map(b => String(b.id));
+            }
+            if (!activeList.includes(String(newBiz.id))) {
+              activeList.push(String(newBiz.id));
+            }
+            
+            const activeWorkspacesStr = `|active_workspaces:${activeList.join(',')}`;
+            const formattedName = `${ownerName}|plan:${planName}|agents:${extraAgents}|packs:${extraPacks}|status:${status}|pay:${payDate}|factura:${factura}${activeWorkspacesStr}`;
+            
+            window.TocaDB.getClient()
+              .from('profiles')
+              .update({ full_name: formattedName, updated_at: new Date().toISOString() })
+              .eq('id', currentAuthUser.id)
+              .then(({ error }) => {
+                if (error) console.error("Error updating profile with new workspace ID:", error);
+              });
+          }
+        });
+      }
+
       showToast(`🏢 Nuevo negocio creado: ${newBiz.name}`);
       switchBusinessWorkspace(newBiz.id);
     }).catch(err => {
@@ -3214,7 +3275,7 @@ function deleteBusinessWorkspace(id) {
 // SECCIÓN ADMINISTRATIVA (Simulación de Gestión de Clientes y Planes)
 // ==========================================================================
 
-function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, maxAgents, status, lastPaymentDate, extraAgents, extraPacks, factura) {
+function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, maxAgents, status, lastPaymentDate, extraAgents, extraPacks, factura, activeWorkspacesIds) {
   const client = adminClients.find(c => String(c.id) === String(clientId));
   if (!client) return;
 
@@ -3222,9 +3283,9 @@ function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, 
   client.status = status || "Activo";
   client.lastPaymentDate = lastPaymentDate || "2026-06-21";
   client.factura = factura !== false;
+  client.activeWorkspaces = activeWorkspacesIds || null;
 
   if (plan === 'Apiario') {
-    // Apiario is custom, limits and toggles are fully editable
     client.maxContacts = parseInt(maxContacts) || 1000;
     client.maxAgents = parseInt(maxAgents) || 10;
     client.copilot = !!copilot;
@@ -3232,7 +3293,6 @@ function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, 
     client.extraAgents = 0;
     client.extraPacks = 0;
   } else {
-    // Fixed plans: limits are set dynamically by base limits + expansions
     const limits = PLAN_LIMITS[plan] || PLAN_LIMITS['Panal'];
     client.extraAgents = parseInt(extraAgents) || 0;
     client.extraPacks = parseInt(extraPacks) || 0;
@@ -3240,7 +3300,6 @@ function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, 
     client.maxContacts = limits.contacts + (client.extraPacks * 50);
     client.maxAgents = limits.agents + client.extraAgents;
 
-    // Enforce default capabilities of the fixed plans
     if (plan === 'Gratuito') {
       client.copilot = false;
       client.autopilot = false;
@@ -3256,18 +3315,24 @@ function saveClientPlanChanges(clientId, plan, copilot, autopilot, maxContacts, 
     }
   }
 
-  // Si estamos suplantando a este cliente, actualizar los límites activos de inmediato
   if (String(impersonatedClientId) === String(clientId)) {
     currentActivePlan = plan;
     purchasedExtraAgents = client.extraAgents;
     purchasedExtraPacks = client.extraPacks;
+    currentActiveWorkspaces = activeWorkspacesIds || null;
     localStorage.setItem('toca_current_active_plan', plan);
     localStorage.setItem('toca_extra_agents', String(client.extraAgents));
     localStorage.setItem('toca_extra_packs', String(client.extraPacks));
+    if (currentActiveWorkspaces) {
+      localStorage.setItem('toca_active_workspaces', currentActiveWorkspaces.join(','));
+    } else {
+      localStorage.removeItem('toca_active_workspaces');
+    }
   }
 
   if (window.TocaDB?.isConfigured()) {
-    const dbPlanStr = `${plan}|agents:${client.extraAgents}|packs:${client.extraPacks}|status:${client.status}|pay:${client.lastPaymentDate}|factura:${client.factura}`;
+    const activeWorkspacesStr = (activeWorkspacesIds && activeWorkspacesIds.length > 0) ? `|active_workspaces:${activeWorkspacesIds.join(',')}` : '';
+    const dbPlanStr = `${plan}|agents:${client.extraAgents}|packs:${client.extraPacks}|status:${client.status}|pay:${client.lastPaymentDate}|factura:${client.factura}${activeWorkspacesStr}`;
     window.TocaDB.updateUserPlan(clientId, dbPlanStr, client.name)
       .then(() => {
         showToast(`✓ Cambios guardados en base de datos.`);

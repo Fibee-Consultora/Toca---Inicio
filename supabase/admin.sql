@@ -115,7 +115,40 @@ returns table(col text)
 language plpgsql
 security definer
 as $$
-begin
   return query select column_name::text from information_schema.columns where table_schema = 'public' and table_name = tbl;
+end;
+$$;
+
+-- RPC: Obtener todos los workspaces de un cliente específico
+create or replace function public.admin_get_user_workspaces(client_user_id uuid)
+returns table (
+  w_id uuid,
+  w_name text,
+  w_sector text,
+  w_description text,
+  w_tone text,
+  w_promotion text,
+  w_timezone text
+)
+language plpgsql
+security definer
+as $$
+begin
+  if exists (select 1 from public.profiles where id = auth.uid() and plan = 'SuperAdmin') or (select email from auth.users where id = auth.uid()) = 'fibeeconsultoradigital@gmail.com' then
+    return query
+    select 
+      id,
+      name::text,
+      sector::text,
+      description::text,
+      tone::text,
+      promotion::text,
+      timezone::text
+    from public.workspaces
+    where owner_id = client_user_id
+    order by created_at;
+  else
+    raise exception 'Unauthorized';
+  end if;
 end;
 $$;

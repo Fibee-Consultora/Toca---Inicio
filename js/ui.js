@@ -764,7 +764,7 @@ function getAdminModalHtml(client) {
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 12px;">
               <div style="display: flex; flex-direction: column; gap: 4px;">
                 <label style="font-size: 0.72rem; color: var(--color-text-muted);">Plan Asignado</label>
-                <select id="admin-edit-plan" onchange="toggleAdminCustomPlanFields(this.value)" style="padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #ffffff; font-family: var(--font-body); font-size: 0.85rem; height: 36px; cursor: pointer;">
+                <select id="admin-edit-plan" onchange="toggleAdminCustomPlanFields(this.value); updateAdminWorkspaceLimit(this.value)" style="padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #ffffff; font-family: var(--font-body); font-size: 0.85rem; height: 36px; cursor: pointer;">
                   <option value="Gratuito" ${client.plan === 'Gratuito' ? 'selected' : ''}>🌱 Plan Gratuito</option>
                   <option value="Néctar" ${client.plan === 'Néctar' ? 'selected' : ''}>🌸 Plan Néctar</option>
                   <option value="Panal" ${client.plan === 'Panal' ? 'selected' : ''}>🍯 Plan Panal</option>
@@ -838,6 +838,17 @@ function getAdminModalHtml(client) {
             </div>
           </div>
 
+          <!-- Active Workspaces Selection Stack -->
+          <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; background: #ffffff; display: flex; flex-direction: column; gap: 10px;">
+            <h4 style="font-size: 0.72rem; font-weight: 700; color: var(--color-text-secondary); margin: 0; text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; justify-content: space-between;">
+              <span>🏢 Marcas / Negocios Activos</span>
+              <span style="font-size: 0.65rem; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 999px; font-weight: 700;">Límite: <span id="admin-active-biz-limit-text">...</span></span>
+            </h4>
+            <div id="admin-workspaces-selection-container" style="display: flex; flex-direction: column; gap: 8px;">
+              <p style="font-size: 0.75rem; color: var(--color-text-muted); margin: 0;">Cargando negocios del cliente...</p>
+            </div>
+          </div>
+
           ${getCollaboratorsListHtml(client.agentsList)}
 
         </div>
@@ -878,9 +889,105 @@ function getCollaboratorsListHtml(agentsList) {
 }
 
 // Helpers para el Panel Admin
-function selectClientForEdit(clientId) {
+async function selectClientForEdit(clientId) {
   selectedAdminClientId = clientId;
   renderAllTabs();
+  
+  if (clientId) {
+    let workspaces = [];
+    try {
+      if (currentAuthUser && window.TocaDB?.isConfigured()) {
+        const { data, error } = await window.TocaDB.getClient().rpc('admin_get_user_workspaces', { client_user_id: clientId });
+        if (!error) workspaces = data || [];
+      } else {
+        workspaces = JSON.parse(localStorage.getItem(`toca_businesses_${clientId}`)) || [];
+      }
+    } catch (err) {
+      console.error("Error fetching workspaces for admin view:", err);
+    }
+    
+    const client = adminClients.find(c => String(c.id) === String(clientId));
+    if (client) {
+      populateAdminWorkspacesSelection(client, workspaces);
+    }
+  }
+}
+
+function populateAdminWorkspacesSelection(client, workspaces) {
+  const container = document.getElementById('admin-workspaces-selection-container');
+  if (!container) return;
+
+  const planSelect = document.getElementById('admin-edit-plan');
+  const plan = planSelect ? planSelect.value : client.plan;
+  const baseLimits = PLAN_LIMITS[plan] || { businesses: 1 };
+  const limit = baseLimits.businesses;
+
+  const limitText = document.getElementById('admin-active-biz-limit-text');
+  if (limitText) {
+    limitText.textContent = limit === 999 ? 'Ilimitados' : limit;
+  }
+
+  const rawProfile = adminUsers.find(u => String(u.id) === String(client.id));
+  const parsed = rawProfile ? parseDbProfile(rawProfile.full_name, rawProfile.plan) : { activeWorkspaces: client.activeWorkspaces || null };
+  let activeIds = parsed.activeWorkspaces;
+  
+  if (!activeIds) {
+    activeIds = workspaces.slice(0, limit).map(w => String(w.id || w.w_id));
+  } else {
+    activeIds = activeIds.map(String);
+  }
+
+  let html = '';
+  if (workspaces.length === 0) {
+    html = '<p style="font-size: 0.75rem; color: var(--color-text-muted); margin: 0;">No tiene negocios creados.</p>';
+  } else {
+    workspaces.forEach((w, idx) => {
+      const id = String(w.id || w.w_id);
+      const name = w.name || w.w_name || 'Sin nombre';
+      const isChecked = activeIds.includes(id);
+      html += `
+        <label style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 8px; background: #f9fafb; font-size: 0.78rem; font-weight: 500; cursor: pointer; color: var(--color-text-primary); transition: all 0.15s; margin-bottom: 2px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span>🏢</span>
+            <span>${name}</span>
+          </div>
+          <input type="checkbox" class="admin-workspace-checkbox" value="${id}" ${isChecked ? 'checked' : ''} onchange="validateAdminWorkspaceCheckboxes(${limit})" style="width: 16px; height: 16px; cursor: pointer;">
+        </label>
+      `;
+    });
+  }
+  container.innerHTML = html;
+  validateAdminWorkspaceCheckboxes(limit);
+}
+
+function validateAdminWorkspaceCheckboxes(limit) {
+  if (limit === 999) return;
+  const checkboxes = document.querySelectorAll('.admin-workspace-checkbox');
+  const checked = Array.from(checkboxes).filter(cb => cb.checked);
+  
+  checkboxes.forEach(cb => {
+    if (!cb.checked) {
+      cb.disabled = checked.length >= limit;
+      cb.parentNode.style.opacity = checked.length >= limit ? '0.5' : '1';
+      cb.parentNode.style.cursor = checked.length >= limit ? 'not-allowed' : 'pointer';
+    } else {
+      cb.disabled = false;
+      cb.parentNode.style.opacity = '1';
+      cb.parentNode.style.cursor = 'pointer';
+    }
+  });
+}
+
+function updateAdminWorkspaceLimit(planValue) {
+  const baseLimits = PLAN_LIMITS[planValue] || { businesses: 1 };
+  const limit = baseLimits.businesses;
+  
+  const limitText = document.getElementById('admin-active-biz-limit-text');
+  if (limitText) {
+    limitText.textContent = limit === 999 ? 'Ilimitados' : limit;
+  }
+  
+  validateAdminWorkspaceCheckboxes(limit);
 }
 
 function toggleAdminCustomPlanFields(planValue) {
@@ -966,7 +1073,10 @@ function adminApplyClientEditChanges(clientId) {
   const extraPacks = document.getElementById('admin-edit-extra-packs')?.value ?? 0;
   const factura = document.getElementById('admin-edit-factura')?.checked ?? true;
 
-  saveClientPlanChanges(clientId, plan, copilot, false, maxContacts, maxAgents, status, lastPaymentDate, extraAgents, extraPacks, factura);
+  const checkboxes = document.querySelectorAll('.admin-workspace-checkbox');
+  const checkedIds = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+
+  saveClientPlanChanges(clientId, plan, copilot, false, maxContacts, maxAgents, status, lastPaymentDate, extraAgents, extraPacks, factura, checkedIds);
   selectClientForEdit(null);
 }
 
@@ -1206,7 +1316,7 @@ function renderProfileModalContent() {
     businesses.forEach((b, idx) => {
       const isActive = b.id === currentBusinessId;
       const isMain = b.id === 1;
-      const isLocked = idx >= bizLimit;
+      const isLocked = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(b.id)) : idx >= bizLimit;
       const showDelete = currentSimulatedUserRole === 'Administrador' && !isActive && !isMain;
       
       bizListHtml += `

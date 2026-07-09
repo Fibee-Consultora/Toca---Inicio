@@ -174,6 +174,7 @@
     let status = 'Activo';
     let lastPaymentDate = '2026-07-01';
     let factura = true;
+    let activeWorkspaces = null;
     
     if (name.includes('|')) {
       const parts = name.split('|');
@@ -192,6 +193,8 @@
           lastPaymentDate = part.substring(4);
         } else if (part.startsWith('factura:')) {
           factura = part.substring(8) === 'true';
+        } else if (part.startsWith('active_workspaces:')) {
+          activeWorkspaces = part.substring(18).split(',').filter(x => x.trim());
         }
       }
     } else {
@@ -201,7 +204,7 @@
       factura = true;
     }
 
-    return { name, plan, extraAgents, extraPacks, status, lastPaymentDate, factura };
+    return { name, plan, extraAgents, extraPacks, status, lastPaymentDate, factura, activeWorkspaces };
   }
 
   async function loadMyProfile() {
@@ -240,6 +243,7 @@
       data.status = parsed.status;
       data.last_payment_date = parsed.lastPaymentDate;
       data.factura = parsed.factura;
+      data.active_workspaces = parsed.activeWorkspaces;
     }
     return data;
   }
@@ -296,11 +300,7 @@
   async function updateUserPlan(userId, planStr, fullName) {
     const parts = planStr.split('|');
     const planName = parts[0] || 'Gratuito';
-    let extraAgents = 0;
-    let extraPacks = 0;
-    let status = 'Activo';
-    let lastPaymentDate = '2026-07-01';
-    let factura = true;
+    let activeWorkspaces = '';
 
     for (let i = 1; i < parts.length; i++) {
       if (parts[i].startsWith('agents:')) extraAgents = parseInt(parts[i].substring(7)) || 0;
@@ -308,6 +308,7 @@
       else if (parts[i].startsWith('status:')) status = parts[i].substring(7);
       else if (parts[i].startsWith('pay:')) lastPaymentDate = parts[i].substring(4);
       else if (parts[i].startsWith('factura:')) factura = parts[i].substring(8) === 'true';
+      else if (parts[i].startsWith('active_workspaces:')) activeWorkspaces = parts[i].substring(18);
     }
 
     let validDbPlan = planName;
@@ -315,7 +316,8 @@
       validDbPlan = 'Néctar';
     }
 
-    const formattedName = `${fullName || 'Sin nombre'}|plan:${planName}|agents:${extraAgents}|packs:${extraPacks}|status:${status}|pay:${lastPaymentDate}|factura:${factura}`;
+    const activeWorkspacesStr = activeWorkspaces ? `|active_workspaces:${activeWorkspaces}` : '';
+    const formattedName = `${fullName || 'Sin nombre'}|plan:${planName}|agents:${extraAgents}|packs:${extraPacks}|status:${status}|pay:${lastPaymentDate}|factura:${factura}${activeWorkspacesStr}`;
 
     const { error } = await client
       .from('profiles')

@@ -28,6 +28,7 @@ const PLAN_LIMITS = {
 
 let currentActivePlan = localStorage.getItem('toca_current_active_plan') || 'Gratuito';
 let currentUserProfileName = localStorage.getItem('toca_user_profile_name') || 'Sin nombre';
+let currentActiveWorkspaces = localStorage.getItem('toca_active_workspaces') ? localStorage.getItem('toca_active_workspaces').split(',') : null;
 let purchasedExtraAgents = parseInt(localStorage.getItem('toca_extra_agents')) || 0;
 let purchasedExtraPacks = parseInt(localStorage.getItem('toca_extra_packs')) || 0;
 
