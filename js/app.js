@@ -3437,25 +3437,21 @@ async function adminDeleteUser(clientId) {
   
   if (window.TocaDB?.isConfigured()) {
     try {
-      // Intentar primero borrar desde auth.users a través del RPC admin_delete_user (para purga completa)
+      // Intentar borrar desde auth.users a través del RPC admin_delete_user (para purga completa)
       const { error: rpcError } = await window.TocaDB.getClient().rpc('admin_delete_user', { user_id: clientId });
       
       if (rpcError) {
-        console.warn("RPC admin_delete_user no disponible o falló, intentando delete directo en profiles:", rpcError);
-        const { error: deleteError } = await window.TocaDB.getClient()
-          .from('profiles')
-          .delete()
-          .eq('id', clientId);
-        if (deleteError) throw deleteError;
+        console.error("Error en RPC admin_delete_user:", rpcError);
+        throw new Error(rpcError.message || "Error al borrar el usuario de Supabase Auth");
       }
       
-      showToast("🗑️ Usuario eliminado permanentemente.");
+      showToast("🗑️ Usuario eliminado permanentemente de la base de datos.");
       adminUsers = await window.TocaDB.loadAllProfiles();
       selectClientForEdit(null);
       renderAdminTab();
     } catch (err) {
       console.error(err);
-      showToast("Error al eliminar el usuario en Supabase.");
+      showToast(`Error al eliminar el usuario: ${err.message || 'Error en Supabase'}`);
     }
   } else {
     adminClients = adminClients.filter(c => String(c.id) !== String(clientId));
