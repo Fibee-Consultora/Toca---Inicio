@@ -86,18 +86,28 @@ function bootstrapAuthenticatedUser(user) {
 async function syncWorkspacesFromSupabase(user) {
   try {
     let ws = await window.TocaDB.loadWorkspaces();
+    
+    // Si la BD devuelve vacío pero localmente ya tenemos un negocio con id tipo UUID,
+    // evitamos insertar un duplicado (es un error de carrera por RLS/sesión no lista).
+    const hasLocalUuid = businesses.some(b => isNaN(b.id));
+    
     if (ws.length === 0) {
-      const localBiz = (businesses && businesses.length > 0) ? businesses[0] : null;
-      const newWs = await window.TocaDB.insertWorkspace({
-        name: (localBiz && localBiz.name) ? localBiz.name : 'Mi Negocio',
-        sector: (localBiz && localBiz.sector) ? localBiz.sector : 'Otro',
-        description: (localBiz && localBiz.description) ? localBiz.description : '',
-        tone: (localBiz && localBiz.tone) ? localBiz.tone : 'Amigable',
-        promotion: (localBiz && localBiz.promotion) ? localBiz.promotion : '',
-        timezone: (localBiz && localBiz.timezone) ? localBiz.timezone : 'America/Lima',
-        owner_id: user.id
-      });
-      ws = [newWs];
+      if (hasLocalUuid) {
+        console.warn("syncWorkspacesFromSupabase: La BD retornó 0 marcas pero localmente hay una marca con UUID. Saltando inserción para evitar duplicados.");
+        ws = businesses;
+      } else {
+        const localBiz = (businesses && businesses.length > 0) ? businesses[0] : null;
+        const newWs = await window.TocaDB.insertWorkspace({
+          name: (localBiz && localBiz.name) ? localBiz.name : 'Mi Negocio',
+          sector: (localBiz && localBiz.sector) ? localBiz.sector : 'Otro',
+          description: (localBiz && localBiz.description) ? localBiz.description : '',
+          tone: (localBiz && localBiz.tone) ? localBiz.tone : 'Amigable',
+          promotion: (localBiz && localBiz.promotion) ? localBiz.promotion : '',
+          timezone: (localBiz && localBiz.timezone) ? localBiz.timezone : 'America/Lima',
+          owner_id: user.id
+        });
+        ws = [newWs];
+      }
     }
     
     // Mapear campos de BD a campos locales
