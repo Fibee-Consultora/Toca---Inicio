@@ -79,7 +79,30 @@ security definer
 as $$
 begin
   if exists (select 1 from public.profiles where id = auth.uid() and plan = 'SuperAdmin') or (select email from auth.users where id = auth.uid()) = 'fibeeconsultoradigital@gmail.com' then
-    delete from auth.users where id = user_id;
+    -- 1. Eliminar historial de contactos
+    delete from public.contact_history where contact_id in (
+      select id from public.contacts where workspace_id in (
+        select id from public.workspaces where owner_id = admin_delete_user.user_id
+      )
+    );
+    -- 2. Eliminar contactos
+    delete from public.contacts where workspace_id in (
+      select id from public.workspaces where owner_id = admin_delete_user.user_id
+    );
+    -- 3. Eliminar miembros del equipo
+    delete from public.workspace_members where workspace_id in (
+      select id from public.workspaces where owner_id = admin_delete_user.user_id
+    ) or user_id = admin_delete_user.user_id;
+    -- 4. Eliminar equipos
+    delete from public.workspace_team where workspace_id in (
+      select id from public.workspaces where owner_id = admin_delete_user.user_id
+    );
+    -- 5. Eliminar marcas (workspaces)
+    delete from public.workspaces where owner_id = admin_delete_user.user_id;
+    -- 6. Eliminar perfil de usuario
+    delete from public.profiles where id = admin_delete_user.user_id;
+    -- 7. Eliminar de la autenticación de Supabase
+    delete from auth.users where id = admin_delete_user.user_id;
   else
     raise exception 'Unauthorized';
   end if;
