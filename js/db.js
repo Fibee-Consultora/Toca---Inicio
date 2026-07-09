@@ -200,6 +200,13 @@
       lastPaymentDate = '2026-07-01';
       factura = true;
     }
+
+    if (dbPlan) {
+      if (dbPlan !== 'Néctar' || plan !== 'Gratuito') {
+        plan = dbPlan;
+      }
+    }
+    
     return { name, plan, extraAgents, extraPacks, status, lastPaymentDate, factura };
   }
 
@@ -213,7 +220,9 @@
       .maybeSingle();
     if (error) throw error;
     if (data) {
+      console.log("TOCA_DEBUG: loaded raw profiles data:", { full_name: data.full_name, plan: data.plan });
       const parsed = parseDbProfile(data.full_name, data.plan);
+      console.log("TOCA_DEBUG: resolved profile parsed:", parsed);
       data.full_name = parsed.name;
       data.plan = parsed.plan;
       data.extra_agents = parsed.extraAgents;
