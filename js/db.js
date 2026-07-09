@@ -201,12 +201,6 @@
       factura = true;
     }
 
-    if (dbPlan) {
-      if (dbPlan !== 'Néctar' || plan !== 'Gratuito') {
-        plan = dbPlan;
-      }
-    }
-    
     return { name, plan, extraAgents, extraPacks, status, lastPaymentDate, factura };
   }
 

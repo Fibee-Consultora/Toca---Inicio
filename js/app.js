@@ -139,6 +139,17 @@ async function syncWorkspacesFromSupabase(user) {
     } catch (err) {
       console.error("Error loading team members:", err);
     }
+    // Enforce business limit redirection if active workspace is locked under current plan
+    const limit = getActiveBusinessLimit();
+    const activeIdx = businesses.findIndex(b => String(b.id) === String(currentBusinessId));
+    if (businesses.length > 0 && activeIdx >= limit) {
+      const mainBizId = businesses[0].id;
+      currentBusinessId = mainBizId;
+      localStorage.setItem(`toca_current_business_id_${user.id}`, String(mainBizId));
+      localStorage.setItem('toca_current_business_id', String(mainBizId));
+      businessProfile = businesses[0];
+      localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
+    }
     
     populateBusinessSwitchers();
     renderAllTabs();
@@ -2108,6 +2119,19 @@ async function syncUserPlanFromProfile() {
       localStorage.setItem('toca_user_profile_name', currentUserProfileName);
       localStorage.setItem('toca_extra_agents', String(purchasedExtraAgents));
       localStorage.setItem('toca_extra_packs', String(purchasedExtraPacks));
+      
+      // Enforce business limit redirection if active workspace is locked under current plan
+      const limit = PLAN_LIMITS[currentActivePlan]?.businesses || 1;
+      const activeIdx = businesses.findIndex(b => String(b.id) === String(currentBusinessId));
+      if (businesses.length > 0 && activeIdx >= limit) {
+        const mainBizId = businesses[0].id;
+        currentBusinessId = mainBizId;
+        localStorage.setItem(`toca_current_business_id_${currentAuthUser.id}`, String(mainBizId));
+        localStorage.setItem('toca_current_business_id', String(mainBizId));
+        businessProfile = businesses[0];
+        localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
+      }
+
       updateProfileUI();
       populateBusinessSwitchers();
       
