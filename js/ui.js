@@ -1203,20 +1203,26 @@ function renderProfileModalContent() {
     
     // Generate business list rows for workspace management
     let bizListHtml = '';
-    businesses.forEach(b => {
+    businesses.forEach((b, idx) => {
       const isActive = b.id === currentBusinessId;
       const isMain = b.id === 1;
+      const isLocked = idx >= bizLimit;
       const showDelete = currentSimulatedUserRole === 'Administrador' && !isActive && !isMain;
       
       bizListHtml += `
-        <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid ${isActive ? 'var(--color-accent)' : 'var(--border-color)'};">
+        <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid ${isActive ? 'var(--color-accent)' : 'var(--border-color)'}; opacity: ${isLocked ? '0.6' : '1'};">
           <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; flex-grow: 1;">
             <span style="font-size: 0.9rem;">🏢</span>
-            <span style="font-size: 0.78rem; font-weight: ${isActive ? '700' : '500'}; color: var(--color-text-primary); text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 180px;">${b.name}</span>
+            <span style="font-size: 0.78rem; font-weight: ${isActive ? '700' : '500'}; color: var(--color-text-primary); text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 180px;">${b.name}${isLocked ? ' 🔒' : ''}</span>
             ${isActive ? '<span style="font-size: 0.6rem; background: #fef3c7; color: #b45309; padding: 1px 4px; border-radius: 4px; font-weight: 700; border: 1px solid #fde68a; margin-left: 4px;">Activo</span>' : ''}
           </div>
           <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-            ${!isActive ? `<button onclick="switchBusinessWorkspace('${b.id}')" style="background: #f3f4f6; border: none; font-size: 0.68rem; padding: 3px 6px; border-radius: 4px; color: var(--color-text-secondary); cursor: pointer; font-weight: 600;">Editar</button>` : ''}
+            ${!isActive ? `
+              <button onclick="${isLocked ? '' : `switchBusinessWorkspace('${b.id}')`}" 
+                      ${isLocked ? 'disabled style="background: #e5e7eb; color: #9ca3af; cursor: not-allowed; border: none; font-size: 0.68rem; padding: 3px 6px; border-radius: 4px; font-weight: 600;"' : 'style="background: #f3f4f6; border: none; font-size: 0.68rem; padding: 3px 6px; border-radius: 4px; color: var(--color-text-secondary); cursor: pointer; font-weight: 600;"'}>
+                Editar
+              </button>
+            ` : ''}
             ${showDelete ? `<button onclick="deleteBusinessWorkspace('${b.id}')" style="background: transparent; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 0.9rem; padding: 2px;" title="Eliminar negocio y contactos">🗑️</button>` : ''}
           </div>
         </div>
