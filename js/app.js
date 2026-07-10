@@ -50,7 +50,7 @@ function bootstrapAuthenticatedUser(user) {
     localStorage.setItem(`toca_businesses_${user.id}`, JSON.stringify(businesses));
     localStorage.setItem(`toca_current_business_id_${user.id}`, String(currentBusinessId));
     localStorage.setItem(agentKey, JSON.stringify(teamAgents));
-    if (window.TocaDB?.isConfigured()) {
+    if (window.TocaDB?.isConfigured() && !impersonatedClientId) {
       syncWorkspacesFromSupabase(user);
     }
     return;
@@ -78,7 +78,7 @@ function bootstrapAuthenticatedUser(user) {
     localStorage.setItem(agentKey, JSON.stringify(teamAgents));
   }
 
-  if (window.TocaDB?.isConfigured()) {
+  if (window.TocaDB?.isConfigured() && !impersonatedClientId) {
     syncWorkspacesFromSupabase(user);
   }
 }
@@ -241,7 +241,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Carga de sesión de cliente suplantado (impersonated) en inicialización
   if (impersonatedClientId) {
-    const client = adminClients.find(c => c.id === impersonatedClientId);
+    let client = adminClients.find(c => String(c.id) === String(impersonatedClientId));
+    if (!client) {
+      const savedData = localStorage.getItem('toca_impersonated_client_data');
+      if (savedData) client = JSON.parse(savedData);
+    }
     if (client) {
       currentBusinessId = 999;
       currentActivePlan = client.plan;
@@ -3426,6 +3430,7 @@ function impersonateClient(clientId) {
 
   impersonatedClientId = clientId;
   localStorage.setItem('toca_impersonated_client_id', JSON.stringify(clientId));
+  localStorage.setItem('toca_impersonated_client_data', JSON.stringify(client));
 
   currentActivePlan = client.plan;
   purchasedExtraAgents = client.extraAgents || 0;
@@ -3477,6 +3482,7 @@ function stopImpersonating() {
 
   impersonatedClientId = null;
   localStorage.removeItem('toca_impersonated_client_id');
+  localStorage.removeItem('toca_impersonated_client_data');
 
   // Restaurar el negocio original (Polos Mayoristas Lima)
   currentBusinessId = 1;
