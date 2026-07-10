@@ -2137,31 +2137,39 @@ async function syncUserPlanFromProfile() {
     }
     let invitationsClaimed = false;
     const diagWrap = document.getElementById('diagnostic-invitation-wrap');
-    if (diagWrap) {
-      diagWrap.style.display = 'block';
-      diagWrap.innerHTML = `⏳ Buscando invitaciones...<br><span style="color:#94a3b8;font-size:0.6rem;">Mail: ${currentAuthUser.email}</span>`;
-    }
+    
+    const setDiag = (step, detail = '') => {
+      if (diagWrap) {
+        diagWrap.style.display = 'block';
+        diagWrap.innerHTML = `<strong>Diagnóstico de Invitaciones:</strong><br>[Paso ${step}]<br><span style="font-size:0.65rem;color:#cbd5e1;">${detail}</span><br><span style="color:#94a3b8;font-size:0.6rem;">Mail: ${currentAuthUser.email}</span>`;
+      }
+    };
 
     try {
+      setDiag(1, 'Obteniendo cliente de Supabase...');
       const client = window.TocaDB.getClient();
+      
+      setDiag(2, 'Enviando SELECT a tabla workspace_members...');
       const { data: pending, error: pendingErr } = await client
         .from('workspace_members')
         .select('id')
         .eq('invite_email', currentAuthUser.email)
         .eq('status', 'Pendiente');
       
-      if (pendingErr) throw pendingErr;
+      if (pendingErr) {
+        setDiag('ERROR', 'Error al ejecutar SELECT: ' + (pendingErr.message || JSON.stringify(pendingErr)));
+        throw pendingErr;
+      }
+      
+      setDiag(3, `SELECT completado. Invitaciones encontradas: ${pending ? pending.length : 0}`);
       
       if (pending && pending.length > 0) {
-        if (diagWrap) {
-          diagWrap.innerHTML = `
-            <div style="color: #ef4444; font-size: 0.82rem; font-weight: 800; text-transform: uppercase; animation: blink 1.2s infinite; display: flex; align-items: center; gap: 4px;">⚠️ INVITACIÓN ENCONTRADA</div>
-            <div style="font-size: 0.65rem; color: #cbd5e1; margin-top: 4px;">Reclamando espacio para: <strong>${currentAuthUser.email}</strong></div>
-          `;
-        }
+        setDiag(4, 'Reclamando invitaciones (llamando a claimPendingInvitations)...');
         await window.TocaDB.claimPendingInvitations(currentAuthUser.email, currentAuthUser.id);
         invitationsClaimed = true;
         showToast("¡Has sido añadido a un nuevo espacio de trabajo!");
+        
+        setDiag(5, 'Invitaciones reclamadas con éxito.');
         if (diagWrap) {
           diagWrap.innerHTML = `
             <div style="color: #10b981; font-weight: 700; font-size: 0.82rem;">✓ INVITACIÓN ACEPTADA</div>
@@ -2169,6 +2177,7 @@ async function syncUserPlanFromProfile() {
           `;
         }
       } else {
+        setDiag(5, 'Sin invitaciones pendientes.');
         if (diagWrap) {
           diagWrap.innerHTML = `
             <div style="color: #10b981; font-weight: 700; font-size: 0.75rem;">✓ SIN INVITACIONES EN BD</div>
@@ -2181,7 +2190,7 @@ async function syncUserPlanFromProfile() {
       if (diagWrap) {
         diagWrap.innerHTML = `
           <div style="color: #f59e0b; font-weight: 700; font-size: 0.75rem;">⚠️ ERROR DE CONSULTA</div>
-          <div style="font-size: 0.62rem; color: #cbd5e1; margin-top: 4px;">${inviteErr.message || inviteErr}</div>
+          <div style="font-size: 0.62rem; color: #cbd5e1; margin-top: 4px;">${inviteErr.message || JSON.stringify(inviteErr)}</div>
         `;
       }
     }
