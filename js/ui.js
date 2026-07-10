@@ -532,9 +532,9 @@ async function renderAdminTab() {
         const maxAgents = baseLimits.agents + extraAgents;
         return {
           id: u.id,
-          name: u.full_name || u.email?.split('@')[0] || 'Sin nombre',
-          email: u.email,
-          businessName: u.full_name ? `Negocio de ${u.full_name}` : `Negocio de ${u.email?.split('@')[0]}`,
+          name: u.full_name || (u.email ? u.email.split('@')[0] : 'Sin nombre'),
+          email: u.email || '',
+          businessName: u.full_name ? `Negocio de ${u.full_name}` : (u.email ? `Negocio de ${u.email.split('@')[0]}` : 'Negocio sin configurar'),
           plan: planVal,
           extraAgents: extraAgents,
           extraPacks: extraPacks,
