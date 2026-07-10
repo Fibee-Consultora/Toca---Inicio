@@ -569,7 +569,8 @@ async function renderAdminTab() {
       if (planCounts[c.plan] !== undefined) planCounts[c.plan]++;
       
       // El SuperAdmin no genera MRR y las cuentas sin facturación tampoco
-      if (c.plan !== 'SuperAdmin' && c.email.toLowerCase() !== 'fibeeconsultoradigital@gmail.com' && c.factura !== false) {
+      const clientEmail = c.email || '';
+      if (c.plan !== 'SuperAdmin' && clientEmail.toLowerCase() !== 'fibeeconsultoradigital@gmail.com' && c.factura !== false) {
         const basePrice = PLAN_PRICES[c.plan] || 0;
         const extraAgentsCost = (c.extraAgents || 0) * 24.90;
         const extraPacksCost = (c.extraPacks || 0) * 19.90;
@@ -1157,7 +1158,11 @@ function renderSortedAdminTable() {
 
   tbody.innerHTML = list.map(c => {
     const pill = planPills[c.plan] || planPills.Panal;
-    const searchData = `${c.name.toLowerCase()} ${c.businessName.toLowerCase()} ${c.email.toLowerCase()} ${c.plan.toLowerCase()}`;
+    const nameVal = c.name || '';
+    const bizVal = c.businessName || '';
+    const emailVal = c.email || '';
+    const planVal = c.plan || '';
+    const searchData = `${nameVal.toLowerCase()} ${bizVal.toLowerCase()} ${emailVal.toLowerCase()} ${planVal.toLowerCase()}`;
     return `
       <tr class="admin-client-row" data-search="${searchData}" style="border-bottom: 1px solid var(--border-color); background: #ffffff;">
         <td style="padding: 12px 14px; font-weight: 600; color: var(--color-text-primary);">${c.businessName}</td>
@@ -1175,7 +1180,7 @@ function renderSortedAdminTable() {
           </span>
         </td>
         <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
-          ${c.email.toLowerCase() === 'fibeeconsultoradigital@gmail.com' ? `
+          ${(c.email || '').toLowerCase() === 'fibeeconsultoradigital@gmail.com' ? `
             <span style="font-size: 0.75rem; font-weight: 700; color: #7d35ef; text-transform: uppercase; letter-spacing: 0.05em; padding-right: 14px;">👑 Super Admin</span>
           ` : `
             <button onclick="selectClientForEdit('${c.id}')" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--color-text-primary); margin-right: 6px; transition: background 0.15s;">
