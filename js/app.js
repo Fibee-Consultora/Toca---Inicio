@@ -2690,7 +2690,7 @@ function submitAgentInvitation() {
   
   const name = nameInput.value.trim();
   const email = emailInput.value.trim();
-  const role = "Agente";
+  const role = "Colaborador";
   
   const agentLimit = getActiveAgentLimit();
   if (teamAgents.length >= agentLimit) {
