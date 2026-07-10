@@ -52,9 +52,6 @@ function bootstrapAuthenticatedUser(user) {
     localStorage.setItem(`toca_businesses_${user.id}`, JSON.stringify(businesses));
     localStorage.setItem(`toca_current_business_id_${user.id}`, String(currentBusinessId));
     localStorage.setItem(agentKey, JSON.stringify(teamAgents));
-    if (window.TocaDB?.isConfigured() && !impersonatedClientId) {
-      syncWorkspacesFromSupabase(user);
-    }
     return;
   }
 
@@ -80,9 +77,7 @@ function bootstrapAuthenticatedUser(user) {
     localStorage.setItem(agentKey, JSON.stringify(teamAgents));
   }
 
-  if (window.TocaDB?.isConfigured() && !impersonatedClientId) {
-    syncWorkspacesFromSupabase(user);
-  }
+  // syncWorkspacesFromSupabase will be called deterministically from syncUserPlanFromProfile
 }
 
 function isBusinessLocked(b, idx, limit) {
@@ -2149,17 +2144,32 @@ async function syncUserPlanFromProfile() {
       setDiag(1, 'Obteniendo cliente de Supabase...');
       const client = window.TocaDB.getClient();
       
-      setDiag(2, 'Enviando SELECT a tabla workspace_members...');
-      const { data: pending, error: pendingErr } = await client
-        .from('workspace_members')
-        .select('id')
-        .eq('invite_email', currentAuthUser.email)
-        .eq('status', 'Pendiente');
+      setDiag(2, 'Obteniendo sesión JWT...');
+      const sessionRes = await client.auth.getSession();
+      const jwt = sessionRes.data.session?.access_token;
       
-      if (pendingErr) {
-        setDiag('ERROR', 'Error al ejecutar SELECT: ' + (pendingErr.message || JSON.stringify(pendingErr)));
-        throw pendingErr;
+      if (!jwt) {
+        setDiag('ERROR', 'No se encontró una sesión JWT activa.');
+        throw new Error('No se encontró sesión JWT');
       }
+
+      setDiag(2.5, 'Enviando petición fetch a Supabase REST API...');
+      const url = `${window.SUPABASE_URL}/rest/v1/workspace_members?select=id&invite_email=eq.${encodeURIComponent(currentAuthUser.email)}&status=eq.Pendiente`;
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "apikey": window.SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${jwt}`
+        }
+      });
+      
+      if (!res.ok) {
+        const txt = await res.text();
+        setDiag('ERROR', `HTTP ${res.status}: ${txt}`);
+        throw new Error(`HTTP ${res.status}: ${txt}`);
+      }
+      
+      const pending = await res.json();
       
       setDiag(3, `SELECT completado. Invitaciones encontradas: ${pending ? pending.length : 0}`);
       
@@ -2242,7 +2252,7 @@ async function syncUserPlanFromProfile() {
       updateProfileUI();
       populateBusinessSwitchers();
       
-      if (invitationsClaimed) {
+      if (window.TocaDB?.isConfigured() && !impersonatedClientId) {
         await syncWorkspacesFromSupabase(currentAuthUser);
       } else {
         renderAllTabs();

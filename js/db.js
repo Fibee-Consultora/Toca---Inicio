@@ -36,6 +36,32 @@
     return client;
   }
 
+  async function safeFetch(path, options = {}) {
+    const client = getClient();
+    const sessionRes = await client.auth.getSession();
+    const jwt = sessionRes.data.session?.access_token;
+    
+    const headers = {
+      "apikey": window.SUPABASE_ANON_KEY,
+      "Content-Type": "application/json",
+      ...options.headers
+    };
+    if (jwt) {
+      headers["Authorization"] = `Bearer ${jwt}`;
+    }
+    
+    const res = await fetch(`${window.SUPABASE_URL}/rest/v1/${path}`, {
+      ...options,
+      headers
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`HTTP ${res.status}: ${txt}`);
+    }
+    if (res.status === 204) return null;
+    return await res.json();
+  }
+
   async function signInWithGoogle() {
     const c = getClient();
     const redirectTo = `${window.location.origin}${window.location.pathname}`;
@@ -475,6 +501,7 @@
     isConfigured,
     init,
     getClient,
+    safeFetch,
     signInWithGoogle,
     signOut,
     getSession,
