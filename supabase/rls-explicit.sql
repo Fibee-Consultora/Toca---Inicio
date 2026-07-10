@@ -45,11 +45,12 @@ $$;
 -- POLÍTICAS PARA WORKSPACE_MEMBERS (Explícitas por comando)
 -- =============================================================================
 
--- SELECT: El usuario puede ver su propia fila de miembro o los miembros del workspace del cual es parte
+-- SELECT: El usuario puede ver su propia fila de miembro, la invitación que le hicieron a su correo, o los miembros del workspace del cual es parte
 create policy "workspace_members_select_policy" on public.workspace_members
 for select
 using (
   user_id = auth.uid() or 
+  invite_email = auth.jwt() ->> 'email' or
   public.is_member_of_workspace(workspace_id, auth.uid())
 );
 
@@ -60,15 +61,17 @@ with check (
   public.is_member_of_workspace(workspace_id, auth.uid())
 );
 
--- UPDATE: Un miembro puede actualizar su propia fila (ej. al aceptar) o el dueño/miembro puede modificarla
+-- UPDATE: Un miembro puede actualizar su propia fila (ej. al aceptar), su invitación por correo, o el dueño/miembro puede modificarla
 create policy "workspace_members_update_policy" on public.workspace_members
 for update
 using (
   user_id = auth.uid() or 
+  invite_email = auth.jwt() ->> 'email' or
   public.is_member_of_workspace(workspace_id, auth.uid())
 )
 with check (
   user_id = auth.uid() or 
+  invite_email = auth.jwt() ->> 'email' or
   public.is_member_of_workspace(workspace_id, auth.uid())
 );
 
