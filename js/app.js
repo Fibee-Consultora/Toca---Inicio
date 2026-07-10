@@ -2136,21 +2136,54 @@ async function syncUserPlanFromProfile() {
       return;
     }
     let invitationsClaimed = false;
+    const diagWrap = document.getElementById('diagnostic-invitation-wrap');
+    if (diagWrap) {
+      diagWrap.style.display = 'block';
+      diagWrap.innerHTML = `⏳ Buscando invitaciones...<br><span style="color:#94a3b8;font-size:0.6rem;">Mail: ${currentAuthUser.email}</span>`;
+    }
+
     try {
       const client = window.TocaDB.getClient();
-      const { data: pending } = await client
+      const { data: pending, error: pendingErr } = await client
         .from('workspace_members')
         .select('id')
         .eq('invite_email', currentAuthUser.email)
         .eq('status', 'Pendiente');
       
+      if (pendingErr) throw pendingErr;
+      
       if (pending && pending.length > 0) {
+        if (diagWrap) {
+          diagWrap.innerHTML = `
+            <div style="color: #ef4444; font-size: 0.82rem; font-weight: 800; text-transform: uppercase; animation: blink 1.2s infinite; display: flex; align-items: center; gap: 4px;">⚠️ INVITACIÓN ENCONTRADA</div>
+            <div style="font-size: 0.65rem; color: #cbd5e1; margin-top: 4px;">Reclamando espacio para: <strong>${currentAuthUser.email}</strong></div>
+          `;
+        }
         await window.TocaDB.claimPendingInvitations(currentAuthUser.email, currentAuthUser.id);
         invitationsClaimed = true;
         showToast("¡Has sido añadido a un nuevo espacio de trabajo!");
+        if (diagWrap) {
+          diagWrap.innerHTML = `
+            <div style="color: #10b981; font-weight: 700; font-size: 0.82rem;">✓ INVITACIÓN ACEPTADA</div>
+            <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 4px;">Espacio activado para: <strong>${currentAuthUser.email}</strong></div>
+          `;
+        }
+      } else {
+        if (diagWrap) {
+          diagWrap.innerHTML = `
+            <div style="color: #10b981; font-weight: 700; font-size: 0.75rem;">✓ SIN INVITACIONES EN BD</div>
+            <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 4px;">Mail verificado: <strong>${currentAuthUser.email}</strong></div>
+          `;
+        }
       }
     } catch (inviteErr) {
       console.error("Error al procesar invitaciones pendientes:", inviteErr);
+      if (diagWrap) {
+        diagWrap.innerHTML = `
+          <div style="color: #f59e0b; font-weight: 700; font-size: 0.75rem;">⚠️ ERROR DE CONSULTA</div>
+          <div style="font-size: 0.62rem; color: #cbd5e1; margin-top: 4px;">${inviteErr.message || inviteErr}</div>
+        `;
+      }
     }
 
     const profile = await window.TocaDB.loadMyProfile();
