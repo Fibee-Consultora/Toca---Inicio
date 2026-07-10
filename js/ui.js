@@ -929,7 +929,7 @@ function populateAdminWorkspacesSelection(client, workspaces) {
   }
 
   const rawProfile = adminUsers.find(u => String(u.id) === String(client.id));
-  const parsed = rawProfile ? parseDbProfile(rawProfile.raw_full_name || rawProfile.full_name, rawProfile.plan) : { activeWorkspaces: client.activeWorkspaces || null };
+  const parsed = rawProfile ? window.TocaDB.parseDbProfile(rawProfile.raw_full_name || rawProfile.full_name, rawProfile.plan) : { activeWorkspaces: client.activeWorkspaces || null };
   let activeIds = parsed.activeWorkspaces;
   
   if (!activeIds) {

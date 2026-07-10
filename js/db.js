@@ -478,5 +478,6 @@
     updateContact,
     deleteContact,
     addHistoryItem,
+    parseDbProfile,
   };
 })();
