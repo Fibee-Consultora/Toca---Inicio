@@ -1,3 +1,4 @@
+// Deploy trigger comment: final fixes for pricing, workspaces, suplantation, and invitations.
 let pendingContactOpen = null;
 let appInitialized = false;
 
