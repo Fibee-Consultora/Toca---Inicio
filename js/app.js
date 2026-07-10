@@ -2343,25 +2343,37 @@ function loginLocalSimulation() {
 }
 
 async function logout() {
-  if (window.TocaDB?.isConfigured()) {
-    try {
-      await window.TocaDB.signOut();
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  applyAuthUser(null);
+  const userToSignOut = currentAuthUser;
+  
+  // 1. Limpiar localStorage y estado UI de inmediato (Síncrono)
   localStorage.removeItem('toca_is_logged_in');
   localStorage.removeItem('toca_business_config_modal_shown');
   localStorage.removeItem('toca_current_active_plan');
   localStorage.removeItem('toca_user_profile_name');
   localStorage.removeItem('toca_extra_agents');
   localStorage.removeItem('toca_extra_packs');
+  
+  if (userToSignOut) {
+    localStorage.removeItem(`toca_user_${userToSignOut.id}`);
+    localStorage.removeItem(`toca_businesses_${userToSignOut.id}`);
+    localStorage.removeItem(`toca_current_business_id_${userToSignOut.id}`);
+    localStorage.removeItem(`toca_team_agents_${userToSignOut.id}`);
+  }
+  
   currentActivePlan = 'Gratuito';
   currentUserProfileName = 'Sin nombre';
+  applyAuthUser(null);
   updateLoginScreen();
   setLoginButtonLoading(false);
+
+  // 2. Ejecutar el cierre de sesión de Supabase en segundo plano
+  if (window.TocaDB?.isConfigured()) {
+    try {
+      await window.TocaDB.signOut();
+    } catch (err) {
+      console.error("Error al cerrar sesión en Supabase:", err);
+    }
+  }
 }
 
 // ==========================================================================
@@ -2992,10 +3004,19 @@ function switchSimulatedRole(role) {
   }
 }
 
-function deleteAgent(email) {
+async function deleteAgent(email) {
   const agent = teamAgents.find(a => a.email.toLowerCase() === email.toLowerCase());
   const agentName = agent ? agent.name : email;
   if (confirm(`¿Estás seguro de que deseas eliminar a ${agentName} del equipo?`)) {
+    if (window.TocaDB?.isConfigured()) {
+      try {
+        await window.TocaDB.deleteTeamMember(email, currentBusinessId);
+      } catch (err) {
+        console.error("Error deleting team member from DB:", err);
+        showToast("Error al eliminar el agente de la base de datos.");
+        return;
+      }
+    }
     teamAgents = teamAgents.filter(a => a.email.toLowerCase() !== email.toLowerCase());
     localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
     showToast(`🗑️ Agente ${agentName} eliminado del equipo.`);
@@ -3003,8 +3024,17 @@ function deleteAgent(email) {
   }
 }
 
-function selfUnsubscribeAgent(email) {
+async function selfUnsubscribeAgent(email) {
   if (confirm("¿Estás seguro de que deseas darte de baja del equipo? Perderás acceso al sistema de inmediato.")) {
+    if (window.TocaDB?.isConfigured()) {
+      try {
+        await window.TocaDB.deleteTeamMember(email, currentBusinessId);
+      } catch (err) {
+        console.error("Error self-unsubscribing from DB:", err);
+        showToast("Error al darte de baja en la base de datos.");
+        return;
+      }
+    }
     teamAgents = teamAgents.filter(a => a.email.toLowerCase() !== email.toLowerCase());
     localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
     

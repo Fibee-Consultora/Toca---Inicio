@@ -446,6 +446,23 @@
     }
   }
 
+  async function deleteTeamMember(email, workspaceId) {
+    const client = getClient();
+    const { error: teamErr } = await client
+      .from('workspace_team')
+      .delete()
+      .eq('workspace_id', workspaceId)
+      .eq('email', email);
+    if (teamErr) throw teamErr;
+
+    const { error: memberErr } = await client
+      .from('workspace_members')
+      .delete()
+      .eq('workspace_id', workspaceId)
+      .eq('invite_email', email);
+    if (memberErr) throw memberErr;
+  }
+
   async function updateSessionToken(userId, token) {
     const { error } = await getClient()
       .from('profiles')
@@ -472,6 +489,7 @@
     deleteWorkspace,
     loadTeamMembers,
     inviteTeamMember,
+    deleteTeamMember,
     claimPendingInvitations,
     loadContacts,
     insertContact,
