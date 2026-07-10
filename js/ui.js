@@ -1288,6 +1288,8 @@ function generateIaSuggestionsHtml(id) {
 }
 
 function renderProfileTab() {
+  const isModalOpen = document.getElementById('profile-config-modal')?.classList.contains('open');
+  if (isModalOpen) return;
   renderProfileModalContent();
 }
 

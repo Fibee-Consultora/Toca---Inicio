@@ -2737,7 +2737,8 @@ function submitAgentInvitation() {
       renderProfileModalContent();
     }).catch(err => {
       console.error(err);
-      showToast("Error al registrar la invitación en la base de datos.");
+      const details = err.message || err.details || JSON.stringify(err);
+      showToast(`Error al registrar la invitación: ${details}`);
     });
   } else {
     const newAgent = {
