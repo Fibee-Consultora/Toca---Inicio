@@ -1323,7 +1323,7 @@ function renderProfileModalContent() {
     businesses.forEach((b, idx) => {
       const isActive = b.id === currentBusinessId;
       const isMain = b.id === 1;
-      const isLocked = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(b.id)) : idx >= bizLimit;
+      const isLocked = isBusinessLocked(b, idx, bizLimit);
       const showDelete = currentSimulatedUserRole === 'Administrador' && !isActive && !isMain;
       
       bizListHtml += `

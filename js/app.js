@@ -35,6 +35,7 @@ function bootstrapAuthenticatedUser(user) {
         tone: 'Amigable',
         promotion: '',
         timezone: 'America/Lima',
+        owner_id: user.id,
       },
     ];
     currentBusinessId = 1;
@@ -84,6 +85,21 @@ function bootstrapAuthenticatedUser(user) {
   }
 }
 
+function isBusinessLocked(b, idx, limit) {
+  if (!currentAuthUser) return false;
+  // Si no es el dueño, nunca está bloqueado (es un espacio de trabajo invitado)
+  if (b.owner_id && b.owner_id !== currentAuthUser.id) return false;
+  
+  if (currentActiveWorkspaces) {
+    return !currentActiveWorkspaces.includes(String(b.id));
+  }
+  
+  // Si es el dueño, contamos el índice relativo a los negocios que posee
+  const ownedBusinesses = businesses.filter(x => !x.owner_id || x.owner_id === currentAuthUser.id);
+  const ownedIdx = ownedBusinesses.findIndex(x => String(x.id) === String(b.id));
+  return ownedIdx >= limit;
+}
+
 let isSyncingWorkspaces = false;
 
 async function syncWorkspacesFromSupabase(user) {
@@ -122,6 +138,7 @@ async function syncWorkspacesFromSupabase(user) {
     businesses = ws.map(w => ({
       id: w.id, // UUID string
       name: w.name || 'Mi Negocio',
+      owner_id: w.owner_id,
       sector: w.sector || 'Otro',
       description: w.description || '',
       tone: w.tone || 'Amigable',
@@ -160,12 +177,12 @@ async function syncWorkspacesFromSupabase(user) {
     // Enforce business limit redirection if active workspace is locked under current plan
     const limit = getActiveBusinessLimit();
     const activeIdx = businesses.findIndex(b => String(b.id) === String(currentBusinessId));
-    const isLocked = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(currentBusinessId)) : activeIdx >= limit;
+    const activeBiz = businesses[activeIdx] || businesses[0];
+    const isLocked = isBusinessLocked(activeBiz, activeIdx, limit);
     
     if (businesses.length > 0 && isLocked) {
       let firstUnlocked = businesses.find((b, idx) => {
-        const isL = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(b.id)) : idx >= limit;
-        return !isL;
+        return !isBusinessLocked(b, idx, limit);
       });
       if (!firstUnlocked) firstUnlocked = businesses[0];
       const mainBizId = firstUnlocked.id;
@@ -2164,12 +2181,12 @@ async function syncUserPlanFromProfile() {
       // Enforce business limit redirection if active workspace is locked under current plan
       const limit = PLAN_LIMITS[currentActivePlan]?.businesses || 1;
       const activeIdx = businesses.findIndex(b => String(b.id) === String(currentBusinessId));
-      const isLocked = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(currentBusinessId)) : activeIdx >= limit;
+      const activeBiz = businesses[activeIdx] || businesses[0];
+      const isLocked = isBusinessLocked(activeBiz, activeIdx, limit);
       
       if (businesses.length > 0 && isLocked) {
         let firstUnlocked = businesses.find((b, idx) => {
-          const isL = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(b.id)) : idx >= limit;
-          return !isL;
+          return !isBusinessLocked(b, idx, limit);
         });
         if (!firstUnlocked) firstUnlocked = businesses[0];
         const mainBizId = firstUnlocked.id;
@@ -2980,7 +2997,7 @@ function populateBusinessSwitchers() {
   // 1. Populate custom dropdown menu in sidebar
   let menuHtml = '';
   businesses.forEach((b, idx) => {
-    const isLocked = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(b.id)) : idx >= limit;
+    const isLocked = isBusinessLocked(b, idx, limit);
     const isActive = b.id === currentBusinessId;
     
     if (isActive && triggerText) {
@@ -3003,13 +3020,13 @@ function populateBusinessSwitchers() {
     switcherMenu.innerHTML = menuHtml;
   }
   if (triggerBtn) {
-    triggerBtn.disabled = (limit === 1);
+    triggerBtn.disabled = (businesses.length <= 1);
   }
   
   // 2. Populate native select in modal configuration
   let optionsHtml = '';
   businesses.forEach((b, idx) => {
-    const isLocked = currentActiveWorkspaces ? !currentActiveWorkspaces.includes(String(b.id)) : idx >= limit;
+    const isLocked = isBusinessLocked(b, idx, limit);
     const label = isLocked ? `${b.name} 🔒 (Subir Plan)` : b.name;
     const disabledAttr = isLocked ? 'disabled' : '';
     const selectedAttr = b.id === currentBusinessId ? 'selected' : '';
@@ -3019,7 +3036,7 @@ function populateBusinessSwitchers() {
   if (modalSelect) {
     modalSelect.innerHTML = optionsHtml;
     modalSelect.value = currentBusinessId;
-    modalSelect.disabled = (limit === 1);
+    modalSelect.disabled = (businesses.length <= 1);
   }
 }
 
