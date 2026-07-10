@@ -254,6 +254,7 @@
     if (!error) {
       if (data) {
         data.forEach(row => {
+          row.raw_full_name = row.u_full_name; // Guardar el original con metadata
           // Mapear alias de retorno del RPC
           row.id = row.u_id;
           row.email = row.u_email;
@@ -284,6 +285,7 @@
     if (selectError) throw selectError;
     if (selectData) {
       selectData.forEach(row => {
+        row.raw_full_name = row.full_name; // Guardar el original con metadata
         const parsed = parseDbProfile(row.full_name, row.plan);
         row.full_name = parsed.name;
         row.plan = parsed.plan;
@@ -300,6 +302,11 @@
   async function updateUserPlan(userId, planStr, fullName) {
     const parts = planStr.split('|');
     const planName = parts[0] || 'Gratuito';
+    let extraAgents = 0;
+    let extraPacks = 0;
+    let status = 'Activo';
+    let lastPaymentDate = '2026-07-01';
+    let factura = true;
     let activeWorkspaces = '';
 
     for (let i = 1; i < parts.length; i++) {

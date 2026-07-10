@@ -562,7 +562,7 @@ async function renderAdminTab() {
   const planCounts = { Gratuito: 0, Néctar: 0, Panal: 0, Colmena: 0, Apiario: 0 };
   let estimatedRevenue = 0;
   
-  const PLAN_PRICES = { Gratuito: 0, Néctar: 49, Panal: 119, Colmena: 249, Apiario: 499, SuperAdmin: 0 };
+  const PLAN_PRICES = { Gratuito: 0, Néctar: 59, Panal: 109, Colmena: 150, Apiario: 500, SuperAdmin: 0 };
 
   adminClients.forEach(c => {
     if (c.status === "Activo") {
@@ -928,7 +928,7 @@ function populateAdminWorkspacesSelection(client, workspaces) {
   }
 
   const rawProfile = adminUsers.find(u => String(u.id) === String(client.id));
-  const parsed = rawProfile ? parseDbProfile(rawProfile.full_name, rawProfile.plan) : { activeWorkspaces: client.activeWorkspaces || null };
+  const parsed = rawProfile ? parseDbProfile(rawProfile.raw_full_name || rawProfile.full_name, rawProfile.plan) : { activeWorkspaces: client.activeWorkspaces || null };
   let activeIds = parsed.activeWorkspaces;
   
   if (!activeIds) {
@@ -1537,7 +1537,7 @@ function renderProfileModalContent() {
             ${currentActivePlan === 'Néctar' ? '<span style="position: absolute; top: -10px; right: 12px; background: #fbbf24; color: #0a0a0a; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.02em; z-index: 10;">✓ Activo</span>' : ''}
             <div style="display: flex; flex-direction: column; gap: 4px; height: 100%;">
               <h4 style="font-family: var(--font-title); font-size: 0.9rem; font-weight: 700; color: ${currentActivePlan === 'Néctar' ? '#b45309' : 'var(--color-text-primary)'}; margin: 0; display: flex; align-items: center; gap: 4px;">Plan Néctar 🌸</h4>
-              <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-text-primary); margin: 4px 0;">S/. 69 <span style="font-size: 0.65rem; font-weight: 500; color: var(--color-text-muted);">/ mes</span></div>
+              <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-text-primary); margin: 4px 0;">S/. 59 <span style="font-size: 0.65rem; font-weight: 500; color: var(--color-text-muted);">/ mes</span></div>
               <ul style="font-size: 0.72rem; color: var(--color-text-secondary); padding-left: 14px; margin: 6px 0; line-height: 1.4; text-align: left; list-style-type: disc;">
                 <li>1 Agente de ventas</li>
                 <li>Hasta 50 contactos</li>
@@ -1565,7 +1565,7 @@ function renderProfileModalContent() {
             ${currentActivePlan === 'Panal' ? '<span style="position: absolute; top: -10px; right: 12px; background: #fbbf24; color: #0a0a0a; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.02em; z-index: 10;">✓ Activo</span>' : ''}
             <div style="display: flex; flex-direction: column; gap: 4px; height: 100%;">
               <h4 style="font-family: var(--font-title); font-size: 0.9rem; font-weight: 700; color: ${currentActivePlan === 'Panal' ? '#b45309' : 'var(--color-text-primary)'}; margin: 0; display: flex; align-items: center; gap: 4px;">Plan Panal 🍯</h4>
-              <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-text-primary); margin: 4px 0;">S/. 119 <span style="font-size: 0.65rem; font-weight: 500; color: var(--color-text-muted);">/ mes</span></div>
+              <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-text-primary); margin: 4px 0;">S/. 109 <span style="font-size: 0.65rem; font-weight: 500; color: var(--color-text-muted);">/ mes</span></div>
               <div style="font-size: 0.62rem; color: #b45309; font-weight: 700; margin-top: -2px; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.02em;">⭐ El más elegido</div>
               <ul style="font-size: 0.72rem; color: var(--color-text-secondary); padding-left: 14px; margin: 6px 0; line-height: 1.4; text-align: left; list-style-type: disc;">
                 <li>Hasta 3 agentes</li>
@@ -1594,7 +1594,7 @@ function renderProfileModalContent() {
             ${currentActivePlan === 'Colmena' ? '<span style="position: absolute; top: -10px; right: 12px; background: #fbbf24; color: #0a0a0a; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.02em; z-index: 10;">✓ Activo</span>' : ''}
             <div style="display: flex; flex-direction: column; gap: 4px; height: 100%;">
               <h4 style="font-family: var(--font-title); font-size: 0.9rem; font-weight: 700; color: ${currentActivePlan === 'Colmena' ? '#b45309' : 'var(--color-text-primary)'}; margin: 0; display: flex; align-items: center; gap: 4px;">Plan Colmena 🐝</h4>
-              <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-text-primary); margin: 4px 0;">S/. 199 <span style="font-size: 0.65rem; font-weight: 500; color: var(--color-text-muted);">/ mes</span></div>
+              <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-text-primary); margin: 4px 0;">S/. 150 <span style="font-size: 0.65rem; font-weight: 500; color: var(--color-text-muted);">/ mes</span></div>
               <ul style="font-size: 0.72rem; color: var(--color-text-secondary); padding-left: 14px; margin: 6px 0; line-height: 1.4; text-align: left; list-style-type: disc;">
                 <li>Hasta 8 agentes</li>
                 <li>Hasta 600 contactos</li>
