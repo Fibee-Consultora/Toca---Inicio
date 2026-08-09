@@ -449,9 +449,16 @@
             }
           }
         } else {
+          let resolvedName = 'Espacio de Trabajo';
+          if (window.pendingWorkspaceInvitations && Array.isArray(window.pendingWorkspaceInvitations)) {
+            const match = window.pendingWorkspaceInvitations.find(i => String(i.workspace_id) === String(wsId));
+            if (match && match.workspaces && match.workspaces.name) {
+              resolvedName = match.workspaces.name;
+            }
+          }
           list.push({
             id: wsId,
-            name: 'Espacio Invitado (Click para ingresar)',
+            name: resolvedName,
             sector: 'Colaborativo',
             _role: info.role,
             _status: info.status,

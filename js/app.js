@@ -3167,7 +3167,7 @@ function populateBusinessSwitchers() {
     
     let labelText = `🏢 ${b.name}`;
     if (isInvited) {
-      labelText = isPending ? `🤝 ${b.name} (Click para ingresar)` : `🤝 ${b.name}`;
+      labelText = `🤝 ${b.name}`;
     } else if (isLocked) {
       labelText = `🏢 ${b.name} 🔒 (Subir Plan)`;
     }
