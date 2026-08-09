@@ -2693,6 +2693,42 @@ function confirmArchiveWithReason() {
   }
 }
 
+function saveProfileModalDraft() {
+  const ownerInput = document.getElementById('profile-owner-name');
+  const bizNameInput = document.getElementById('profile-biz-name');
+  const bizSectorInput = document.getElementById('profile-biz-sector');
+  const bizDescInput = document.getElementById('profile-biz-desc');
+  const bizToneInput = document.getElementById('profile-biz-tone');
+  const bizPromoInput = document.getElementById('profile-biz-promo');
+  const newBizInput = document.getElementById('new-biz-name-input');
+
+  if (!window.profileModalDraft) window.profileModalDraft = {};
+  if (ownerInput) window.profileModalDraft.ownerName = ownerInput.value;
+  if (bizNameInput) window.profileModalDraft.bizName = bizNameInput.value;
+  if (bizSectorInput) window.profileModalDraft.bizSector = bizSectorInput.value;
+  if (bizDescInput) window.profileModalDraft.bizDesc = bizDescInput.value;
+  if (bizToneInput) window.profileModalDraft.bizTone = bizToneInput.value;
+  if (bizPromoInput) window.profileModalDraft.bizPromo = bizPromoInput.value;
+  if (newBizInput) window.profileModalDraft.newBizName = newBizInput.value;
+}
+
+async function handleAddWorkspaceClick() {
+  saveProfileModalDraft();
+  const input = document.getElementById('new-biz-name-input');
+  const val = input ? input.value.trim() : (window.profileModalDraft?.newBizName || '');
+  if (!val) {
+    showToast("⚠️ El nombre del negocio no puede estar vacío.");
+    return;
+  }
+  
+  if (window.profileModalDraft) {
+    window.profileModalDraft.newBizName = '';
+  }
+  if (input) input.value = '';
+
+  await createBusinessWorkspace(val);
+}
+
 function changeStatsPeriod(period) {
   currentStatsPeriod = period;
   renderEstadisticasTab();
@@ -2700,6 +2736,7 @@ function changeStatsPeriod(period) {
 
 // Profile Modal State & Controls
 function openProfileConfigModal() {
+  window.profileModalDraft = {};
   currentProfileModalTab = 'perfil';
   renderProfileModalContent();
   const modal = document.getElementById('profile-config-modal');
@@ -2707,11 +2744,13 @@ function openProfileConfigModal() {
 }
 
 function closeProfileConfigModal() {
+  window.profileModalDraft = {};
   const modal = document.getElementById('profile-config-modal');
   if (modal) modal.classList.remove('open');
 }
 
 function switchProfileModalTab(tabId) {
+  saveProfileModalDraft();
   currentProfileModalTab = tabId;
   renderProfileModalContent();
 }

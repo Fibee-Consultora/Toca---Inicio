@@ -1386,7 +1386,7 @@ function renderProfileModalContent() {
             </h3>
             <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Tu Nombre y Apellido</label>
-              <input type="text" id="profile-owner-name" class="form-input" value="${getCurrentOwnerName()}" placeholder="Ej. Javier Reyes" style="padding: 8px 12px; background: #ffffff;">
+              <input type="text" id="profile-owner-name" class="form-input" value="${(window.profileModalDraft && window.profileModalDraft.ownerName !== undefined) ? window.profileModalDraft.ownerName : getCurrentOwnerName()}" placeholder="Ej. Javier Reyes" style="padding: 8px 12px; background: #ffffff;">
             </div>
           </div>
 
@@ -1400,25 +1400,25 @@ function renderProfileModalContent() {
             ${!isAgent ? `
               <div class="form-group">
                 <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Nombre del Negocio</label>
-                <input type="text" id="profile-biz-name" class="form-input" value="${businessProfile.name}" placeholder="Ej. Polos Mayoristas Lima" style="padding: 8px 12px; background: #ffffff;">
+                <input type="text" id="profile-biz-name" class="form-input" value="${(window.profileModalDraft && window.profileModalDraft.bizName !== undefined) ? window.profileModalDraft.bizName : businessProfile.name}" placeholder="Ej. Polos Mayoristas Lima" style="padding: 8px 12px; background: #ffffff;">
               </div>
 
               <div class="form-group">
                 <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Rubro o Sector</label>
                 <select id="profile-biz-sector" class="form-input form-select" style="padding: 8px 12px; background: #ffffff;">
-                  <option value="Comercio" ${businessProfile.sector === 'Comercio' ? 'selected' : ''}>Comercio (Venta de productos/Mercaderías)</option>
-                  <option value="Servicios y Consultoría" ${businessProfile.sector === 'Servicios y Consultoría' ? 'selected' : ''}>Servicios y Consultoría</option>
-                  <option value="Suscripciones y Membresías" ${businessProfile.sector === 'Suscripciones y Membresías' ? 'selected' : ''}>Suscripciones y Membresías</option>
-                  <option value="Alimentos y Bebidas" ${businessProfile.sector === 'Alimentos y Bebidas' ? 'selected' : ''}>Alimentos y Bebidas</option>
-                  <option value="Tecnología y Software" ${businessProfile.sector === 'Tecnología y Software' ? 'selected' : ''}>Tecnología y Software</option>
-                  <option value="Educación y Cursos" ${businessProfile.sector === 'Educación y Cursos' ? 'selected' : ''}>Educación y Cursos</option>
-                  <option value="Otro" ${!['Comercio', 'Servicios y Consultoría', 'Suscripciones y Membresías', 'Alimentos y Bebidas', 'Tecnología y Software', 'Educación y Cursos'].includes(businessProfile.sector) ? 'selected' : ''}>Otro rubro / servicio</option>
+                  <option value="Comercio" ${((window.profileModalDraft && window.profileModalDraft.bizSector) || businessProfile.sector) === 'Comercio' ? 'selected' : ''}>Comercio (Venta de productos/Mercaderías)</option>
+                  <option value="Servicios y Consultoría" ${((window.profileModalDraft && window.profileModalDraft.bizSector) || businessProfile.sector) === 'Servicios y Consultoría' ? 'selected' : ''}>Servicios y Consultoría</option>
+                  <option value="Suscripciones y Membresías" ${((window.profileModalDraft && window.profileModalDraft.bizSector) || businessProfile.sector) === 'Suscripciones y Membresías' ? 'selected' : ''}>Suscripciones y Membresías</option>
+                  <option value="Alimentos y Bebidas" ${((window.profileModalDraft && window.profileModalDraft.bizSector) || businessProfile.sector) === 'Alimentos y Bebidas' ? 'selected' : ''}>Alimentos y Bebidas</option>
+                  <option value="Tecnología y Software" ${((window.profileModalDraft && window.profileModalDraft.bizSector) || businessProfile.sector) === 'Tecnología y Software' ? 'selected' : ''}>Tecnología y Software</option>
+                  <option value="Educación y Cursos" ${((window.profileModalDraft && window.profileModalDraft.bizSector) || businessProfile.sector) === 'Educación y Cursos' ? 'selected' : ''}>Educación y Cursos</option>
+                  <option value="Otro" ${!['Comercio', 'Servicios y Consultoría', 'Suscripciones y Membresías', 'Alimentos y Bebidas', 'Tecnología y Software', 'Educación y Cursos'].includes(((window.profileModalDraft && window.profileModalDraft.bizSector) || businessProfile.sector)) ? 'selected' : ''}>Otro rubro / servicio</option>
                 </select>
               </div>
 
               <div class="form-group">
                 <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Descripción del Producto/Servicio Principal</label>
-                <textarea id="profile-biz-desc" class="form-input" rows="3" placeholder="Describe qué vendes..." style="padding: 8px 12px; background: #ffffff; resize: vertical; font-family: var(--font-body);">${businessProfile.description}</textarea>
+                <textarea id="profile-biz-desc" class="form-input" rows="3" placeholder="Describe qué vendes..." style="padding: 8px 12px; background: #ffffff; resize: vertical; font-family: var(--font-body);">${(window.profileModalDraft && window.profileModalDraft.bizDesc !== undefined) ? window.profileModalDraft.bizDesc : businessProfile.description}</textarea>
               </div>
             ` : ''}
 
@@ -1426,15 +1426,15 @@ function renderProfileModalContent() {
               <div class="form-group">
                 <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Tono de la Marca</label>
                 <select id="profile-biz-tone" class="form-input form-select" style="padding: 8px 12px; background: #ffffff;">
-                  <option value="Amigable" ${businessProfile.tone === 'Amigable' ? 'selected' : ''}>Amigable 😊</option>
-                  <option value="Formal" ${businessProfile.tone === 'Formal' ? 'selected' : ''}>Formal 💼</option>
-                  <option value="Directo" ${businessProfile.tone === 'Directo' ? 'selected' : ''}>Directo 🎯</option>
-                  <option value="Divertido" ${businessProfile.tone === 'Divertido' ? 'selected' : ''}>Divertido ⚡</option>
+                  <option value="Amigable" ${((window.profileModalDraft && window.profileModalDraft.bizTone) || businessProfile.tone) === 'Amigable' ? 'selected' : ''}>Amigable 😊</option>
+                  <option value="Formal" ${((window.profileModalDraft && window.profileModalDraft.bizTone) || businessProfile.tone) === 'Formal' ? 'selected' : ''}>Formal 💼</option>
+                  <option value="Directo" ${((window.profileModalDraft && window.profileModalDraft.bizTone) || businessProfile.tone) === 'Directo' ? 'selected' : ''}>Directo 🎯</option>
+                  <option value="Divertido" ${((window.profileModalDraft && window.profileModalDraft.bizTone) || businessProfile.tone) === 'Divertido' ? 'selected' : ''}>Divertido ⚡</option>
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Oferta / Promoción Clave</label>
-                <input type="text" id="profile-biz-promo" class="form-input" value="${businessProfile.promotion}" placeholder="Ej. Envío gratis a todo el Perú" style="padding: 8px 12px; background: #ffffff;">
+                <input type="text" id="profile-biz-promo" class="form-input" value="${(window.profileModalDraft && window.profileModalDraft.bizPromo !== undefined) ? window.profileModalDraft.bizPromo : businessProfile.promotion}" placeholder="Ej. Envío gratis a todo el Perú" style="padding: 8px 12px; background: #ffffff;">
               </div>
             </div>
           </div>
@@ -1474,8 +1474,8 @@ function renderProfileModalContent() {
                 ${currentSimulatedUserRole === 'Administrador' ? `
                   ${businesses.length < bizLimit ? `
                     <div style="display: flex; gap: 6px; margin-top: 4px;">
-                      <input type="text" id="new-biz-name-input" placeholder="Nombre de nueva marca (Ej: Lima Growth)" style="flex-grow: 1; font-size: 0.72rem; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff;">
-                      <button onclick="createBusinessWorkspace(document.getElementById('new-biz-name-input').value)" style="background: var(--color-accent); border: none; color: #0a0a0a; font-size: 0.72rem; font-weight: 600; padding: 5px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap;">➕ Agregar</button>
+                      <input type="text" id="new-biz-name-input" placeholder="Nombre de nueva marca (Ej: Lima Growth)" value="${(window.profileModalDraft && window.profileModalDraft.newBizName) || ''}" style="flex-grow: 1; font-size: 0.72rem; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff;" onkeydown="if (event.key === 'Enter') { event.preventDefault(); handleAddWorkspaceClick(); }">
+                      <button type="button" onclick="handleAddWorkspaceClick()" style="background: var(--color-accent); border: none; color: #0a0a0a; font-size: 0.72rem; font-weight: 600; padding: 5px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap;">➕ Agregar</button>
                     </div>
                   ` : `
                     <div style="font-size: 0.7rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px; text-align: center; font-weight: 600; margin-top: 2px;">
