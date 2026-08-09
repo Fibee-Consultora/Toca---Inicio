@@ -2158,7 +2158,8 @@ async function syncUserPlanFromProfile() {
       }
 
       setDiag(2.5, 'Enviando petición fetch a Supabase REST API...');
-      const url = `${window.SUPABASE_URL}/rest/v1/workspace_members?select=id,workspace_id,role,invite_email,workspaces(name)&invite_email=eq.${encodeURIComponent(currentAuthUser.email)}&status=eq.Pendiente`;
+      const cleanEmail = currentAuthUser.email ? currentAuthUser.email.trim() : '';
+      const url = `${window.SUPABASE_URL}/rest/v1/workspace_members?select=id,workspace_id,role,invite_email,status&invite_email=ilike.${encodeURIComponent(cleanEmail)}&status=eq.Pendiente`;
       const res = await fetch(url, {
         method: "GET",
         headers: {

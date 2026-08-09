@@ -19,8 +19,6 @@ end;
 $$;
 
 -- 2. Crear la función 'security definer' para verificar membresía de workspace
--- Nota: Al ser 'security definer', se ejecuta con los privilegios del creador (postgres),
--- saltando las políticas RLS internas y previniendo la recursión infinita.
 create or replace function public.is_member_of_workspace(ws_id uuid, u_id uuid)
 returns boolean
 security definer
@@ -34,7 +32,17 @@ begin
   ) or exists (
     select 1 
     from public.workspace_members wm 
-    where wm.workspace_id = ws_id and wm.user_id = u_id
+    where wm.workspace_id = ws_id and (
+      wm.user_id = u_id or 
+      lower(wm.invite_email) = lower(auth.jwt() ->> 'email')
+    )
+  ) or exists (
+    select 1 
+    from public.workspace_team wt 
+    where wt.workspace_id = ws_id and (
+      wt.user_id = u_id or 
+      lower(wt.email) = lower(auth.jwt() ->> 'email')
+    )
   );
 end;
 $$;
@@ -50,18 +58,14 @@ alter table public.workspace_team enable row level security;
 create policy "workspaces_access_policy" on public.workspaces
 for all
 using (
-  owner_id = auth.uid() or 
-  exists (
-    select 1 from public.workspace_members wm 
-    where wm.workspace_id = id and (wm.user_id = auth.uid() or wm.invite_email = (auth.jwt() ->> 'email'))
-  )
+  public.is_member_of_workspace(id, auth.uid())
 );
 
 create policy "workspace_members_access_policy" on public.workspace_members
 for all
 using (
   user_id = auth.uid() or 
-  invite_email = (auth.jwt() ->> 'email') or
+  lower(invite_email) = lower(auth.jwt() ->> 'email') or
   public.is_member_of_workspace(workspace_id, auth.uid())
 );
 

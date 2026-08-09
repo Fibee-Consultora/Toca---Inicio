@@ -429,6 +429,16 @@
           wsDirect._isPending = (info.status === 'Pendiente');
           wsDirect._memberId = info.memberId;
           list.push(wsDirect);
+        } else {
+          list.push({
+            id: wsId,
+            name: 'Espacio Invitado (Click para ingresar)',
+            sector: 'Colaborativo',
+            _role: info.role,
+            _status: info.status,
+            _isPending: (info.status === 'Pendiente'),
+            _memberId: info.memberId
+          });
         }
       }
     }
