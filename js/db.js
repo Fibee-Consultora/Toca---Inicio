@@ -369,6 +369,29 @@
     const user = userRes?.user;
     if (!user) return [];
 
+    // 1. Invocación limpia mediante RPC SECURITY DEFINER
+    try {
+      const { data: rpcData, error: rpcError } = await client.rpc('get_user_workspaces');
+      if (!rpcError && rpcData && Array.isArray(rpcData) && rpcData.length > 0) {
+        return rpcData.map(w => ({
+          id: w.id,
+          name: w.name,
+          sector: w.sector,
+          description: w.description,
+          tone: w.tone,
+          promotion: w.promotion,
+          timezone: w.timezone,
+          owner_id: w.owner_id,
+          _role: w.member_role,
+          _status: w.member_status,
+          _isPending: w.is_pending === true
+        }));
+      }
+    } catch (rpcErr) {
+      console.warn("RPC get_user_workspaces fallback warning:", rpcErr);
+    }
+
+    // 2. Fallback estándar si el RPC no retorna datos
     const email = user.email ? user.email.toLowerCase() : '';
 
     // Vincular invitaciones pendientes automáticamente si coincide el correo del usuario
