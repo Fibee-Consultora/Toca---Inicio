@@ -113,24 +113,26 @@
   }
 
   function contactToRow(contact) {
+    const rawType = contact.type || (contact.status === 'AL_DIA' ? 'Cliente' : 'Prospecto');
+    const rawStatus = contact.status || (rawType === 'Cliente' ? 'Completado' : 'Esperando respuesta');
     return {
       name: contact.name,
       company: contact.company || null,
-      type: contact.type,
-      context: contact.context || null,
-      status: contact.status,
+      type: rawType,
+      context: contact.context || contact.notes || null,
+      status: rawStatus,
       fu1: contact.fu1 || null,
       fu2: contact.fu2 || null,
       fu3: contact.fu3 || null,
-      whatsapp: contact.whatsapp,
-      suggested_date: contact.suggestedDate || null,
-      last_contacted: contact.lastContacted || null,
+      whatsapp: contact.whatsapp || contact.phone || null,
+      suggested_date: contact.suggestedDate || contact.suggested_date || null,
+      last_contacted: contact.lastContacted || contact.last_contacted || 'Hoy',
       cycle_days: contact.cycle_days ?? contact.cycleDays ?? null,
       archived: !!contact.archived,
       archived_date: contact.archivedDate || null,
       waiting_since: contact.waitingSince || null,
       days_waiting: contact.days_waiting ?? contact.daysWaiting ?? null,
-      workspace_id: contact.businessId || window.currentBusinessId || null,
+      workspace_id: contact.workspace_id || contact.businessId || window.currentBusinessId || null,
     };
   }
 

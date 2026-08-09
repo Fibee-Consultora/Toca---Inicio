@@ -83,19 +83,22 @@ function bootstrapAuthenticatedUser(user) {
 function isBusinessLocked(b, idx, limit) {
   if (!currentAuthUser) return false;
   // Si es un espacio invitado (pendiente, con rol colaborador o de otro dueño), NUNCA se bloquea por el plan del usuario
-  if (b._isPending || (b._role && b._role !== 'Propietario') || (b.owner_id && b.owner_id !== currentAuthUser.id)) {
+  const isOwner = Boolean(!b.owner_id || (currentAuthUser && String(b.owner_id).toLowerCase() === String(currentAuthUser.id).toLowerCase()));
+  if (!isOwner || b._isPending || (b._role && b._role !== 'Propietario')) {
     return false;
   }
   
-  if (currentActiveWorkspaces) {
-    return !currentActiveWorkspaces.includes(String(b.id));
-  }
-  
-  // Contamos el índice relativo únicamente sobre los negocios propios
-  const ownedBusinesses = businesses.filter(x => (!x._isPending && (!x._role || x._role === 'Propietario')) && (!x.owner_id || x.owner_id === currentAuthUser.id));
+  // Contamos el índice relativo únicamente sobre los negocios propios con comparación de ID insensible
+  const ownedBusinesses = businesses.filter(x => (!x._isPending && (!x._role || x._role === 'Propietario')) && (!x.owner_id || (currentAuthUser && String(x.owner_id).toLowerCase() === String(currentAuthUser.id).toLowerCase())));
   const ownedIdx = ownedBusinesses.findIndex(x => String(x.id) === String(b.id));
   if (ownedIdx === -1) return false;
-  return ownedIdx >= limit;
+
+  // Si el índice del negocio propio está dentro del límite del plan (ej. Plan Panal = 2), NO se bloquea
+  if (limit === 999 || ownedIdx < limit) {
+    return false;
+  }
+
+  return true;
 }
 
 let isSyncingWorkspaces = false;
