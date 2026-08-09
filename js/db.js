@@ -531,7 +531,25 @@
   }
 
   async function insertWorkspace(workspace) {
-    const { data, error } = await getClient()
+    const client = getClient();
+    try {
+      const { data: rpcData, error: rpcErr } = await client.rpc('create_user_workspace', {
+        p_name: workspace.name,
+        p_sector: workspace.sector || 'Otro',
+        p_description: workspace.description || '',
+        p_tone: workspace.tone || 'Amigable',
+        p_promotion: workspace.promotion || '',
+        p_timezone: workspace.timezone || 'America/Lima'
+      });
+
+      if (!rpcErr && rpcData && Array.isArray(rpcData) && rpcData.length > 0) {
+        return rpcData[0];
+      }
+    } catch (err) {
+      console.warn("create_user_workspace RPC fallback warning:", err);
+    }
+
+    const { data, error } = await client
       .from('workspaces')
       .insert(workspace)
       .select()
