@@ -3550,44 +3550,65 @@ async function switchBusinessWorkspace(id) {
   }
 }
 
-function switchSimulatedPlan(plan) {
+async function switchSimulatedPlan(plan) {
+  if (!PLAN_LIMITS[plan]) return;
   currentActivePlan = plan;
   localStorage.setItem('toca_current_active_plan', plan);
   
-  // Enforce business limit: if current active business index exceeds new plan limit, switch to first business
-  const limit = PLAN_LIMITS[plan].businesses;
-  const activeIdx = businesses.findIndex(b => b.id === currentBusinessId);
-  if (activeIdx >= limit) {
-    const mainBizId = businesses[0].id;
-    currentBusinessId = mainBizId;
-    if (currentAuthUser) {
-      localStorage.setItem(`toca_current_business_id_${currentAuthUser.id}`, mainBizId);
-    } else {
-      localStorage.setItem('toca_current_business_id', mainBizId);
+  if (currentAuthUser && window.TocaDB?.isConfigured()) {
+    try {
+      const profile = await window.TocaDB.loadMyProfile();
+      const ownerName = (profile && profile.name) || currentUserProfileName;
+      const extraAgents = (profile && profile.extra_agents) || purchasedExtraAgents || 0;
+      const extraPacks = (profile && profile.extra_packs) || purchasedExtraPacks || 0;
+      const status = (profile && profile.status) || 'Activo';
+      const payDate = (profile && profile.last_payment_date) || TODAY_STR;
+      const factura = true;
+      const activeWorkspacesStr = currentActiveWorkspaces ? `|active_workspaces:${currentActiveWorkspaces.join(',')}` : '';
+      const formattedName = `${ownerName}|plan:${plan}|agents:${extraAgents}|packs:${extraPacks}|status:${status}|pay:${payDate}|factura:${factura}${activeWorkspacesStr}`;
+
+      await window.TocaDB.getClient()
+        .from('profiles')
+        .update({
+          full_name: formattedName,
+          plan: plan,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentAuthUser.id);
+    } catch (err) {
+      console.error("Error al guardar cambio de plan en Supabase:", err);
     }
-    businessProfile = businesses[0];
+  }
+
+  // Enforce business limit
+  const limit = PLAN_LIMITS[plan].businesses;
+  const ownedBusinesses = businesses.filter(x => (!x._isPending && (!x._role || x._role === 'Propietario')) && (!x.owner_id || (currentAuthUser && String(x.owner_id).toLowerCase() === String(currentAuthUser.id).toLowerCase())));
+  const activeIdx = ownedBusinesses.findIndex(b => String(b.id) === String(currentBusinessId));
+  
+  if (activeIdx !== -1 && activeIdx >= limit) {
+    const mainBiz = ownedBusinesses[0] || businesses[0];
+    currentBusinessId = mainBiz.id;
+    if (currentAuthUser) {
+      localStorage.setItem(`toca_current_business_id_${currentAuthUser.id}`, String(mainBiz.id));
+    }
+    localStorage.setItem('toca_current_business_id', String(mainBiz.id));
+    businessProfile = mainBiz;
     localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
     showToast(`⚠️ Límite del plan excedido. Cambiado al negocio principal: ${businessProfile.name}`);
   }
   
-  // Re-populate switchers
   populateBusinessSwitchers();
-  
-  // Update role/plan displayed in sidebar and simulator select
   updateProfileUI();
   
-  // Update plan tab contents
   const modal = document.getElementById('profile-config-modal');
   if (modal && modal.classList.contains('open')) {
     renderProfileModalContent();
   }
   
-  // Re-render other elements
   renderAllTabs();
   
-  // Dispatch a descriptive toast message about limits
   const details = PLAN_LIMITS[plan];
-  showToast(`⚡ Plan Simulado cambiado a: ${details.tag} ${details.name} (Límite: ${details.businesses} Negocio(s), ${details.agents} Agente(s), ${details.contacts} Contactos)`);
+  showToast(`⚡ Plan cambiado a: ${details.tag} ${details.name} (Límite: ${details.businesses === 999 ? 'Ilimitados' : details.businesses} Negocio(s))`);
 }
 
 function createBusinessWorkspace(name) {
