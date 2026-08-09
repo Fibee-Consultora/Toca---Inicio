@@ -373,19 +373,22 @@
     try {
       const { data: rpcData, error: rpcError } = await client.rpc('get_user_workspaces');
       if (!rpcError && rpcData && Array.isArray(rpcData) && rpcData.length > 0) {
-        let mapped = rpcData.map(w => ({
-          id: w.id,
-          name: w.name,
-          sector: w.sector,
-          description: w.description,
-          tone: w.tone,
-          promotion: w.promotion,
-          timezone: w.timezone,
-          owner_id: w.owner_id,
-          _role: w.member_role,
-          _status: w.member_status,
-          _isPending: w.is_pending === true
-        }));
+        let mapped = rpcData.map(w => {
+          const isOwner = Boolean(!w.owner_id || (user && String(w.owner_id).toLowerCase() === String(user.id).toLowerCase()));
+          return {
+            id: w.id,
+            name: w.name,
+            sector: w.sector,
+            description: w.description,
+            tone: w.tone,
+            promotion: w.promotion,
+            timezone: w.timezone,
+            owner_id: w.owner_id,
+            _role: isOwner ? 'Propietario' : (w.member_role || 'Colaborador'),
+            _status: isOwner ? 'Activo' : (w.member_status || 'Activo'),
+            _isPending: isOwner ? false : (w.is_pending === true)
+          };
+        });
 
         return mapped;
       }

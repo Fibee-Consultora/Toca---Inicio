@@ -3162,7 +3162,7 @@ function populateBusinessSwitchers() {
     const isLocked = isBusinessLocked(b, idx, limit);
     const isActive = String(b.id) === String(currentBusinessId);
     const isPending = b._isPending;
-    const isInvited = Boolean(b.owner_id && currentAuthUser && b.owner_id !== currentAuthUser.id);
+    const isInvited = Boolean(b.owner_id && currentAuthUser && String(b.owner_id).toLowerCase() !== String(currentAuthUser.id).toLowerCase());
     
     if (isActive && triggerText) {
       triggerText.textContent = isLocked ? `${b.name} 🔒` : b.name;

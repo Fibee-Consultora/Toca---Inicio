@@ -1303,7 +1303,7 @@ function renderProfileModalContent() {
   const container = document.getElementById('profile-modal-body');
   if (!container) return;
 
-  const isAgent = Boolean(businessProfile && businessProfile.owner_id && currentAuthUser && businessProfile.owner_id !== currentAuthUser.id);
+  const isAgent = Boolean(businessProfile && businessProfile.owner_id && currentAuthUser && String(businessProfile.owner_id).toLowerCase() !== String(currentAuthUser.id).toLowerCase());
 
   // Toggle active class and visibility on modal tab buttons
   const btnPerfil = document.getElementById('btn-profile-tab-perfil');
