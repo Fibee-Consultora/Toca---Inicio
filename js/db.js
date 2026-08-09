@@ -239,25 +239,13 @@
     const { data: { user } } = await getClient().auth.getUser();
     if (!user) return null;
     
-    let data = null;
-    const { data: selectData, error } = await client
+    const { data, error } = await client
       .from('profiles')
-      .select('id, email, full_name, avatar_url, plan, created_at, last_session_id')
+      .select('id, email, full_name, avatar_url, plan, created_at')
       .eq('id', user.id)
       .maybeSingle();
       
-    if (error) {
-      console.warn("Error loading profile with last_session_id, attempting fallback select:", error);
-      const { data: fallbackData, error: fallbackError } = await client
-        .from('profiles')
-        .select('id, email, full_name, avatar_url, plan, created_at')
-        .eq('id', user.id)
-        .maybeSingle();
-      if (fallbackError) throw fallbackError;
-      data = fallbackData;
-    } else {
-      data = selectData;
-    }
+    if (error) throw error;
     
     if (data) {
       window.lastLoadedRawProfile = { full_name: data.full_name, plan: data.plan };
@@ -781,11 +769,14 @@
   }
 
   async function updateSessionToken(userId, token) {
-    const { error } = await getClient()
-      .from('profiles')
-      .update({ last_session_id: token, updated_at: new Date().toISOString() })
-      .eq('id', userId);
-    if (error) throw error;
+    try {
+      await getClient()
+        .from('profiles')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', userId);
+    } catch (e) {
+      // no-op
+    }
   }
 
   window.TocaDB = {

@@ -1472,16 +1472,9 @@ function renderProfileModalContent() {
                 
                 <!-- Add New Workspace button -->
                 ${currentSimulatedUserRole === 'Administrador' ? `
-                  ${businesses.length < bizLimit ? `
-                    <div style="display: flex; gap: 6px; margin-top: 4px;">
-                      <input type="text" id="new-biz-name-input" placeholder="Nombre de nueva marca (Ej: Lima Growth)" value="${(window.profileModalDraft && window.profileModalDraft.newBizName) || ''}" style="flex-grow: 1; font-size: 0.72rem; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff;" onkeydown="if (event.key === 'Enter') { event.preventDefault(); handleAddWorkspaceClick(); }">
-                      <button type="button" id="btn-add-new-workspace" onclick="handleAddWorkspaceClick()" style="background: var(--color-accent); border: none; color: #0a0a0a; font-size: 0.72rem; font-weight: 600; padding: 5px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap;">➕ Agregar</button>
-                    </div>
-                  ` : `
-                    <div style="font-size: 0.7rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px; text-align: center; font-weight: 600; margin-top: 2px;">
-                      🔒 Límite de negocios alcanzado (${businesses.length}/${displayLimit}). <span style="text-decoration: underline; cursor: pointer;" onclick="switchProfileModalTab('plan')">Sube de plan para agregar más.</span>
-                    </div>
-                  `}
+                  <button type="button" onclick="createBusinessWorkspace()" style="width: 100%; background: var(--color-accent); border: none; color: #0a0a0a; font-size: 0.78rem; font-weight: 700; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                    ➕ Agregar Nuevo Negocio
+                  </button>
                 ` : `
                   <div style="font-size: 0.68rem; color: var(--color-text-muted); text-align: center; padding: 4px;">
                     🔒 Solo el propietario puede administrar los negocios.

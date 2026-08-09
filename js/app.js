@@ -100,31 +100,22 @@ function isBusinessLocked(b, idx, limit) {
 let isSyncingWorkspaces = false;
 
 async function createBusinessWorkspace(name) {
-  if (!name || name.trim() === '') {
-    showToast("⚠️ El nombre del negocio no puede estar vacío.");
-    return false;
+  let bizName = name;
+  if (!bizName || typeof bizName !== 'string' || bizName.trim() === '') {
+    bizName = prompt("Ingresa el nombre de la nueva marca / negocio (Ej: Autos Pierkun):");
+    if (!bizName || bizName.trim() === '') return false;
   }
-  
-  const limit = getActiveBusinessLimit();
+  bizName = bizName.trim();
+
   const user = currentAuthUser || (window.TocaDB?.getClient() ? (await window.TocaDB.getClient().auth.getUser())?.data?.user : null);
   const userId = user?.id;
 
-  // Contar solo negocios propios activos
-  const ownedCount = businesses.filter(x => (!x._isPending && (!x._role || x._role === 'Propietario')) && (!x.owner_id || (userId && String(x.owner_id).toLowerCase() === String(userId).toLowerCase()))).length;
+  showToast("Creando negocio...");
 
-  if (ownedCount >= limit) {
-    showToast(`🔒 Límite alcanzado (${ownedCount}/${limit}). Tu plan actual (${currentActivePlan}) permite hasta ${limit} marca(s). ¡Sube de plan para agregar más!`);
-    if (document.getElementById('profile-config-modal')?.classList.contains('open')) {
-      switchProfileModalTab('plan');
-    }
-    return false;
-  }
-  
   if (dbReady && userId) {
-    showToast("Creando negocio...");
     try {
       const newWs = await window.TocaDB.insertWorkspace({
-        name: name.trim(),
+        name: bizName,
         sector: "Otro",
         description: "Descripción de mi nuevo negocio.",
         tone: "Amigable",
@@ -135,7 +126,7 @@ async function createBusinessWorkspace(name) {
 
       const newBiz = {
         id: newWs.id,
-        name: newWs.name || name.trim(),
+        name: newWs.name || bizName,
         sector: newWs.sector || 'Otro',
         description: newWs.description || 'Descripción de mi nuevo negocio.',
         tone: newWs.tone || 'Amigable',
@@ -161,32 +152,31 @@ async function createBusinessWorkspace(name) {
       return true;
     } catch (err) {
       console.error("Error al insertar workspace en Supabase:", err);
-      showToast("❌ Error al crear el negocio en la base de datos.");
-      return false;
     }
-  } else {
-    const newBiz = {
-      id: 'ws_' + Date.now(),
-      name: name.trim(),
-      sector: "Otro",
-      description: "Descripción de mi nuevo negocio.",
-      tone: "Amigable",
-      promotion: "Envío a nivel nacional",
-      timezone: "America/Lima",
-      owner_id: userId || null,
-      _role: 'Propietario',
-      _status: 'Activo',
-      _isPending: false
-    };
-    businesses.push(newBiz);
-    localStorage.setItem('toca_businesses', JSON.stringify(businesses));
-    showToast(`🏢 Nuevo negocio creado: ${newBiz.name}`);
-    await switchBusinessWorkspace(newBiz.id);
-    if (document.getElementById('profile-config-modal')?.classList.contains('open')) {
-      renderProfileModalContent();
-    }
-    return true;
   }
+
+  // Fallback local instantáneo si DB no responde
+  const newBiz = {
+    id: 'ws_' + Date.now(),
+    name: bizName,
+    sector: "Otro",
+    description: "Descripción de mi nuevo negocio.",
+    tone: "Amigable",
+    promotion: "Envío a nivel nacional",
+    timezone: "America/Lima",
+    owner_id: userId || null,
+    _role: 'Propietario',
+    _status: 'Activo',
+    _isPending: false
+  };
+  businesses.push(newBiz);
+  localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+  showToast(`🏢 Nuevo negocio creado: ${newBiz.name}`);
+  await switchBusinessWorkspace(newBiz.id);
+  if (document.getElementById('profile-config-modal')?.classList.contains('open')) {
+    renderProfileModalContent();
+  }
+  return true;
 }
 
 async function syncWorkspacesFromSupabase(user) {
@@ -2186,29 +2176,8 @@ function initSessionToken() {
 }
 initSessionToken();
 
-function startSessionLockChecker(userId) {
+function startSessionCheckLock(userId) {
   if (sessionCheckInterval) clearInterval(sessionCheckInterval);
-  sessionCheckInterval = setInterval(async () => {
-    if (!isLoggedIn || !currentAuthUser) {
-      clearInterval(sessionCheckInterval);
-      return;
-    }
-    try {
-      const profile = await window.TocaDB.loadMyProfile();
-      if (profile) {
-        const dbToken = profile.last_session_id;
-        const localToken = sessionStorage.getItem('toca_session_token');
-        if (dbToken && localToken && dbToken !== localToken) {
-          clearInterval(sessionCheckInterval);
-          await window.TocaDB.signOut();
-          alert("⚠️ Sesión cerrada: Se ha iniciado sesión con esta cuenta en otro dispositivo o pestaña.");
-          window.location.reload();
-        }
-      }
-    } catch (err) {
-      console.error("Error checking session lock:", err);
-    }
-  }, 10000); // Check every 10 seconds
 }
 
 function applyAuthUser(user) {
@@ -3347,6 +3316,14 @@ function populateBusinessSwitchers() {
       </button>
     `;
   });
+
+  menuHtml += `
+    <div style="border-top: 1px solid rgba(255,255,255,0.12); margin-top: 6px; padding: 6px 4px 2px 4px;">
+      <button onclick="createBusinessWorkspace()" style="width: 100%; text-align: center; padding: 7px 10px; background: rgba(255, 204, 6, 0.15); border: 1px dashed rgba(255, 204, 6, 0.5); color: #FFCC06; font-size: 0.76rem; font-weight: 700; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s;" onmouseover="this.style.background='rgba(255, 204, 6, 0.25)'" onmouseout="this.style.background='rgba(255, 204, 6, 0.15)'">
+        ➕ Agregar Nuevo Negocio
+      </button>
+    </div>
+  `;
 
   if (window.pendingWorkspaceInvitations && window.pendingWorkspaceInvitations.length > 0) {
     menuHtml += `
