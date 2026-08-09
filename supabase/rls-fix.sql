@@ -53,7 +53,7 @@ using (
   owner_id = auth.uid() or 
   exists (
     select 1 from public.workspace_members wm 
-    where wm.workspace_id = id and wm.user_id = auth.uid()
+    where wm.workspace_id = id and (wm.user_id = auth.uid() or wm.invite_email = (auth.jwt() ->> 'email'))
   )
 );
 
@@ -61,6 +61,7 @@ create policy "workspace_members_access_policy" on public.workspace_members
 for all
 using (
   user_id = auth.uid() or 
+  invite_email = (auth.jwt() ->> 'email') or
   public.is_member_of_workspace(workspace_id, auth.uid())
 );
 

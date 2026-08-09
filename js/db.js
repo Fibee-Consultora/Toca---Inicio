@@ -364,12 +364,37 @@
   }
 
   async function loadWorkspaces() {
-    const { data, error } = await getClient()
+    const client = getClient();
+    const { data: userRes } = await client.auth.getUser();
+    const user = userRes?.user;
+
+    const { data: ownedData, error: ownedError } = await client
       .from('workspaces')
       .select('*')
       .order('created_at');
-    if (error) throw error;
-    return data || [];
+    if (ownedError) throw ownedError;
+
+    let list = ownedData || [];
+
+    if (user) {
+      const { data: memberData } = await client
+        .from('workspace_members')
+        .select('workspace_id, role, status, workspaces(*)')
+        .or(`user_id.eq.${user.id},invite_email.eq.${user.email}`)
+        .eq('status', 'Activo');
+
+      if (memberData && memberData.length > 0) {
+        memberData.forEach(m => {
+          if (m.workspaces && !list.some(w => String(w.id) === String(m.workspaces.id))) {
+            const ws = m.workspaces;
+            ws._role = m.role;
+            list.push(ws);
+          }
+        });
+      }
+    }
+
+    return list;
   }
 
   async function insertWorkspace(workspace) {

@@ -2174,15 +2174,35 @@ async function syncUserPlanFromProfile() {
       setDiag(3, `SELECT completado. Invitaciones encontradas: ${pending ? pending.length : 0}`);
       
       if (pending && pending.length > 0) {
+        for (let inv of pending) {
+          if (!inv.workspaces || !inv.workspaces.name) {
+            try {
+              const wsRes = await fetch(`${window.SUPABASE_URL}/rest/v1/workspaces?id=eq.${inv.workspace_id}&select=id,name`, {
+                headers: {
+                  "apikey": window.SUPABASE_ANON_KEY,
+                  "Authorization": `Bearer ${jwt}`
+                }
+              });
+              if (wsRes.ok) {
+                const wsData = await wsRes.json();
+                if (wsData && wsData.length > 0) {
+                  inv.workspaces = { name: wsData[0].name };
+                }
+              }
+            } catch (wsErr) {
+              console.warn("Error fetching workspace name fallback:", wsErr);
+            }
+          }
+        }
         window.pendingWorkspaceInvitations = pending;
         if (diagWrap) {
           const invListHtml = pending.map(inv => {
-            const wsName = (inv.workspaces && inv.workspaces.name) || 'Nuevo Espacio de Trabajo';
+            const wsName = (inv.workspaces && inv.workspaces.name) || 'Espacio de Trabajo Invitado';
             const role = inv.role || 'Colaborador';
             return `
               <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; border-radius: 8px; padding: 10px; margin-top: 6px;">
                 <div style="color: #f59e0b; font-weight: 700; font-size: 0.82rem; margin-bottom: 2px;">📬 INVITACIÓN A ESPACIO DE TRABAJO</div>
-                <div style="font-size: 0.78rem; color: #ffffff; font-weight: 700;">${wsName}</div>
+                <div style="font-size: 0.78rem; color: #ffffff; font-weight: 700;">🏢 ${wsName}</div>
                 <div style="font-size: 0.65rem; color: #cbd5e1; margin-bottom: 8px;">Rol: <strong>${role}</strong> · Para: <strong>${currentAuthUser.email}</strong></div>
                 <div style="display: flex; gap: 6px;">
                   <button onclick="acceptUserInvitation('${inv.id}')" style="background: #FFCC06; color: #0a0a0a; border: none; font-weight: 700; font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; cursor: pointer; flex: 1;">✓ Aceptar</button>
@@ -2216,13 +2236,21 @@ async function syncUserPlanFromProfile() {
 async function acceptUserInvitation(memberId) {
   if (!currentAuthUser) return;
   try {
-    await window.TocaDB.acceptInvitation(memberId, currentAuthUser.id);
-    showToast("¡Te has unido al nuevo espacio de trabajo!");
+    showToast("Aceptando invitación...");
+    const member = await window.TocaDB.acceptInvitation(memberId, currentAuthUser.id);
+    showToast("¡Te has unido al espacio de trabajo!");
     window.pendingWorkspaceInvitations = (window.pendingWorkspaceInvitations || []).filter(i => i.id !== memberId);
-    await syncUserPlanFromProfile();
+    
+    isSyncingWorkspaces = false;
+    await syncWorkspacesFromSupabase(currentAuthUser);
+    if (member && member.workspace_id) {
+      switchBusinessWorkspace(member.workspace_id);
+    }
+    populateBusinessSwitchers();
+    if (typeof updateProfileUI === 'function') updateProfileUI();
   } catch (err) {
     console.error("Error al aceptar invitación:", err);
-    showToast("⚠️ Error al aceptar la invitación");
+    showToast("⚠️ Error al aceptar la invitación: " + (err.message || JSON.stringify(err)));
   }
 }
 
