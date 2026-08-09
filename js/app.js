@@ -102,7 +102,7 @@ let isSyncingWorkspaces = false;
 async function createBusinessWorkspace(name) {
   if (!name || name.trim() === '') {
     showToast("⚠️ El nombre del negocio no puede estar vacío.");
-    return;
+    return false;
   }
   
   const limit = getActiveBusinessLimit();
@@ -113,8 +113,11 @@ async function createBusinessWorkspace(name) {
   const ownedCount = businesses.filter(x => (!x._isPending && (!x._role || x._role === 'Propietario')) && (!x.owner_id || (userId && String(x.owner_id).toLowerCase() === String(userId).toLowerCase()))).length;
 
   if (ownedCount >= limit) {
-    showToast(`🔒 No puedes crear más negocios. Has alcanzado el límite de ${limit} negocios para tu plan.`);
-    return;
+    showToast(`🔒 Límite alcanzado (${ownedCount}/${limit}). Tu plan actual (${currentActivePlan}) permite hasta ${limit} marca(s). ¡Sube de plan para agregar más!`);
+    if (document.getElementById('profile-config-modal')?.classList.contains('open')) {
+      switchProfileModalTab('plan');
+    }
+    return false;
   }
   
   if (dbReady && userId) {
@@ -132,7 +135,7 @@ async function createBusinessWorkspace(name) {
 
       const newBiz = {
         id: newWs.id,
-        name: newWs.name,
+        name: newWs.name || name.trim(),
         sector: newWs.sector || 'Otro',
         description: newWs.description || 'Descripción de mi nuevo negocio.',
         tone: newWs.tone || 'Amigable',
@@ -151,13 +154,15 @@ async function createBusinessWorkspace(name) {
       localStorage.setItem('toca_businesses', JSON.stringify(businesses));
       
       showToast(`🏢 Nuevo negocio creado: ${newBiz.name}`);
-      switchBusinessWorkspace(newBiz.id);
+      await switchBusinessWorkspace(newBiz.id);
       if (document.getElementById('profile-config-modal')?.classList.contains('open')) {
         renderProfileModalContent();
       }
+      return true;
     } catch (err) {
       console.error("Error al insertar workspace en Supabase:", err);
       showToast("❌ Error al crear el negocio en la base de datos.");
+      return false;
     }
   } else {
     const newBiz = {
@@ -176,10 +181,11 @@ async function createBusinessWorkspace(name) {
     businesses.push(newBiz);
     localStorage.setItem('toca_businesses', JSON.stringify(businesses));
     showToast(`🏢 Nuevo negocio creado: ${newBiz.name}`);
-    switchBusinessWorkspace(newBiz.id);
+    await switchBusinessWorkspace(newBiz.id);
     if (document.getElementById('profile-config-modal')?.classList.contains('open')) {
       renderProfileModalContent();
     }
+    return true;
   }
 }
 
@@ -2721,12 +2727,13 @@ async function handleAddWorkspaceClick() {
     return;
   }
   
-  if (window.profileModalDraft) {
-    window.profileModalDraft.newBizName = '';
+  const success = await createBusinessWorkspace(val);
+  if (success) {
+    if (window.profileModalDraft) {
+      window.profileModalDraft.newBizName = '';
+    }
+    if (input) input.value = '';
   }
-  if (input) input.value = '';
-
-  await createBusinessWorkspace(val);
 }
 
 function changeStatsPeriod(period) {
