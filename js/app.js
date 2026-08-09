@@ -82,16 +82,19 @@ function bootstrapAuthenticatedUser(user) {
 
 function isBusinessLocked(b, idx, limit) {
   if (!currentAuthUser) return false;
-  // Si no es el dueño, nunca está bloqueado (es un espacio de trabajo invitado)
-  if (b.owner_id && b.owner_id !== currentAuthUser.id) return false;
+  // Si es un espacio invitado (pendiente, con rol colaborador o de otro dueño), NUNCA se bloquea por el plan del usuario
+  if (b._isPending || (b._role && b._role !== 'Propietario') || (b.owner_id && b.owner_id !== currentAuthUser.id)) {
+    return false;
+  }
   
   if (currentActiveWorkspaces) {
     return !currentActiveWorkspaces.includes(String(b.id));
   }
   
-  // Si es el dueño, contamos el índice relativo a los negocios que posee
-  const ownedBusinesses = businesses.filter(x => !x.owner_id || x.owner_id === currentAuthUser.id);
+  // Contamos el índice relativo únicamente sobre los negocios propios
+  const ownedBusinesses = businesses.filter(x => (!x._isPending && (!x._role || x._role === 'Propietario')) && (!x.owner_id || x.owner_id === currentAuthUser.id));
   const ownedIdx = ownedBusinesses.findIndex(x => String(x.id) === String(b.id));
+  if (ownedIdx === -1) return false;
   return ownedIdx >= limit;
 }
 
@@ -3157,7 +3160,7 @@ function populateBusinessSwitchers() {
     const isLocked = isBusinessLocked(b, idx, limit);
     const isActive = String(b.id) === String(currentBusinessId);
     const isPending = b._isPending;
-    const isInvited = b.owner_id && currentAuthUser && b.owner_id !== currentAuthUser.id;
+    const isInvited = isPending || (b._role && b._role !== 'Propietario') || (b.owner_id && currentAuthUser && b.owner_id !== currentAuthUser.id);
     
     if (isActive && triggerText) {
       triggerText.textContent = isLocked ? `${b.name} 🔒` : b.name;
