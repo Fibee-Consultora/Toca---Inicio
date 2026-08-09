@@ -1292,6 +1292,13 @@ function generateIaSuggestionsHtml(id) {
   `;
 }
 
+function renderProfileTab() {
+  const isModalOpen = document.getElementById('profile-config-modal')?.classList.contains('open');
+  if (isModalOpen) {
+    renderProfileModalContent();
+  }
+}
+
 function renderProfileModalContent() {
   const container = document.getElementById('profile-modal-body');
   if (!container) return;
