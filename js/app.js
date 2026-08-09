@@ -2174,19 +2174,16 @@ async function syncUserPlanFromProfile() {
       setDiag(3, `SELECT completado. Invitaciones encontradas: ${pending ? pending.length : 0}`);
       
       if (pending && pending.length > 0) {
-        setDiag(4, 'Reclamando invitaciones (llamando a claimPendingInvitations)...');
-        await window.TocaDB.claimPendingInvitations(currentAuthUser.email, currentAuthUser.id);
-        invitationsClaimed = true;
-        showToast("¡Has sido añadido a un nuevo espacio de trabajo!");
-        
-        setDiag(5, 'Invitaciones reclamadas con éxito.');
+        window.pendingWorkspaceInvitations = pending;
+        setDiag(5, `Invitaciones pendientes encontradas: ${pending.length}`);
         if (diagWrap) {
           diagWrap.innerHTML = `
-            <div style="color: #10b981; font-weight: 700; font-size: 0.82rem;">✓ INVITACIÓN ACEPTADA</div>
-            <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 4px;">Espacio activado para: <strong>${currentAuthUser.email}</strong></div>
+            <div style="color: #f59e0b; font-weight: 700; font-size: 0.82rem;">📬 ${pending.length} INVITACIÓN(ES) PENDIENTE(S)</div>
+            <div style="font-size: 0.65rem; color: #cbd5e1; margin-top: 4px;">En espera de aceptación por: <strong>${currentAuthUser.email}</strong></div>
           `;
         }
       } else {
+        window.pendingWorkspaceInvitations = [];
         setDiag(5, 'Sin invitaciones pendientes.');
         if (diagWrap) {
           diagWrap.innerHTML = `
@@ -2204,6 +2201,34 @@ async function syncUserPlanFromProfile() {
         `;
       }
     }
+
+async function acceptUserInvitation(memberId) {
+  if (!currentAuthUser) return;
+  try {
+    await window.TocaDB.acceptInvitation(memberId, currentAuthUser.id);
+    showToast("¡Te has unido al nuevo espacio de trabajo!");
+    window.pendingWorkspaceInvitations = (window.pendingWorkspaceInvitations || []).filter(i => i.id !== memberId);
+    await syncUserPlanFromProfile();
+  } catch (err) {
+    console.error("Error al aceptar invitación:", err);
+    showToast("⚠️ Error al aceptar la invitación");
+  }
+}
+
+async function rejectUserInvitation(memberId) {
+  try {
+    await window.TocaDB.rejectInvitation(memberId);
+    showToast("Invitación rechazada");
+    window.pendingWorkspaceInvitations = (window.pendingWorkspaceInvitations || []).filter(i => i.id !== memberId);
+    await syncUserPlanFromProfile();
+  } catch (err) {
+    console.error("Error al rechazar invitación:", err);
+    showToast("⚠️ Error al rechazar la invitación");
+  }
+}
+
+window.acceptUserInvitation = acceptUserInvitation;
+window.rejectUserInvitation = rejectUserInvitation;
 
     const profile = await window.TocaDB.loadMyProfile();
     if (!profile) {

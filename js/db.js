@@ -489,6 +489,35 @@
     if (memberErr) throw memberErr;
   }
 
+  async function acceptInvitation(invId, userId) {
+    const client = getClient();
+    const { data: member, error } = await client
+      .from('workspace_members')
+      .update({ user_id: userId, status: 'Activo' })
+      .eq('id', invId)
+      .select()
+      .single();
+    if (error) throw error;
+
+    if (member) {
+      await client
+        .from('workspace_team')
+        .update({ user_id: userId, status: 'Activo' })
+        .eq('workspace_id', member.workspace_id)
+        .eq('email', member.invite_email);
+    }
+    return member;
+  }
+
+  async function rejectInvitation(invId) {
+    const client = getClient();
+    const { error } = await client
+      .from('workspace_members')
+      .update({ status: 'Rechazado' })
+      .eq('id', invId);
+    if (error) throw error;
+  }
+
   async function updateSessionToken(userId, token) {
     const { error } = await getClient()
       .from('profiles')
@@ -518,6 +547,8 @@
     inviteTeamMember,
     deleteTeamMember,
     claimPendingInvitations,
+    acceptInvitation,
+    rejectInvitation,
     loadContacts,
     insertContact,
     updateContact,
