@@ -3091,14 +3091,13 @@ async function deleteAgent(email) {
         await window.TocaDB.deleteTeamMember(email, currentBusinessId);
       } catch (err) {
         console.error("Error deleting team member from DB:", err);
-        showToast("Error al eliminar el agente de la base de datos.");
-        return;
       }
     }
     teamAgents = teamAgents.filter(a => a.email.toLowerCase() !== email.toLowerCase());
     localStorage.setItem(getTeamAgentsStorageKey(), JSON.stringify(teamAgents));
     showToast(`🗑️ Agente ${agentName} eliminado del equipo.`);
     renderProfileModalContent();
+    renderAllTabs();
   }
 }
 

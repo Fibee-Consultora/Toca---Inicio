@@ -463,12 +463,33 @@
   }
 
   async function loadTeamMembers(workspaceId) {
-    const { data, error } = await getClient()
+    const client = getClient();
+    const { data: teamData, error } = await client
       .from('workspace_team')
       .select('*')
       .eq('workspace_id', workspaceId);
     if (error) throw error;
-    return data || [];
+
+    const { data: memberData } = await client
+      .from('workspace_members')
+      .select('invite_email, user_id, status, role')
+      .eq('workspace_id', workspaceId);
+
+    let members = teamData || [];
+    if (memberData && memberData.length > 0) {
+      members = members.map(t => {
+        const matchingMember = memberData.find(m => 
+          (m.invite_email && m.invite_email.toLowerCase() === (t.email || '').toLowerCase()) ||
+          (m.user_id && t.user_id && m.user_id === t.user_id)
+        );
+        if (matchingMember && matchingMember.status) {
+          t.status = matchingMember.status;
+        }
+        return t;
+      });
+    }
+
+    return members;
   }
 
   async function inviteTeamMember(invitation) {
@@ -505,72 +526,83 @@
 
   async function claimPendingInvitations(email, userId) {
     const client = getClient();
+    const cleanEmail = (email || '').trim().toLowerCase();
     const { data: pendingMembers, error: findError } = await client
       .from('workspace_members')
       .select('*')
-      .eq('invite_email', email)
+      .ilike('invite_email', cleanEmail)
       .eq('status', 'Pendiente');
     if (findError) throw findError;
 
     if (pendingMembers && pendingMembers.length > 0) {
       for (const member of pendingMembers) {
-        const { error: memberErr } = await client
+        await client
           .from('workspace_members')
           .update({
             user_id: userId,
             status: 'Activo'
           })
           .eq('id', member.id);
-        if (memberErr) console.error("Error claiming member:", memberErr);
 
-        const { error: teamErr } = await client
+        await client
           .from('workspace_team')
           .update({
             user_id: userId,
             status: 'Activo'
           })
           .eq('workspace_id', member.workspace_id)
-          .eq('email', email);
-        if (teamErr) console.error("Error claiming team:", teamErr);
+          .ilike('email', cleanEmail);
       }
     }
   }
 
   async function deleteTeamMember(email, workspaceId) {
     const client = getClient();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+
     const { error: teamErr } = await client
       .from('workspace_team')
       .delete()
       .eq('workspace_id', workspaceId)
-      .eq('email', email);
-    if (teamErr) throw teamErr;
+      .ilike('email', cleanEmail);
+    if (teamErr) console.warn("deleteTeamMember workspace_team warning:", teamErr);
 
     const { error: memberErr } = await client
       .from('workspace_members')
       .delete()
       .eq('workspace_id', workspaceId)
-      .eq('invite_email', email);
-    if (memberErr) throw memberErr;
+      .ilike('invite_email', cleanEmail);
+    if (memberErr) console.warn("deleteTeamMember workspace_members warning:", memberErr);
   }
 
   async function acceptInvitation(invId, userId) {
     const client = getClient();
+
+    const { data: memberBefore } = await client
+      .from('workspace_members')
+      .select('*')
+      .eq('id', invId)
+      .maybeSingle();
+
     const { data: member, error } = await client
       .from('workspace_members')
       .update({ user_id: userId, status: 'Activo' })
       .eq('id', invId)
       .select()
-      .single();
-    if (error) throw error;
+      .maybeSingle();
 
-    if (member) {
+    if (error) console.error("acceptInvitation update error:", error);
+
+    const activeMember = member || memberBefore;
+    if (activeMember && activeMember.workspace_id && activeMember.invite_email) {
+      const cleanEmail = activeMember.invite_email.trim().toLowerCase();
       await client
         .from('workspace_team')
         .update({ user_id: userId, status: 'Activo' })
-        .eq('workspace_id', member.workspace_id)
-        .eq('email', member.invite_email);
+        .eq('workspace_id', activeMember.workspace_id)
+        .ilike('email', cleanEmail);
     }
-    return member;
+    return activeMember;
   }
 
   async function rejectInvitation(invId) {
