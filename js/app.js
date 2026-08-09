@@ -3498,6 +3498,41 @@ function deleteBusinessWorkspace(id) {
     return;
   }
 
+  const bizToDelete = businesses.find(b => String(b.id) === String(id));
+  const name = bizToDelete ? bizToDelete.name : `ID ${id}`;
+
+  if (confirm(`¿Estás seguro de que deseas eliminar permanentemente el negocio "${name}" y TODOS sus contactos asociados?`)) {
+    if (dbReady) {
+      showToast("Eliminando negocio...");
+      window.TocaDB.deleteWorkspace(id).then(() => {
+        contacts = contacts.filter(c => String(c.businessId) !== String(id));
+        businesses = businesses.filter(b => String(b.id) !== String(id));
+        localStorage.setItem(`toca_businesses_${currentAuthUser.id}`, JSON.stringify(businesses));
+        localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+        showToast(`🗑️ Negocio "${name}" y sus contactos eliminados.`);
+        populateBusinessSwitchers();
+        if (document.getElementById('profile-config-modal').classList.contains('open')) {
+          renderProfileModalContent();
+        }
+        renderAllTabs();
+      }).catch(err => {
+        console.error(err);
+        showToast("Error al eliminar el negocio de la base de datos.");
+      });
+    } else {
+      contacts = contacts.filter(c => String(c.businessId) !== String(id));
+      businesses = businesses.filter(b => String(b.id) !== String(id));
+      localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+      showToast(`🗑️ Negocio "${name}" y sus contactos eliminados.`);
+      populateBusinessSwitchers();
+      if (document.getElementById('profile-config-modal').classList.contains('open')) {
+        renderProfileModalContent();
+      }
+      renderAllTabs();
+    }
+  }
+}
+
 let pendingExcelRows = [];
 
 function triggerImportExcel() {
@@ -3805,29 +3840,6 @@ async function exportAllWorkspacesToExcel() {
   } catch (err) {
     console.error("Error exportando a Excel:", err);
     showToast("❌ Error al exportar a Excel.");
-  }
-}
-        showToast(`🗑️ Negocio "${name}" y sus contactos eliminados.`);
-        populateBusinessSwitchers();
-        if (document.getElementById('profile-config-modal').classList.contains('open')) {
-          renderProfileModalContent();
-        }
-        renderAllTabs();
-      }).catch(err => {
-        console.error(err);
-        showToast("Error al eliminar el negocio de la base de datos.");
-      });
-    } else {
-      contacts = contacts.filter(c => String(c.businessId) !== String(id));
-      businesses = businesses.filter(b => String(b.id) !== String(id));
-      localStorage.setItem('toca_businesses', JSON.stringify(businesses));
-      showToast(`🗑️ Negocio "${name}" y sus contactos eliminados.`);
-      populateBusinessSwitchers();
-      if (document.getElementById('profile-config-modal').classList.contains('open')) {
-        renderProfileModalContent();
-      }
-      renderAllTabs();
-    }
   }
 }
 
