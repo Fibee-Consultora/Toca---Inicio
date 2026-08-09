@@ -3281,6 +3281,91 @@ async function selfUnsubscribeAgent(email) {
   }
 }
 
+async function confirmAddWorkspaceInline() {
+  const input = document.getElementById('new-biz-name-input');
+  const name = input ? input.value.trim() : '';
+  if (!name) {
+    showToast("⚠️ Ingresa el nombre de la nueva marca.");
+    return;
+  }
+
+  const btn = document.getElementById('btn-confirm-add-workspace');
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.innerHTML = '⌛ Agregando...';
+  }
+
+  showToast("Creando negocio...");
+  
+  const user = currentAuthUser || (window.TocaDB?.getClient() ? (await window.TocaDB.getClient().auth.getUser())?.data?.user : null);
+  const userId = user?.id;
+
+  try {
+    let newBiz;
+    if (dbReady && userId) {
+      const newWs = await window.TocaDB.insertWorkspace({
+        name: name,
+        sector: "Otro",
+        description: "Descripción de mi nuevo negocio.",
+        tone: "Amigable",
+        promotion: "Envío a nivel nacional",
+        timezone: "America/Lima",
+        owner_id: userId
+      });
+
+      newBiz = {
+        id: newWs.id,
+        name: newWs.name || name,
+        sector: newWs.sector || 'Otro',
+        description: newWs.description || 'Descripción de mi nuevo negocio.',
+        tone: newWs.tone || 'Amigable',
+        promotion: newWs.promotion || 'Envío a nivel nacional',
+        timezone: newWs.timezone || 'America/Lima',
+        owner_id: newWs.owner_id || userId,
+        _role: 'Propietario',
+        _status: 'Activo',
+        _isPending: false
+      };
+    } else {
+      newBiz = {
+        id: 'ws_' + Date.now(),
+        name: name,
+        sector: "Otro",
+        description: "Descripción de mi nuevo negocio.",
+        tone: "Amigable",
+        promotion: "Envío a nivel nacional",
+        timezone: "America/Lima",
+        owner_id: userId || null,
+        _role: 'Propietario',
+        _status: 'Activo',
+        _isPending: false
+      };
+    }
+
+    businesses.push(newBiz);
+    if (userId) {
+      localStorage.setItem(`toca_businesses_${userId}`, JSON.stringify(businesses));
+    }
+    localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+
+    showToast(`🏢 Nuevo negocio creado: ${newBiz.name}`);
+    await switchBusinessWorkspace(newBiz.id);
+    if (document.getElementById('profile-config-modal')?.classList.contains('open')) {
+      renderProfileModalContent();
+    }
+  } catch (err) {
+    console.error("Error al crear workspace:", err);
+    showToast("❌ Error al crear el negocio en Supabase.");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = '➕ Agregar';
+    }
+  }
+}
+
 function populateBusinessSwitchers() {
   const switcherMenu = document.getElementById('workspace-switcher-menu');
   const triggerText = document.getElementById('current-workspace-name');
@@ -3319,14 +3404,6 @@ function populateBusinessSwitchers() {
       </button>
     `;
   });
-
-  menuHtml += `
-    <div style="border-top: 1px solid rgba(255,255,255,0.12); margin-top: 6px; padding: 6px 4px 2px 4px;">
-      <button onclick="createBusinessWorkspace()" style="width: 100%; text-align: center; padding: 7px 10px; background: rgba(255, 204, 6, 0.15); border: 1px dashed rgba(255, 204, 6, 0.5); color: #FFCC06; font-size: 0.76rem; font-weight: 700; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s;" onmouseover="this.style.background='rgba(255, 204, 6, 0.25)'" onmouseout="this.style.background='rgba(255, 204, 6, 0.15)'">
-        ➕ Agregar Nuevo Negocio
-      </button>
-    </div>
-  `;
 
   if (window.pendingWorkspaceInvitations && window.pendingWorkspaceInvitations.length > 0) {
     menuHtml += `

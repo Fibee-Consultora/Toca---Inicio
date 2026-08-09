@@ -1470,11 +1470,15 @@ function renderProfileModalContent() {
                   ${bizListHtml}
                 </div>
                 
-                <!-- Add New Workspace button -->
+                <!-- Add New Workspace Inline Form -->
                 ${currentSimulatedUserRole === 'Administrador' ? `
-                  <button type="button" onclick="createBusinessWorkspace()" style="width: 100%; background: var(--color-accent); border: none; color: #0a0a0a; font-size: 0.78rem; font-weight: 700; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                    ➕ Agregar Nuevo Negocio
-                  </button>
+                  <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
+                    <label for="new-biz-name-input" style="font-size: 0.68rem; font-weight: 600; color: var(--color-text-secondary);">Agregar Nueva Marca / Negocio:</label>
+                    <div style="display: flex; gap: 6px;">
+                      <input type="text" id="new-biz-name-input" name="new_biz_name" placeholder="Ej: Autos Pierkun" style="flex-grow: 1; font-size: 0.76rem; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff; color: var(--color-text-primary);" onkeydown="if (event.key === 'Enter') { event.preventDefault(); confirmAddWorkspaceInline(); }">
+                      <button type="button" id="btn-confirm-add-workspace" onclick="confirmAddWorkspaceInline()" style="background: var(--color-accent); border: none; color: #0a0a0a; font-size: 0.74rem; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: opacity 0.2s;">➕ Agregar</button>
+                    </div>
+                  </div>
                 ` : `
                   <div style="font-size: 0.68rem; color: var(--color-text-muted); text-align: center; padding: 4px;">
                     🔒 Solo el propietario puede administrar los negocios.
