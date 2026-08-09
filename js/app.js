@@ -3289,6 +3289,20 @@ async function confirmAddWorkspaceInline() {
     return;
   }
 
+  const limit = getActiveBusinessLimit();
+  const user = currentAuthUser || (window.TocaDB?.getClient() ? (await window.TocaDB.getClient().auth.getUser())?.data?.user : null);
+  const userId = user?.id;
+
+  const ownedCount = businesses.filter(x => (!x._isPending && (!x._role || x._role === 'Propietario')) && (!x.owner_id || (userId && String(x.owner_id).toLowerCase() === String(userId).toLowerCase()))).length;
+
+  if (ownedCount >= limit) {
+    showToast(`🔒 Límite alcanzado (${ownedCount}/${limit} marca(s)). Tu plan actual (${currentActivePlan}) permite hasta ${limit} negocio(s). ¡Sube de plan para agregar más!`);
+    if (document.getElementById('profile-config-modal')?.classList.contains('open')) {
+      switchProfileModalTab('plan');
+    }
+    return;
+  }
+
   const btn = document.getElementById('btn-confirm-add-workspace');
   if (btn) {
     btn.disabled = true;
@@ -3298,9 +3312,6 @@ async function confirmAddWorkspaceInline() {
 
   showToast("Creando negocio...");
   
-  const user = currentAuthUser || (window.TocaDB?.getClient() ? (await window.TocaDB.getClient().auth.getUser())?.data?.user : null);
-  const userId = user?.id;
-
   try {
     let newBiz;
     if (dbReady && userId) {

@@ -26,7 +26,7 @@ const PLAN_LIMITS = {
   'Apiario': { name: 'Plan Apiario', tag: '👑', businesses: 999, agents: 999, contacts: 99999 }
 };
 
-let currentActivePlan = localStorage.getItem('toca_current_active_plan') || 'Gratuito';
+let currentActivePlan = localStorage.getItem('toca_current_active_plan') || 'Panal';
 let currentUserProfileName = localStorage.getItem('toca_user_profile_name') || 'Sin nombre';
 let currentActiveWorkspaces = localStorage.getItem('toca_active_workspaces') ? localStorage.getItem('toca_active_workspaces').split(',') : null;
 let purchasedExtraAgents = parseInt(localStorage.getItem('toca_extra_agents')) || 0;
