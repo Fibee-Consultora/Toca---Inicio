@@ -133,20 +133,23 @@ async function syncWorkspacesFromSupabase(user) {
     }
     
     // Mapear campos de BD a campos locales
-    businesses = ws.map(w => ({
-      id: w.id, // UUID string
-      name: w.name || 'Mi Negocio',
-      owner_id: w.owner_id,
-      sector: w.sector || 'Otro',
-      description: w.description || '',
-      tone: w.tone || 'Amigable',
-      promotion: w.promotion || '',
-      timezone: w.timezone || 'America/Lima',
-      _role: w._role || 'Propietario',
-      _status: w._status || 'Activo',
-      _isPending: !!w._isPending,
-      _memberId: w._memberId || null
-    }));
+    businesses = ws.map(w => {
+      const isOwner = Boolean(!w.owner_id || (user && w.owner_id === user.id));
+      return {
+        id: w.id, // UUID string
+        name: w.name || 'Mi Negocio',
+        owner_id: w.owner_id,
+        sector: w.sector || 'Otro',
+        description: w.description || '',
+        tone: w.tone || 'Amigable',
+        promotion: w.promotion || '',
+        timezone: w.timezone || 'America/Lima',
+        _role: isOwner ? 'Propietario' : (w._role || 'Colaborador'),
+        _status: isOwner ? 'Activo' : (w._status || 'Activo'),
+        _isPending: isOwner ? false : !!w._isPending,
+        _memberId: w._memberId || null
+      };
+    });
     
     localStorage.setItem(`toca_businesses_${user.id}`, JSON.stringify(businesses));
     
@@ -3159,7 +3162,7 @@ function populateBusinessSwitchers() {
     const isLocked = isBusinessLocked(b, idx, limit);
     const isActive = String(b.id) === String(currentBusinessId);
     const isPending = b._isPending;
-    const isInvited = isPending || (b._role && b._role !== 'Propietario') || (b.owner_id && currentAuthUser && b.owner_id !== currentAuthUser.id);
+    const isInvited = Boolean(b.owner_id && currentAuthUser && b.owner_id !== currentAuthUser.id);
     
     if (isActive && triggerText) {
       triggerText.textContent = isLocked ? `${b.name} 🔒` : b.name;
