@@ -367,37 +367,68 @@
     const client = getClient();
     const { data: userRes } = await client.auth.getUser();
     const user = userRes?.user;
+    if (!user) return [];
+
+    const email = user.email ? user.email.toLowerCase() : '';
 
     const { data: ownedData, error: ownedError } = await client
       .from('workspaces')
       .select('*')
       .order('created_at');
-    if (ownedError) throw ownedError;
+    if (ownedError) console.warn("Error loading owned workspaces:", ownedError);
 
     let list = ownedData || [];
 
-    if (user) {
-      const email = user.email ? user.email.toLowerCase() : '';
-      const { data: memberData } = await client
-        .from('workspace_members')
-        .select('workspace_id, role, status')
-        .or(`user_id.eq.${user.id},invite_email.ilike.${email}`)
-        .eq('status', 'Activo');
+    // Query workspace_members for user (active or pending)
+    const { data: memberData } = await client
+      .from('workspace_members')
+      .select('id, workspace_id, role, status')
+      .or(`user_id.eq.${user.id},invite_email.ilike.${email}`);
 
-      if (memberData && memberData.length > 0) {
-        for (const m of memberData) {
-          if (m.workspace_id && !list.some(w => String(w.id) === String(m.workspace_id))) {
-            const { data: wsDirect } = await client
-              .from('workspaces')
-              .select('*')
-              .eq('id', m.workspace_id)
-              .maybeSingle();
+    // Query workspace_team for user (active or pending)
+    const { data: teamData } = await client
+      .from('workspace_team')
+      .select('id, workspace_id, role, status')
+      .or(`user_id.eq.${user.id},email.ilike.${email}`);
 
-            if (wsDirect) {
-              wsDirect._role = m.role;
-              list.push(wsDirect);
-            }
-          }
+    const candidateMap = new Map();
+    if (memberData) {
+      memberData.forEach(m => {
+        if (m.workspace_id) {
+          candidateMap.set(String(m.workspace_id), {
+            memberId: m.id,
+            role: m.role || 'Colaborador',
+            status: m.status || 'Pendiente'
+          });
+        }
+      });
+    }
+    if (teamData) {
+      teamData.forEach(t => {
+        if (t.workspace_id && !candidateMap.has(String(t.workspace_id))) {
+          candidateMap.set(String(t.workspace_id), {
+            memberId: null,
+            role: t.role || 'Colaborador',
+            status: t.status || 'Pendiente'
+          });
+        }
+      });
+    }
+
+    for (const [wsId, info] of candidateMap.entries()) {
+      if (!list.some(w => String(w.id) === wsId)) {
+        const { data: wsDirect } = await client
+          .from('workspaces')
+          .select('*')
+          .eq('id', wsId)
+          .maybeSingle();
+
+        if (wsDirect) {
+          wsDirect._role = info.role;
+          wsDirect._status = info.status;
+          wsDirect._isPending = (info.status === 'Pendiente');
+          wsDirect._memberId = info.memberId;
+          list.push(wsDirect);
         }
       }
     }

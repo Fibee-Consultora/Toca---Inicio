@@ -138,7 +138,11 @@ async function syncWorkspacesFromSupabase(user) {
       description: w.description || '',
       tone: w.tone || 'Amigable',
       promotion: w.promotion || '',
-      timezone: w.timezone || 'America/Lima'
+      timezone: w.timezone || 'America/Lima',
+      _role: w._role || 'Propietario',
+      _status: w._status || 'Activo',
+      _isPending: !!w._isPending,
+      _memberId: w._memberId || null
     }));
     
     localStorage.setItem(`toca_businesses_${user.id}`, JSON.stringify(businesses));
@@ -3144,19 +3148,28 @@ function populateBusinessSwitchers() {
   let menuHtml = '';
   businesses.forEach((b, idx) => {
     const isLocked = isBusinessLocked(b, idx, limit);
-    const isActive = b.id === currentBusinessId;
+    const isActive = String(b.id) === String(currentBusinessId);
+    const isPending = b._isPending;
+    const isInvited = b.owner_id && currentAuthUser && b.owner_id !== currentAuthUser.id;
     
     if (isActive && triggerText) {
       triggerText.textContent = isLocked ? `${b.name} 🔒` : b.name;
     }
     
+    let labelText = `🏢 ${b.name}`;
+    if (isInvited) {
+      labelText = isPending ? `📬 ${b.name} (Click para Aceptar e Ingresar)` : `🤝 ${b.name} (Invitado - ${b._role || 'Colaborador'})`;
+    } else if (isLocked) {
+      labelText = `🏢 ${b.name} 🔒 (Subir Plan)`;
+    }
+    
     menuHtml += `
-      <button onclick="${isLocked ? '' : `selectWorkspace('${b.id}')`}" 
-              ${isLocked ? 'disabled' : ''} 
-              style="width: 100%; text-align: left; padding: 8px 12px; background: transparent; border: none; color: ${isActive ? 'var(--color-accent)' : '#ffffff'}; font-size: 0.8rem; font-family: var(--font-body); font-weight: ${isActive ? '700' : '500'}; cursor: ${isLocked ? 'not-allowed' : 'pointer'}; opacity: ${isLocked ? '0.4' : '1'}; display: flex; align-items: center; justify-content: space-between; transition: background 0.15s; outline: none;"
+      <button onclick="${(isLocked && !isInvited) ? '' : `selectWorkspace('${b.id}')`}" 
+              ${(isLocked && !isInvited) ? 'disabled' : ''} 
+              style="width: 100%; text-align: left; padding: 8px 12px; background: ${isPending ? 'rgba(245, 158, 11, 0.12)' : 'transparent'}; border: none; color: ${isActive ? 'var(--color-accent)' : '#ffffff'}; font-size: 0.8rem; font-family: var(--font-body); font-weight: ${isActive ? '700' : '500'}; cursor: ${(isLocked && !isInvited) ? 'not-allowed' : 'pointer'}; opacity: ${(isLocked && !isInvited) ? '0.4' : '1'}; display: flex; align-items: center; justify-content: space-between; transition: background 0.15s; outline: none;"
               onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
-              onmouseout="this.style.background='transparent'">
-        <span>🏢 ${b.name} ${isLocked ? ' 🔒 (Subir Plan)' : ''}</span>
+              onmouseout="this.style.background='${isPending ? 'rgba(245, 158, 11, 0.12)' : 'transparent'}'">
+        <span>${labelText}</span>
         ${isActive ? '<span style="color: var(--color-accent); font-size: 0.75rem;">✓</span>' : ''}
       </button>
     `;
@@ -3195,9 +3208,10 @@ function populateBusinessSwitchers() {
   let optionsHtml = '';
   businesses.forEach((b, idx) => {
     const isLocked = isBusinessLocked(b, idx, limit);
-    const label = isLocked ? `${b.name} 🔒 (Subir Plan)` : b.name;
-    const disabledAttr = isLocked ? 'disabled' : '';
-    const selectedAttr = b.id === currentBusinessId ? 'selected' : '';
+    const isInvited = b.owner_id && currentAuthUser && b.owner_id !== currentAuthUser.id;
+    const label = (isLocked && !isInvited) ? `${b.name} 🔒 (Subir Plan)` : (isInvited ? `🤝 ${b.name} (Invitado)` : b.name);
+    const disabledAttr = (isLocked && !isInvited) ? 'disabled' : '';
+    const selectedAttr = String(b.id) === String(currentBusinessId) ? 'selected' : '';
     optionsHtml += `<option value="${b.id}" ${disabledAttr} ${selectedAttr}>${label}</option>`;
   });
   
@@ -3236,7 +3250,21 @@ document.addEventListener('click', () => {
   if (chevron) chevron.style.transform = 'rotate(0deg)';
 });
 
-function switchBusinessWorkspace(id) {
+async function switchBusinessWorkspace(id) {
+  const targetBiz = businesses.find(b => String(b.id) === String(id));
+  if (targetBiz && targetBiz._isPending && targetBiz._memberId && currentAuthUser) {
+    showToast(`Aceptando invitación a ${targetBiz.name}...`);
+    try {
+      await window.TocaDB.acceptInvitation(targetBiz._memberId, currentAuthUser.id);
+      targetBiz._isPending = false;
+      targetBiz._status = 'Activo';
+      window.pendingWorkspaceInvitations = (window.pendingWorkspaceInvitations || []).filter(i => i.id !== targetBiz._memberId);
+      showToast(`¡Has aceptado la invitación a ${targetBiz.name}!`);
+    } catch (err) {
+      console.error("Error auto-accepting on switch:", err);
+    }
+  }
+
   currentBusinessId = id;
   localStorage.setItem('toca_current_business_id', id);
   if (currentAuthUser) {
@@ -3248,7 +3276,7 @@ function switchBusinessWorkspace(id) {
   if (triggerText) {
     const limit = getActiveBusinessLimit();
     const idx = businesses.findIndex(b => String(b.id) === String(id));
-    const isLocked = idx >= limit;
+    const isLocked = isBusinessLocked(businessProfile, idx, limit);
     triggerText.textContent = isLocked ? `${businessProfile.name} 🔒` : businessProfile.name;
   }
   
@@ -3256,6 +3284,10 @@ function switchBusinessWorkspace(id) {
   if (modalSelect) modalSelect.value = id;
   
   showToast(`🏢 Espacio de trabajo cambiado a: ${businessProfile.name}`);
+  
+  populateBusinessSwitchers();
+  renderAllTabs();
+  updateProfileUI();
   
   const modal = document.getElementById('profile-config-modal');
   if (dbReady) {
