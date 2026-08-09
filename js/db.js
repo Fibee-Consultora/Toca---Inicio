@@ -727,17 +727,36 @@
     if (error) throw error;
   }
 
-  async function updateSessionToken(userId, token) {
-    const { error } = await getClient()
-      .from('profiles')
-      .update({ last_session_id: token, updated_at: new Date().toISOString() })
-      .eq('id', userId);
-    if (error) throw error;
+  async function hardDeleteUser(userId, email) {
+    const client = getClient();
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    try {
+      if (cleanEmail) {
+        await client.from('workspace_members').delete().ilike('invite_email', cleanEmail);
+        await client.from('workspace_team').delete().ilike('email', cleanEmail);
+      }
+      if (userId) {
+        await client.from('workspace_members').delete().eq('user_id', userId);
+        await client.from('workspace_team').delete().eq('user_id', userId);
+
+        const { data: ownedWs } = await client.from('workspaces').select('id').eq('owner_id', userId);
+        if (ownedWs && ownedWs.length > 0) {
+          const wsIds = ownedWs.map(w => w.id);
+          await client.from('contacts').delete().in('workspace_id', wsIds);
+        }
+        await client.from('workspaces').delete().eq('owner_id', userId);
+        await client.from('profiles').delete().eq('id', userId);
+      }
+    } catch (err) {
+      console.warn("hardDeleteUser warning:", err);
+    }
   }
 
   window.TocaDB = {
     isConfigured,
     init,
+    hardDeleteUser,
     getClient,
     safeFetch,
     signInWithGoogle,

@@ -154,13 +154,18 @@ async function syncWorkspacesFromSupabase(user) {
     localStorage.setItem(`toca_businesses_${user.id}`, JSON.stringify(businesses));
     
     const savedId = localStorage.getItem(`toca_current_business_id_${user.id}`);
-    if (!businesses.some(b => b.id === savedId)) {
-      currentBusinessId = businesses[0].id;
-      localStorage.setItem(`toca_current_business_id_${user.id}`, String(currentBusinessId));
+    const ownedBiz = businesses.find(b => !b.owner_id || (user && String(b.owner_id).toLowerCase() === String(user.id).toLowerCase()));
+    const defaultBizId = ownedBiz ? ownedBiz.id : (businesses[0] ? businesses[0].id : null);
+    
+    if (!savedId || !businesses.some(b => String(b.id) === String(savedId))) {
+      currentBusinessId = defaultBizId;
+      if (currentBusinessId) {
+        localStorage.setItem(`toca_current_business_id_${user.id}`, String(currentBusinessId));
+      }
     } else {
       currentBusinessId = savedId;
     }
-    businessProfile = businesses.find(b => b.id === currentBusinessId) || businesses[0];
+    businessProfile = businesses.find(b => String(b.id) === String(currentBusinessId)) || ownedBiz || businesses[0];
     localStorage.setItem('toca_business_profile', JSON.stringify(businessProfile));
     
     // Sincronizar ID de negocio activo para la extensión de Chrome
@@ -3631,12 +3636,11 @@ function adminCancelService(clientId) {
   client.status = "Cancelado";
 
   if (window.TocaDB?.isConfigured()) {
-    window.TocaDB.getClient()
-      .from('profiles')
-      .update({ plan: 'Gratuito|agents:0|packs:0' })
-      .eq('id', clientId)
+    showToast("Eliminando cuenta y datos de Supabase...");
+    window.TocaDB.hardDeleteUser(clientId, client.email)
       .then(() => {
-        showToast(`🗑️ Servicio dado de baja en base de datos.`);
+        clearTocaLocalStorageCache();
+        showToast(`🗑️ Servicio y datos eliminados completamente de Supabase.`);
         return window.TocaDB.loadAllProfiles();
       })
       .then(profiles => {
@@ -3645,9 +3649,10 @@ function adminCancelService(clientId) {
       })
       .catch(err => {
         console.error(err);
-        showToast("Error cancelando el servicio en Supabase.");
+        showToast("Error eliminando servicio en Supabase.");
       });
   } else {
+    clearTocaLocalStorageCache();
     localStorage.setItem('toca_simulated_admin_clients', JSON.stringify(adminClients));
     showToast(`🗑️ Servicio cancelado para ${client.businessName}.`);
     renderAllTabs();
