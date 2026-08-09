@@ -48,8 +48,9 @@
   <!-- Google Fonts: Outfit & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" href="assets/solo%20isotipo%20fondo%20blanco.png" type="image/png">
+  <!-- SheetJS para Importar/Exportar Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/prototype.css">
@@ -210,6 +211,10 @@
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
                     Nuevo
                   </button>
+                  <button onclick="triggerImportExcel()" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.9); border: 1px solid #d1d5db; border-radius: 999px; padding: 7px 14px; font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600; color: #374151; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='rgba(255,255,255,0.9)'">
+                    📥 Importar Excel
+                  </button>
+                  <input type="file" id="excel-import-file-input" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelImportFile(event)">
                   <div class="mobile-header-profile-btn" onclick="openProfileConfigModal()">J</div>
                 </div>
               </div>

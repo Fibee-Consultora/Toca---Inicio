@@ -220,8 +220,8 @@ if (!adminClients[0] || adminClients[0].agentsList === undefined || adminClients
 let selectedAdminClientId = null;
 let impersonatedClientId = JSON.parse(localStorage.getItem('toca_impersonated_client_id')) || null;
 
-// Time constant mockup (simulation represents July 7, 2026)
-const TODAY_STR = "2026-07-07";
+// Time constant mockup (dynamically uses current system date)
+const TODAY_STR = new Date().toISOString().split('T')[0];
 const TODAY = new Date(TODAY_STR + "T00:00:00");
 
 let currentAccountStatus = localStorage.getItem('toca_current_account_status') || 'Activo';

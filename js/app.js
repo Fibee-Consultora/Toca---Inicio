@@ -3487,17 +3487,146 @@ function deleteBusinessWorkspace(id) {
     return;
   }
 
-  const bizToDelete = businesses.find(b => String(b.id) === String(id));
-  const name = bizToDelete ? bizToDelete.name : `ID ${id}`;
+function triggerImportExcel() {
+  const input = document.getElementById('excel-import-file-input');
+  if (input) input.click();
+}
 
-  if (confirm(`¿Estás seguro de que deseas eliminar permanentemente el negocio "${name}" y TODOS sus contactos asociados?`)) {
-    if (dbReady) {
-      showToast("Eliminando negocio...");
-      window.TocaDB.deleteWorkspace(id).then(() => {
-        contacts = contacts.filter(c => String(c.businessId) !== String(id));
-        businesses = businesses.filter(b => String(b.id) !== String(id));
-        localStorage.setItem(`toca_businesses_${currentAuthUser.id}`, JSON.stringify(businesses));
-        localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+async function handleExcelImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (typeof XLSX === 'undefined') {
+    showToast("⚠️ La librería de Excel aún se está cargando. Intenta de nuevo en 2 segundos.");
+    return;
+  }
+
+  showToast("Leyendo archivo Excel...");
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+      if (!jsonRows || jsonRows.length === 0) {
+        showToast("⚠️ El archivo Excel no contiene filas de datos.");
+        return;
+      }
+
+      let importedCount = 0;
+      const todayISO = new Date().toISOString().split('T')[0];
+
+      for (const row of jsonRows) {
+        const phoneKey = Object.keys(row).find(k => /tel[eé]fono|celular|whatsapp|n[uú]mero|phone|mobile/i.test(k)) || Object.keys(row)[0];
+        const rawPhone = String(row[phoneKey] || '').trim();
+        if (!rawPhone) continue;
+
+        const nameKey = Object.keys(row).find(k => /nombre|cliente|contacto|name/i.test(k));
+        const rawName = nameKey ? String(row[nameKey]).trim() : `Lead ${rawPhone}`;
+
+        const companyKey = Object.keys(row).find(k => /empresa|rubro|detalle|tipo|compa[ñn][ií]a/i.test(k));
+        const rawCompany = companyKey ? String(row[companyKey]).trim() : 'Comprador individual';
+
+        const notesKey = Object.keys(row).find(k => /nota|contexto|comentario|observaci[oó]n|description/i.test(k));
+        const rawNotes = notesKey ? String(row[notesKey]).trim() : 'Importado desde Excel.';
+
+        const contactData = {
+          name: rawName || `Lead ${rawPhone}`,
+          company: rawCompany || 'Comprador individual',
+          type: 'Prospecto',
+          status: 'Esperando respuesta',
+          whatsapp: rawPhone,
+          suggestedDate: todayISO,
+          lastContacted: 'Hoy',
+          cycleDays: 7,
+          leadSource: 'Importado Excel',
+          context: rawNotes,
+          createdAt: todayISO,
+          lastActivityDate: todayISO,
+          businessId: currentBusinessId
+        };
+
+        if (dbReady) {
+          const inserted = await window.TocaDB.insertContact({
+            workspace_id: currentBusinessId,
+            name: contactData.name,
+            company: contactData.company,
+            phone: contactData.whatsapp,
+            status: 'PROSPECTO',
+            priority: 'Media',
+            notes: contactData.context,
+            last_touch: new Date().toISOString(),
+            touch_history: [{
+              date: new Date().toISOString(),
+              text: 'Contacto importado masivamente desde Excel.',
+              author: currentUserProfileName
+            }]
+          });
+          contactData.id = inserted.id;
+        } else {
+          contactData.id = Date.now() + Math.floor(Math.random() * 1000);
+        }
+
+        contacts.push(contactData);
+        importedCount++;
+      }
+
+      showToast(`✅ Se importaron ${importedCount} prospectos correctamente.`);
+      event.target.value = '';
+      renderAllTabs();
+    } catch (err) {
+      console.error("Error al procesar Excel:", err);
+      showToast("❌ Error al leer el archivo Excel. Verifica el formato.");
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function exportAllWorkspacesToExcel() {
+  if (typeof XLSX === 'undefined') {
+    showToast("⚠️ La librería de Excel se está cargando. Intenta de nuevo.");
+    return;
+  }
+
+  showToast("Generando exportación de todos los negocios a Excel...");
+
+  try {
+    const workbook = XLSX.utils.book_new();
+
+    for (const b of businesses) {
+      let bContacts = [];
+      if (dbReady) {
+        bContacts = await window.TocaDB.loadContacts(b.id);
+      } else {
+        bContacts = contacts.filter(c => String(c.businessId) === String(b.id));
+      }
+
+      const rows = bContacts.map(c => ({
+        "Nombre": c.name || '',
+        "Empresa / Rubro": c.company || '',
+        "WhatsApp / Teléfono": c.whatsapp || c.phone || '',
+        "Etapa": c.status || c.type || 'PROSPECTO',
+        "Prioridad": c.priority || 'Media',
+        "Notas / Contexto": c.notes || c.context || '',
+        "Último Toque": c.last_touch || c.lastActivityDate || ''
+      }));
+
+      const sheetName = (b.name || 'Negocio').replace(/[\\/?*:[\]]/g, '').substring(0, 30);
+      const worksheet = XLSX.utils.json_to_sheet(rows.length > 0 ? rows : [{ "Mensaje": "Sin contactos registrados en este negocio" }]);
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName || 'Negocio');
+    }
+
+    XLSX.writeFile(workbook, `Toca_Export_Negocios_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast("✅ Exportación a Excel completada exitosamente.");
+  } catch (err) {
+    console.error("Error exportando a Excel:", err);
+    showToast("❌ Error al exportar a Excel.");
+  }
+}
         showToast(`🗑️ Negocio "${name}" y sus contactos eliminados.`);
         populateBusinessSwitchers();
         if (document.getElementById('profile-config-modal').classList.contains('open')) {
