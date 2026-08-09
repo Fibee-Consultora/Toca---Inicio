@@ -1088,14 +1088,25 @@ function openContactDetailPanel(id) {
   if (c.archived) {
     headerActionButton = `
       <div style="display:flex; gap:8px;">
+        <button class="btn-secondary" style="font-size:0.8rem; padding:8px 12px; border-color:var(--border-color); color:#4b5563; background:#ffffff;" onclick="openMergeModal(${c.id})">🔗 Unificar</button>
         <button class="btn-primary" style="font-size:0.8rem; padding:8px 14px; background:#10b981; color:#ffffff; border-radius:8px; font-weight:600; display:flex; align-items:center; gap:6px; box-shadow:none; border:none;" onclick="restoreContact(${c.id})">🔄 Restaurar</button>
         <button class="btn-secondary" style="font-size:0.8rem; padding:8px 14px; border-color:rgba(239,68,68,0.25); color:var(--color-urgent); background:#ffffff;" onclick="deleteContact(${c.id})">🗑️ Eliminar</button>
       </div>
     `;
   } else if (c.type === 'Prospecto') {
-    headerActionButton = `<button class="btn-secondary" style="font-size:0.8rem; padding:8px 14px; border-color:var(--border-color); color:var(--color-text-secondary); background:#ffffff;" onclick="showArchiveReasonModal(${c.id})">🗑️ Archivar</button>`;
+    headerActionButton = `
+      <div style="display:flex; gap:8px;">
+        <button class="btn-secondary" style="font-size:0.8rem; padding:8px 12px; border-color:var(--border-color); color:#4b5563; background:#ffffff;" onclick="openMergeModal(${c.id})">🔗 Unificar</button>
+        <button class="btn-secondary" style="font-size:0.8rem; padding:8px 14px; border-color:var(--border-color); color:var(--color-text-secondary); background:#ffffff;" onclick="showArchiveReasonModal(${c.id})">🗑️ Archivar</button>
+      </div>
+    `;
   } else {
-    headerActionButton = `<button class="btn-secondary" style="font-size:0.8rem; padding:8px 14px; border-color:var(--border-color); color:var(--color-text-secondary); background:#ffffff;" onclick="showArchiveReasonModal(${c.id})">🗑️ Archivar</button>`;
+    headerActionButton = `
+      <div style="display:flex; gap:8px;">
+        <button class="btn-secondary" style="font-size:0.8rem; padding:8px 12px; border-color:var(--border-color); color:#4b5563; background:#ffffff;" onclick="openMergeModal(${c.id})">🔗 Unificar</button>
+        <button class="btn-secondary" style="font-size:0.8rem; padding:8px 14px; border-color:var(--border-color); color:var(--color-text-secondary); background:#ffffff;" onclick="showArchiveReasonModal(${c.id})">🗑️ Archivar</button>
+      </div>
+    `;
   }
 
   // Left Column: Relationship History timeline
@@ -3487,6 +3498,8 @@ function deleteBusinessWorkspace(id) {
     return;
   }
 
+let pendingExcelRows = [];
+
 function triggerImportExcel() {
   const input = document.getElementById('excel-import-file-input');
   if (input) input.click();
@@ -3517,73 +3530,240 @@ async function handleExcelImportFile(event) {
         return;
       }
 
-      let importedCount = 0;
-      const todayISO = new Date().toISOString().split('T')[0];
-
-      for (const row of jsonRows) {
-        const phoneKey = Object.keys(row).find(k => /tel[eé]fono|celular|whatsapp|n[uú]mero|phone|mobile/i.test(k)) || Object.keys(row)[0];
-        const rawPhone = String(row[phoneKey] || '').trim();
-        if (!rawPhone) continue;
-
-        const nameKey = Object.keys(row).find(k => /nombre|cliente|contacto|name/i.test(k));
-        const rawName = nameKey ? String(row[nameKey]).trim() : `Lead ${rawPhone}`;
-
-        const companyKey = Object.keys(row).find(k => /empresa|rubro|detalle|tipo|compa[ñn][ií]a/i.test(k));
-        const rawCompany = companyKey ? String(row[companyKey]).trim() : 'Comprador individual';
-
-        const notesKey = Object.keys(row).find(k => /nota|contexto|comentario|observaci[oó]n|description/i.test(k));
-        const rawNotes = notesKey ? String(row[notesKey]).trim() : 'Importado desde Excel.';
-
-        const contactData = {
-          name: rawName || `Lead ${rawPhone}`,
-          company: rawCompany || 'Comprador individual',
-          type: 'Prospecto',
-          status: 'Esperando respuesta',
-          whatsapp: rawPhone,
-          suggestedDate: todayISO,
-          lastContacted: 'Hoy',
-          cycleDays: 7,
-          leadSource: 'Importado Excel',
-          context: rawNotes,
-          createdAt: todayISO,
-          lastActivityDate: todayISO,
-          businessId: currentBusinessId
-        };
-
-        if (dbReady) {
-          const inserted = await window.TocaDB.insertContact({
-            workspace_id: currentBusinessId,
-            name: contactData.name,
-            company: contactData.company,
-            phone: contactData.whatsapp,
-            status: 'PROSPECTO',
-            priority: 'Media',
-            notes: contactData.context,
-            last_touch: new Date().toISOString(),
-            touch_history: [{
-              date: new Date().toISOString(),
-              text: 'Contacto importado masivamente desde Excel.',
-              author: currentUserProfileName
-            }]
-          });
-          contactData.id = inserted.id;
-        } else {
-          contactData.id = Date.now() + Math.floor(Math.random() * 1000);
-        }
-
-        contacts.push(contactData);
-        importedCount++;
+      pendingExcelRows = jsonRows;
+      const countElem = document.getElementById('excel-import-count-info');
+      if (countElem) {
+        countElem.innerText = `Se encontraron ${jsonRows.length} contacto(s) en el archivo "${file.name}".`;
       }
 
-      showToast(`✅ Se importaron ${importedCount} prospectos correctamente.`);
+      const modal = document.getElementById('excel-import-modal');
+      if (modal) modal.classList.add('open');
+
       event.target.value = '';
-      renderAllTabs();
     } catch (err) {
       console.error("Error al procesar Excel:", err);
       showToast("❌ Error al leer el archivo Excel. Verifica el formato.");
     }
   };
   reader.readAsArrayBuffer(file);
+}
+
+function closeExcelImportModal() {
+  const modal = document.getElementById('excel-import-modal');
+  if (modal) modal.classList.remove('open');
+  pendingExcelRows = [];
+}
+
+async function confirmExcelImport(defaultStatus) {
+  if (!pendingExcelRows || pendingExcelRows.length === 0) {
+    closeExcelImportModal();
+    return;
+  }
+
+  showToast(`Importando ${pendingExcelRows.length} contactos...`);
+  let importedCount = 0;
+  const todayISO = new Date().toISOString().split('T')[0];
+
+  for (const row of pendingExcelRows) {
+    const phoneKey = Object.keys(row).find(k => /tel[eé]fono|celular|whatsapp|n[uú]mero|phone|mobile/i.test(k)) || Object.keys(row)[0];
+    const rawPhone = String(row[phoneKey] || '').trim();
+    if (!rawPhone) continue;
+
+    const nameKey = Object.keys(row).find(k => /nombre|cliente|contacto|name/i.test(k));
+    const rawName = nameKey ? String(row[nameKey]).trim() : `Lead ${rawPhone}`;
+
+    const companyKey = Object.keys(row).find(k => /empresa|rubro|detalle|tipo|compa[ñn][ií]a/i.test(k));
+    const rawCompany = companyKey ? String(row[companyKey]).trim() : 'Comprador individual';
+
+    const notesKey = Object.keys(row).find(k => /nota|contexto|comentario|observaci[oó]n|description/i.test(k));
+    const rawNotes = notesKey ? String(row[notesKey]).trim() : 'Importado desde Excel.';
+
+    const stageKey = Object.keys(row).find(k => /etapa|tipo|estado|categor[ií]a|stage/i.test(k));
+    let rowStatus = defaultStatus;
+    if (stageKey && row[stageKey]) {
+      const val = String(row[stageKey]).toLowerCase();
+      if (val.includes('cliente') || val.includes('cerrado') || val.includes('al dia') || val.includes('al_dia') || val.includes('comprador')) {
+        rowStatus = 'AL_DIA';
+      } else if (val.includes('prospecto') || val.includes('lead') || val.includes('interesado')) {
+        rowStatus = 'PROSPECTO';
+      }
+    }
+
+    const contactType = rowStatus === 'AL_DIA' ? 'Cliente' : 'Prospecto';
+
+    const contactData = {
+      name: rawName || `Lead ${rawPhone}`,
+      company: rawCompany || 'Comprador individual',
+      type: contactType,
+      status: contactType === 'Cliente' ? 'Completado' : 'Esperando respuesta',
+      whatsapp: rawPhone,
+      suggestedDate: todayISO,
+      lastContacted: 'Hoy',
+      cycleDays: 7,
+      leadSource: 'Importado Excel',
+      context: rawNotes,
+      createdAt: todayISO,
+      lastActivityDate: todayISO,
+      businessId: currentBusinessId
+    };
+
+    if (dbReady) {
+      const inserted = await window.TocaDB.insertContact({
+        workspace_id: currentBusinessId,
+        name: contactData.name,
+        company: contactData.company,
+        phone: contactData.whatsapp,
+        status: rowStatus,
+        priority: 'Media',
+        notes: contactData.context,
+        last_touch: new Date().toISOString(),
+        touch_history: [{
+          date: new Date().toISOString(),
+          text: `Contacto importado masivamente como ${contactType}.`,
+          author: currentUserProfileName
+        }]
+      });
+      contactData.id = inserted.id;
+    } else {
+      contactData.id = Date.now() + Math.floor(Math.random() * 1000);
+    }
+
+    contacts.push(contactData);
+    importedCount++;
+  }
+
+  showToast(`✅ Se importaron ${importedCount} contactos como ${defaultStatus === 'AL_DIA' ? 'Clientes' : 'Prospectos'}.`);
+  closeExcelImportModal();
+  renderAllTabs();
+}
+
+// ==========================================================================
+// UNIFICACIÓN Y FUSIÓN DE DUPLICADOS
+// ==========================================================================
+let mergePrimaryId = null;
+
+function openMergeModal(contactId) {
+  const targetContact = contacts.find(c => String(c.id) === String(contactId));
+  if (!targetContact) return;
+
+  mergePrimaryId = contactId;
+  const modal = document.getElementById('merge-duplicates-modal');
+  const body = document.getElementById('merge-modal-body');
+
+  const cleanPhone = (targetContact.whatsapp || targetContact.phone || '').replace(/\D/g, '');
+  const cleanName = (targetContact.name || '').trim().toLowerCase();
+
+  const matches = contacts.filter(c => {
+    if (String(c.id) === String(contactId)) return false;
+    if (String(c.businessId || 1) !== String(currentBusinessId)) return false;
+
+    const cPhone = (c.whatsapp || c.phone || '').replace(/\D/g, '');
+    const cName = (c.name || '').trim().toLowerCase();
+
+    const phoneMatch = cleanPhone && cPhone && (cleanPhone === cPhone || cleanPhone.endsWith(cPhone) || cPhone.endsWith(cleanPhone));
+    const nameMatch = cleanName && cName && (cleanName === cName || cleanName.includes(cName) || cName.includes(cleanName));
+
+    return phoneMatch || nameMatch;
+  });
+
+  let html = `
+    <div style="background: #f9fafb; border: 1px solid var(--border-color); padding: 12px; border-radius: 10px; margin-bottom: 16px;">
+      <span style="font-size: 0.7rem; font-weight: 700; color: var(--color-text-secondary); text-transform: uppercase;">Contacto Principal (Se conservará)</span>
+      <div style="font-weight: 700; font-size: 0.95rem; color: var(--color-text-primary); margin-top: 2px;">${targetContact.name}</div>
+      <div style="font-size: 0.8rem; color: var(--color-text-muted);">${targetContact.company || 'Sin empresa'} • ${targetContact.whatsapp || 'Sin teléfono'}</div>
+    </div>
+  `;
+
+  if (matches.length === 0) {
+    html += `
+      <div style="text-align: center; padding: 20px; color: var(--color-text-muted); font-size: 0.85rem;">
+        🔍 No se encontraron posibles duplicados automáticos (por teléfono o nombre similar).
+      </div>
+      <div style="margin-top: 12px;">
+        <label style="font-size: 0.78rem; font-weight: 600; color: var(--color-text-primary);">Seleccionar manualmente otro contacto para unificar:</label>
+        <select id="manual-merge-select" class="form-input form-select" style="margin-top: 6px; padding: 8px;">
+          <option value="">-- Selecciona un contacto --</option>
+          ${contacts.filter(c => String(c.id) !== String(contactId) && String(c.businessId || 1) === String(currentBusinessId)).map(c => `<option value="${c.id}">${c.name} (${c.company || 'Sin empresa'} - ${c.whatsapp || ''})</option>`).join('')}
+        </select>
+        <button onclick="executeMergeContacts(mergePrimaryId, document.getElementById('manual-merge-select').value)" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 12px; background: #10b981; color: #fff;">
+          🔗 Fusionar Contacto Seleccionado
+        </button>
+      </div>
+    `;
+  } else {
+    html += `
+      <div style="font-size: 0.8rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: 8px;">
+        Coincidencias encontradas (${matches.length}):
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto;">
+        ${matches.map(m => `
+          <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; border: 1px solid var(--border-color); padding: 10px 12px; border-radius: 8px;">
+            <div>
+              <div style="font-weight: 600; font-size: 0.85rem; color: var(--color-text-primary);">${m.name}</div>
+              <div style="font-size: 0.75rem; color: var(--color-text-muted);">${m.company || 'Sin empresa'} • ${m.whatsapp || 'Sin teléfono'}</div>
+            </div>
+            <button onclick="executeMergeContacts(mergePrimaryId, '${m.id}')" class="btn-primary" style="background: #10b981; color: #fff; font-size: 0.75rem; padding: 6px 10px;">
+              Unificar con este
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  body.innerHTML = html;
+  if (modal) modal.classList.add('open');
+}
+
+function closeMergeModal() {
+  const modal = document.getElementById('merge-duplicates-modal');
+  if (modal) modal.classList.remove('open');
+  mergePrimaryId = null;
+}
+
+async function executeMergeContacts(primaryId, secondaryId) {
+  if (!primaryId || !secondaryId) {
+    showToast("⚠️ Selecciona un contacto secundario para unificar.");
+    return;
+  }
+
+  const primary = contacts.find(c => String(c.id) === String(primaryId));
+  const secondary = contacts.find(c => String(c.id) === String(secondaryId));
+
+  if (!primary || !secondary) {
+    showToast("⚠️ Ocurrió un error al buscar los contactos a fusionar.");
+    return;
+  }
+
+  showToast("Unificando contactos e historial...");
+
+  const mergedContext = [primary.context || primary.notes || '', secondary.context || secondary.notes || '']
+    .filter(Boolean)
+    .join('\n\n--- [Unificado de ' + secondary.name + '] ---\n');
+
+  primary.context = mergedContext;
+  primary.notes = mergedContext;
+
+  if (dbReady) {
+    try {
+      await window.TocaDB.updateContact(primaryId, {
+        notes: mergedContext,
+        company: primary.company || secondary.company || '',
+        phone: primary.whatsapp || secondary.whatsapp || ''
+      });
+
+      await window.TocaDB.deleteContact(secondaryId);
+    } catch (err) {
+      console.warn("Merge DB warning:", err);
+    }
+  }
+
+  contacts = contacts.filter(c => String(c.id) !== String(secondaryId));
+
+  showToast(`✅ Contactos unificados correctamente en "${primary.name}".`);
+  closeMergeModal();
+  closeContactDetailPanel();
+  renderAllTabs();
 }
 
 async function exportAllWorkspacesToExcel() {

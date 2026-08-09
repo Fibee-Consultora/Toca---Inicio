@@ -641,6 +641,44 @@
         </div>
       </div>
     </div>
+  <!-- Modal 1: Categorización de Importación de Excel -->
+  <div id="excel-import-modal" class="modal">
+    <div class="modal-content" style="max-width: 440px; text-align: center; border-radius: 16px;">
+      <h3 style="margin-bottom: 8px; font-family: var(--font-title); font-size: 1.1rem; color: var(--color-text-primary);">📥 Importar Leads desde Excel</h3>
+      <p id="excel-import-count-info" style="font-size: 0.85rem; color: var(--color-text-secondary); margin-bottom: 20px;">Se encontraron 0 contactos en el archivo.</p>
+      
+      <p style="font-size: 0.8rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: 12px;">¿Cómo deseas categorizar estos contactos por defecto?</p>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button onclick="confirmExcelImport('PROSPECTO')" class="btn-primary" style="background: var(--color-urgent); color: #ffffff; width: 100%; justify-content: center; padding: 10px; font-size: 0.82rem;">
+          🔴 Registrar como Prospectos (Para seguimiento)
+        </button>
+        <button onclick="confirmExcelImport('AL_DIA')" class="btn-primary" style="background: var(--color-ontrack); color: #ffffff; width: 100%; justify-content: center; padding: 10px; font-size: 0.82rem;">
+          🟢 Registrar como Clientes (Ya compraron / Al día)
+        </button>
+      </div>
+
+      <button onclick="closeExcelImportModal()" style="margin-top: 15px; background: transparent; border: none; font-size: 0.78rem; color: var(--color-text-muted); cursor: pointer; text-decoration: underline;">
+        Cancelar importación
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal 2: Fusión y Unificación de Duplicados -->
+  <div id="merge-duplicates-modal" class="modal">
+    <div class="modal-content" style="max-width: 520px; border-radius: 16px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <h3 style="font-family: var(--font-title); font-size: 1.1rem; color: var(--color-text-primary); margin: 0;">🔗 Unificar / Fusionar Contactos</h3>
+        <button class="modal-close" onclick="closeMergeModal()">&times;</button>
+      </div>
+      <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin-bottom: 16px;">
+        Combina las notas, contextos e historial de dos contactos en uno solo para eliminar registros duplicados.
+      </p>
+
+      <div id="merge-modal-body">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
   </div>
 
   <!-- ==========================================================================
