@@ -88,20 +88,100 @@ function isBusinessLocked(b, idx, limit) {
     return false;
   }
   
-  // Contamos el índice relativo únicamente sobre los negocios propios con comparación de ID insensible
+  // Contamos el índice relativo únicamente sobre los negocios propios
   const ownedBusinesses = businesses.filter(x => (!x._isPending && (!x._role || x._role === 'Propietario')) && (!x.owner_id || (currentAuthUser && String(x.owner_id).toLowerCase() === String(currentAuthUser.id).toLowerCase())));
   const ownedIdx = ownedBusinesses.findIndex(x => String(x.id) === String(b.id));
   if (ownedIdx === -1) return false;
 
-  // Si el índice del negocio propio está dentro del límite del plan (ej. Plan Panal = 2), NO se bloquea
-  if (limit === 999 || ownedIdx < limit) {
-    return false;
-  }
-
-  return true;
+  // Si el índice del negocio propio está dentro del límite del plan (ej. Plan Panal = 2 negocios -> idx 0 y 1), NO se bloquea
+  return ownedIdx >= limit;
 }
 
 let isSyncingWorkspaces = false;
+
+async function createBusinessWorkspace(name) {
+  if (!name || name.trim() === '') {
+    showToast("⚠️ El nombre del negocio no puede estar vacío.");
+    return;
+  }
+  
+  const limit = getActiveBusinessLimit();
+  const user = currentAuthUser || (window.TocaDB?.getClient() ? (await window.TocaDB.getClient().auth.getUser())?.data?.user : null);
+  const userId = user?.id;
+
+  // Contar solo negocios propios activos
+  const ownedCount = businesses.filter(x => (!x._isPending && (!x._role || x._role === 'Propietario')) && (!x.owner_id || (userId && String(x.owner_id).toLowerCase() === String(userId).toLowerCase()))).length;
+
+  if (ownedCount >= limit) {
+    showToast(`🔒 No puedes crear más negocios. Has alcanzado el límite de ${limit} negocios para tu plan.`);
+    return;
+  }
+  
+  if (dbReady && userId) {
+    showToast("Creando negocio...");
+    try {
+      const newWs = await window.TocaDB.insertWorkspace({
+        name: name.trim(),
+        sector: "Otro",
+        description: "Descripción de mi nuevo negocio.",
+        tone: "Amigable",
+        promotion: "Envío a nivel nacional",
+        timezone: "America/Lima",
+        owner_id: userId
+      });
+
+      const newBiz = {
+        id: newWs.id,
+        name: newWs.name,
+        sector: newWs.sector || 'Otro',
+        description: newWs.description || 'Descripción de mi nuevo negocio.',
+        tone: newWs.tone || 'Amigable',
+        promotion: newWs.promotion || 'Envío a nivel nacional',
+        timezone: newWs.timezone || 'America/Lima',
+        owner_id: newWs.owner_id || userId,
+        _role: 'Propietario',
+        _status: 'Activo',
+        _isPending: false
+      };
+      
+      businesses.push(newBiz);
+      if (userId) {
+        localStorage.setItem(`toca_businesses_${userId}`, JSON.stringify(businesses));
+      }
+      localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+      
+      showToast(`🏢 Nuevo negocio creado: ${newBiz.name}`);
+      switchBusinessWorkspace(newBiz.id);
+      if (document.getElementById('profile-config-modal')?.classList.contains('open')) {
+        renderProfileModalContent();
+      }
+    } catch (err) {
+      console.error("Error al insertar workspace en Supabase:", err);
+      showToast("❌ Error al crear el negocio en la base de datos.");
+    }
+  } else {
+    const newBiz = {
+      id: 'ws_' + Date.now(),
+      name: name.trim(),
+      sector: "Otro",
+      description: "Descripción de mi nuevo negocio.",
+      tone: "Amigable",
+      promotion: "Envío a nivel nacional",
+      timezone: "America/Lima",
+      owner_id: userId || null,
+      _role: 'Propietario',
+      _status: 'Activo',
+      _isPending: false
+    };
+    businesses.push(newBiz);
+    localStorage.setItem('toca_businesses', JSON.stringify(businesses));
+    showToast(`🏢 Nuevo negocio creado: ${newBiz.name}`);
+    switchBusinessWorkspace(newBiz.id);
+    if (document.getElementById('profile-config-modal')?.classList.contains('open')) {
+      renderProfileModalContent();
+    }
+  }
+}
 
 async function syncWorkspacesFromSupabase(user) {
   if (isSyncingWorkspaces) {
