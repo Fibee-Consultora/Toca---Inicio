@@ -1961,18 +1961,22 @@ async function saveAllProfileSettings() {
 
     // 2. Save Business Workspace Settings
     const bizNameInput = document.getElementById('profile-biz-name');
-    if (bizNameInput) {
-      const name = bizNameInput.value.trim() || 'Mi Negocio';
-      const sector = document.getElementById('profile-biz-sector').value;
-      const timezone = 'America/Lima'; // Siempre Perú
-      const description = document.getElementById('profile-biz-desc').value;
-      const tone = document.getElementById('profile-biz-tone').value;
-      const promotion = document.getElementById('profile-biz-promo').value;
+    const toneInput = document.getElementById('profile-biz-tone');
+    const promoInput = document.getElementById('profile-biz-promo');
 
-      // Find and update in businesses list
+    if (toneInput || promoInput || bizNameInput) {
       const bizIdx = businesses.findIndex(b => String(b.id) === String(currentBusinessId));
       if (bizIdx !== -1) {
+        const existing = businesses[bizIdx];
+        const name = bizNameInput ? (bizNameInput.value.trim() || existing.name || 'Mi Negocio') : existing.name;
+        const sector = document.getElementById('profile-biz-sector') ? document.getElementById('profile-biz-sector').value : (existing.sector || 'Comercio');
+        const timezone = 'America/Lima';
+        const description = document.getElementById('profile-biz-desc') ? document.getElementById('profile-biz-desc').value : (existing.description || '');
+        const tone = toneInput ? toneInput.value : (existing.tone || 'Amigable');
+        const promotion = promoInput ? promoInput.value : (existing.promotion || '');
+
         businesses[bizIdx] = {
+          ...existing,
           id: currentBusinessId,
           name,
           sector,
@@ -3168,7 +3172,7 @@ function populateBusinessSwitchers() {
     
     let labelText = `🏢 ${b.name}`;
     if (isInvited) {
-      labelText = isPending ? `📬 ${b.name} (Click para Aceptar e Ingresar)` : `🤝 ${b.name} (Invitado - ${b._role || 'Colaborador'})`;
+      labelText = isPending ? `🤝 ${b.name} (Click para ingresar)` : `🤝 ${b.name}`;
     } else if (isLocked) {
       labelText = `🏢 ${b.name} 🔒 (Subir Plan)`;
     }

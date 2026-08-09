@@ -1292,23 +1292,30 @@ function generateIaSuggestionsHtml(id) {
   `;
 }
 
-function renderProfileTab() {
-  const isModalOpen = document.getElementById('profile-config-modal')?.classList.contains('open');
-  if (isModalOpen) return;
-  renderProfileModalContent();
-}
-
 function renderProfileModalContent() {
   const container = document.getElementById('profile-modal-body');
   if (!container) return;
 
-  const currentTab = typeof currentProfileModalTab !== 'undefined' ? currentProfileModalTab : 'perfil';
+  const isAgent = (businessProfile && businessProfile.owner_id && currentAuthUser && businessProfile.owner_id !== currentAuthUser.id) || (businessProfile && businessProfile._role && businessProfile._role !== 'Propietario');
 
-  // Toggle active class on modal tab buttons
+  // Toggle active class and visibility on modal tab buttons
   const btnPerfil = document.getElementById('btn-profile-tab-perfil');
   const btnPlan = document.getElementById('btn-profile-tab-plan');
   const btnEquipo = document.getElementById('btn-profile-tab-equipo');
-  
+
+  if (isAgent) {
+    if (btnPlan) btnPlan.style.display = 'none';
+    if (btnEquipo) btnEquipo.style.display = 'none';
+    if (currentProfileModalTab === 'plan' || currentProfileModalTab === 'equipo') {
+      currentProfileModalTab = 'perfil';
+    }
+  } else {
+    if (btnPlan) btnPlan.style.display = 'inline-block';
+    if (btnEquipo) btnEquipo.style.display = 'inline-block';
+  }
+
+  const currentTab = typeof currentProfileModalTab !== 'undefined' ? currentProfileModalTab : 'perfil';
+
   if (btnPerfil) btnPerfil.classList.toggle('active', currentTab === 'perfil');
   if (btnPlan) btnPlan.classList.toggle('active', currentTab === 'plan');
   if (btnEquipo) btnEquipo.classList.toggle('active', currentTab === 'equipo');
@@ -1324,12 +1331,12 @@ function renderProfileModalContent() {
       const isActive = b.id === currentBusinessId;
       const isMain = b.id === 1;
       const isLocked = isBusinessLocked(b, idx, bizLimit);
-      const showDelete = currentSimulatedUserRole === 'Administrador' && !isActive && !isMain;
+      const showDelete = currentSimulatedUserRole === 'Administrador' && !isActive && !isMain && !isAgent;
       
       bizListHtml += `
         <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid ${isActive ? 'var(--color-accent)' : 'var(--border-color)'}; opacity: ${isLocked ? '0.6' : '1'};">
           <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; flex-grow: 1;">
-            <span style="font-size: 0.9rem;">🏢</span>
+            <span style="font-size: 0.9rem;">${(b.owner_id && currentAuthUser && b.owner_id !== currentAuthUser.id) ? '🤝' : '🏢'}</span>
             <span style="font-size: 0.78rem; font-weight: ${isActive ? '700' : '500'}; color: var(--color-text-primary); text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 180px;">${b.name}${isLocked ? ' 🔒' : ''}</span>
             ${isActive ? '<span style="font-size: 0.6rem; background: #fef3c7; color: #b45309; padding: 1px 4px; border-radius: 4px; font-weight: 700; border: 1px solid #fde68a; margin-left: 4px;">Activo</span>' : ''}
           </div>
@@ -1350,7 +1357,7 @@ function renderProfileModalContent() {
       <style>
         #profile-columns-layout {
           display: grid;
-          grid-template-columns: 1.2fr 1fr;
+          grid-template-columns: ${isAgent ? '1fr' : '1.2fr 1fr'};
           gap: 20px;
         }
         @media (max-width: 768px) {
@@ -1378,32 +1385,35 @@ function renderProfileModalContent() {
 
           <!-- Card 2: Perfil del Negocio (Individual) -->
           <div class="detail-card" style="background: #ffffff; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px;">
-            <h3 style="font-family: var(--font-title); font-size: 1rem; font-weight: 700; color: var(--color-text-primary); margin: 0; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
-              🏢 Información de la Marca
+            <h3 style="font-family: var(--font-title); font-size: 1rem; font-weight: 700; color: var(--color-text-primary); margin: 0; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+              <span>🏢 Configuración de la Marca (${businessProfile.name})</span>
+              ${isAgent ? '<span style="font-size: 0.65rem; background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 999px; font-weight: 600;">🤝 Colaborador de Marca</span>' : ''}
             </h3>
             
-            <div class="form-group">
-              <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Nombre del Negocio</label>
-              <input type="text" id="profile-biz-name" class="form-input" value="${businessProfile.name}" placeholder="Ej. Polos Mayoristas Lima" style="padding: 8px 12px; background: #ffffff;">
-            </div>
+            ${!isAgent ? `
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Nombre del Negocio</label>
+                <input type="text" id="profile-biz-name" class="form-input" value="${businessProfile.name}" placeholder="Ej. Polos Mayoristas Lima" style="padding: 8px 12px; background: #ffffff;">
+              </div>
 
-            <div class="form-group">
-              <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Rubro o Sector</label>
-              <select id="profile-biz-sector" class="form-input form-select" style="padding: 8px 12px; background: #ffffff;">
-                <option value="Comercio" ${businessProfile.sector === 'Comercio' ? 'selected' : ''}>Comercio (Venta de productos/Mercaderías)</option>
-                <option value="Servicios y Consultoría" ${businessProfile.sector === 'Servicios y Consultoría' ? 'selected' : ''}>Servicios y Consultoría</option>
-                <option value="Suscripciones y Membresías" ${businessProfile.sector === 'Suscripciones y Membresías' ? 'selected' : ''}>Suscripciones y Membresías</option>
-                <option value="Alimentos y Bebidas" ${businessProfile.sector === 'Alimentos y Bebidas' ? 'selected' : ''}>Alimentos y Bebidas</option>
-                <option value="Tecnología y Software" ${businessProfile.sector === 'Tecnología y Software' ? 'selected' : ''}>Tecnología y Software</option>
-                <option value="Educación y Cursos" ${businessProfile.sector === 'Educación y Cursos' ? 'selected' : ''}>Educación y Cursos</option>
-                <option value="Otro" ${!['Comercio', 'Servicios y Consultoría', 'Suscripciones y Membresías', 'Alimentos y Bebidas', 'Tecnología y Software', 'Educación y Cursos'].includes(businessProfile.sector) ? 'selected' : ''}>Otro rubro / servicio</option>
-              </select>
-            </div>
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Rubro o Sector</label>
+                <select id="profile-biz-sector" class="form-input form-select" style="padding: 8px 12px; background: #ffffff;">
+                  <option value="Comercio" ${businessProfile.sector === 'Comercio' ? 'selected' : ''}>Comercio (Venta de productos/Mercaderías)</option>
+                  <option value="Servicios y Consultoría" ${businessProfile.sector === 'Servicios y Consultoría' ? 'selected' : ''}>Servicios y Consultoría</option>
+                  <option value="Suscripciones y Membresías" ${businessProfile.sector === 'Suscripciones y Membresías' ? 'selected' : ''}>Suscripciones y Membresías</option>
+                  <option value="Alimentos y Bebidas" ${businessProfile.sector === 'Alimentos y Bebidas' ? 'selected' : ''}>Alimentos y Bebidas</option>
+                  <option value="Tecnología y Software" ${businessProfile.sector === 'Tecnología y Software' ? 'selected' : ''}>Tecnología y Software</option>
+                  <option value="Educación y Cursos" ${businessProfile.sector === 'Educación y Cursos' ? 'selected' : ''}>Educación y Cursos</option>
+                  <option value="Otro" ${!['Comercio', 'Servicios y Consultoría', 'Suscripciones y Membresías', 'Alimentos y Bebidas', 'Tecnología y Software', 'Educación y Cursos'].includes(businessProfile.sector) ? 'selected' : ''}>Otro rubro / servicio</option>
+                </select>
+              </div>
 
-            <div class="form-group">
-              <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Descripción del Producto/Servicio Principal</label>
-              <textarea id="profile-biz-desc" class="form-input" rows="3" placeholder="Describe qué vendes..." style="padding: 8px 12px; background: #ffffff; resize: vertical; font-family: var(--font-body);">${businessProfile.description}</textarea>
-            </div>
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 600; font-size: 0.72rem;">Descripción del Producto/Servicio Principal</label>
+                <textarea id="profile-biz-desc" class="form-input" rows="3" placeholder="Describe qué vendes..." style="padding: 8px 12px; background: #ffffff; resize: vertical; font-family: var(--font-body);">${businessProfile.description}</textarea>
+              </div>
+            ` : ''}
 
             <div class="form-row" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 12px;">
               <div class="form-group">
@@ -1428,50 +1438,52 @@ function renderProfileModalContent() {
           </button>
         </div>
 
-        <!-- Right Column: Workspace switcher & lists -->
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-          <div class="detail-card" style="background: #ffffff; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px;">
-            <!-- Workspace Switcher & Limits -->
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(255, 204, 6, 0.08); border: 1px solid rgba(255, 204, 6, 0.3); padding: 10px 14px; border-radius: 8px; margin-bottom: 4px;">
-              <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
-                <span style="font-size: 0.65rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; letter-spacing: 0.03em;">Negocio en Edición</span>
-                <select id="modal-business-switcher" onchange="switchBusinessWorkspace(isNaN(this.value) ? this.value : parseInt(this.value))" style="background: transparent; border: none; font-family: var(--font-title); font-size: 0.95rem; font-weight: 700; color: var(--color-text-primary); cursor: pointer; outline: none; padding: 0; width: 100%;">
-                  ${businesses.map(b => `<option value="${b.id}" ${b.id === currentBusinessId ? 'selected' : ''}>${b.name}</option>`).join('')}
-                </select>
-              </div>
-              <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 110px;">
-                <span style="font-size: 0.72rem; font-weight: 700; color: var(--color-text-primary);">Límite: ${businesses.length}/${displayLimit} Negocios</span>
-                ${bizLimit !== 999 && businesses.length >= bizLimit ? `<span style="font-size: 0.62rem; color: #b45309; font-weight: 600; cursor: pointer; text-decoration: underline;" onclick="switchProfileModalTab('plan')" title="Subir plan para agregar más marcas">📈 Upgrade Plan</span>` : ''}
-              </div>
-            </div>
-            
-            <!-- Workspace Management List -->
-            <div style="background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
-              <span style="font-size: 0.68rem; font-weight: 700; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.02em;">Gestión de Espacios de Trabajo</span>
-              <div style="display: flex; flex-direction: column; gap: 6px;">
-                ${bizListHtml}
+        <!-- Right Column: Workspace switcher & lists (hidden for collaborator/agent) -->
+        ${!isAgent ? `
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="detail-card" style="background: #ffffff; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px;">
+              <!-- Workspace Switcher & Limits -->
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(255, 204, 6, 0.08); border: 1px solid rgba(255, 204, 6, 0.3); padding: 10px 14px; border-radius: 8px; margin-bottom: 4px;">
+                <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+                  <span style="font-size: 0.65rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; letter-spacing: 0.03em;">Negocio en Edición</span>
+                  <select id="modal-business-switcher" onchange="switchBusinessWorkspace(isNaN(this.value) ? this.value : parseInt(this.value))" style="background: transparent; border: none; font-family: var(--font-title); font-size: 0.95rem; font-weight: 700; color: var(--color-text-primary); cursor: pointer; outline: none; padding: 0; width: 100%;">
+                    ${businesses.map(b => `<option value="${b.id}" ${b.id === currentBusinessId ? 'selected' : ''}>${b.name}</option>`).join('')}
+                  </select>
+                </div>
+                <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 110px;">
+                  <span style="font-size: 0.72rem; font-weight: 700; color: var(--color-text-primary);">Límite: ${businesses.length}/${displayLimit} Negocios</span>
+                  ${bizLimit !== 999 && businesses.length >= bizLimit ? `<span style="font-size: 0.62rem; color: #b45309; font-weight: 600; cursor: pointer; text-decoration: underline;" onclick="switchProfileModalTab('plan')" title="Subir plan para agregar más marcas">📈 Upgrade Plan</span>` : ''}
+                </div>
               </div>
               
-              <!-- Add New Workspace button -->
-              ${currentSimulatedUserRole === 'Administrador' ? `
-                ${businesses.length < bizLimit ? `
-                  <div style="display: flex; gap: 6px; margin-top: 4px;">
-                    <input type="text" id="new-biz-name-input" placeholder="Nombre de nueva marca (Ej: Lima Growth)" style="flex-grow: 1; font-size: 0.72rem; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff;">
-                    <button onclick="createBusinessWorkspace(document.getElementById('new-biz-name-input').value)" style="background: var(--color-accent); border: none; color: #0a0a0a; font-size: 0.72rem; font-weight: 600; padding: 5px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap;">➕ Agregar</button>
-                  </div>
+              <!-- Workspace Management List -->
+              <div style="background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+                <span style="font-size: 0.68rem; font-weight: 700; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.02em;">Gestión de Espacios de Trabajo</span>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  ${bizListHtml}
+                </div>
+                
+                <!-- Add New Workspace button -->
+                ${currentSimulatedUserRole === 'Administrador' ? `
+                  ${businesses.length < bizLimit ? `
+                    <div style="display: flex; gap: 6px; margin-top: 4px;">
+                      <input type="text" id="new-biz-name-input" placeholder="Nombre de nueva marca (Ej: Lima Growth)" style="flex-grow: 1; font-size: 0.72rem; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff;">
+                      <button onclick="createBusinessWorkspace(document.getElementById('new-biz-name-input').value)" style="background: var(--color-accent); border: none; color: #0a0a0a; font-size: 0.72rem; font-weight: 600; padding: 5px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap;">➕ Agregar</button>
+                    </div>
+                  ` : `
+                    <div style="font-size: 0.7rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px; text-align: center; font-weight: 600; margin-top: 2px;">
+                      🔒 Límite de negocios alcanzado (${businesses.length}/${displayLimit}). <span style="text-decoration: underline; cursor: pointer;" onclick="switchProfileModalTab('plan')">Sube de plan para agregar más.</span>
+                    </div>
+                  `}
                 ` : `
-                  <div style="font-size: 0.7rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px; text-align: center; font-weight: 600; margin-top: 2px;">
-                    🔒 Límite de negocios alcanzado (${businesses.length}/${displayLimit}). <span style="text-decoration: underline; cursor: pointer;" onclick="switchProfileModalTab('plan')">Sube de plan para agregar más.</span>
+                  <div style="font-size: 0.68rem; color: var(--color-text-muted); text-align: center; padding: 4px;">
+                    🔒 Solo el propietario puede administrar los negocios.
                   </div>
                 `}
-              ` : `
-                <div style="font-size: 0.68rem; color: var(--color-text-muted); text-align: center; padding: 4px;">
-                  🔒 Solo el propietario puede administrar los negocios.
-                </div>
-              `}
+              </div>
             </div>
           </div>
-        </div>
+        ` : ''}
       </div>
     `;
   } else if (currentTab === 'plan') {
