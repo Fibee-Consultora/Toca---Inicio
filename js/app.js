@@ -2721,18 +2721,33 @@ function saveProfileModalDraft() {
 async function handleAddWorkspaceClick() {
   saveProfileModalDraft();
   const input = document.getElementById('new-biz-name-input');
+  const btn = document.getElementById('btn-add-new-workspace') || document.querySelector('#profile-modal-body button[onclick*="handleAddWorkspaceClick"]');
   const val = input ? input.value.trim() : (window.profileModalDraft?.newBizName || '');
   if (!val) {
     showToast("⚠️ El nombre del negocio no puede estar vacío.");
     return;
   }
   
-  const success = await createBusinessWorkspace(val);
-  if (success) {
-    if (window.profileModalDraft) {
-      window.profileModalDraft.newBizName = '';
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.innerHTML = '⌛ Agregando...';
+  }
+
+  try {
+    const success = await createBusinessWorkspace(val);
+    if (success) {
+      if (window.profileModalDraft) {
+        window.profileModalDraft.newBizName = '';
+      }
+      if (input) input.value = '';
     }
-    if (input) input.value = '';
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = '➕ Agregar';
+    }
   }
 }
 
