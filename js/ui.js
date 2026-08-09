@@ -1486,6 +1486,8 @@ function renderProfileModalContent() {
                   <div style="font-size: 0.68rem; color: var(--color-text-muted); text-align: center; padding: 4px;">
                     🔒 Solo el propietario puede administrar los negocios.
                   </div>
+                `}
+
                 <!-- Export to Excel Button -->
                 <div style="margin-top: 8px; border-top: 1px solid var(--border-color); padding-top: 8px;">
                   <button onclick="exportAllWorkspacesToExcel()" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #10b981; color: #ffffff; border: none; border-radius: 8px; padding: 8px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
