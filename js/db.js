@@ -373,7 +373,7 @@
     try {
       const { data: rpcData, error: rpcError } = await client.rpc('get_user_workspaces');
       if (!rpcError && rpcData && Array.isArray(rpcData) && rpcData.length > 0) {
-        return rpcData.map(w => ({
+        let mapped = rpcData.map(w => ({
           id: w.id,
           name: w.name,
           sector: w.sector,
@@ -386,6 +386,18 @@
           _status: w.member_status,
           _isPending: w.is_pending === true
         }));
+
+        // Si el usuario tiene invitaciones a otros espacios, ocultar el 'Mi negocio' por defecto
+        const hasInvited = mapped.some(w => w.owner_id !== user.id || (w._role && w._role !== 'Propietario'));
+        if (hasInvited) {
+          mapped = mapped.filter(w => {
+            if (w.owner_id !== user.id || (w._role && w._role !== 'Propietario')) return true;
+            const normName = (w.name || '').trim().toLowerCase();
+            return normName !== 'mi negocio';
+          });
+        }
+
+        return mapped;
       }
     } catch (rpcErr) {
       console.warn("RPC get_user_workspaces fallback warning:", rpcErr);
