@@ -753,6 +753,14 @@
     }
   }
 
+  async function updateSessionToken(userId, token) {
+    const { error } = await getClient()
+      .from('profiles')
+      .update({ last_session_id: token, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+    if (error) throw error;
+  }
+
   window.TocaDB = {
     isConfigured,
     init,
