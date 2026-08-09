@@ -371,6 +371,15 @@
 
     const email = user.email ? user.email.toLowerCase() : '';
 
+    // Vincular invitaciones pendientes automáticamente si coincide el correo del usuario
+    if (email && user.id) {
+      try {
+        await claimPendingInvitations(email, user.id);
+      } catch (claimErr) {
+        console.warn("Auto claim invitations error:", claimErr);
+      }
+    }
+
     const { data: ownedData, error: ownedError } = await client
       .from('workspaces')
       .select('*')
@@ -382,7 +391,7 @@
     // Query workspace_members for user (active or pending)
     const { data: memberData } = await client
       .from('workspace_members')
-      .select('id, workspace_id, role, status')
+      .select('id, workspace_id, role, status, invited_by')
       .or(`user_id.eq.${user.id},invite_email.ilike.${email}`);
 
     // Query workspace_team for user (active or pending)
@@ -398,7 +407,8 @@
           candidateMap.set(String(m.workspace_id), {
             memberId: m.id,
             role: m.role || 'Colaborador',
-            status: m.status || 'Pendiente'
+            status: m.status || 'Pendiente',
+            invitedBy: m.invited_by || null
           });
         }
       });
@@ -409,7 +419,8 @@
           candidateMap.set(String(t.workspace_id), {
             memberId: null,
             role: t.role || 'Colaborador',
-            status: t.status || 'Pendiente'
+            status: t.status || 'Pendiente',
+            invitedBy: null
           });
         }
       });
@@ -447,6 +458,23 @@
                 }
               });
             }
+          }
+        } else if (info.invitedBy && info.invitedBy !== user.id) {
+          // Si wsDirect nulo pero tenemos invitedBy, cargar todos los espacios del dueño invitador
+          const { data: siblingWorkspaces } = await client
+            .from('workspaces')
+            .select('*')
+            .eq('owner_id', info.invitedBy);
+
+          if (siblingWorkspaces && siblingWorkspaces.length > 0) {
+            siblingWorkspaces.forEach(sw => {
+              if (!list.some(w => String(w.id) === String(sw.id))) {
+                sw._role = info.role || 'Colaborador';
+                sw._status = info.status || 'Activo';
+                sw._isPending = (info.status === 'Pendiente');
+                list.push(sw);
+              }
+            });
           }
         } else {
           let resolvedName = 'Espacio de Trabajo';
