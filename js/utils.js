@@ -251,6 +251,7 @@ function getActiveAgentLimit() {
 }
 
 function getActiveBusinessLimit() {
+  if (typeof isSuperAdmin === 'function' && isSuperAdmin()) return 999;
   if (isSuspended()) return 1;
   return PLAN_LIMITS[currentActivePlan]?.businesses || 1;
 }
