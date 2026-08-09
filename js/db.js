@@ -387,16 +387,6 @@
           _isPending: w.is_pending === true
         }));
 
-        // Si el usuario tiene invitaciones a otros espacios, ocultar el 'Mi negocio' por defecto
-        const hasInvited = mapped.some(w => w.owner_id !== user.id || (w._role && w._role !== 'Propietario'));
-        if (hasInvited) {
-          mapped = mapped.filter(w => {
-            if (w.owner_id !== user.id || (w._role && w._role !== 'Propietario')) return true;
-            const normName = (w.name || '').trim().toLowerCase();
-            return normName !== 'mi negocio';
-          });
-        }
-
         return mapped;
       }
     } catch (rpcErr) {
