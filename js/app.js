@@ -2176,8 +2176,11 @@ function initSessionToken() {
 }
 initSessionToken();
 
-function startSessionCheckLock(userId) {
+function startSessionLockChecker(userId) {
   if (sessionCheckInterval) clearInterval(sessionCheckInterval);
+}
+function startSessionCheckLock(userId) {
+  startSessionLockChecker(userId);
 }
 
 function applyAuthUser(user) {
