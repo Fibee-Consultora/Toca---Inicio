@@ -2227,21 +2227,16 @@ async function syncUserPlanFromProfile() {
         }
       } else {
         window.pendingWorkspaceInvitations = [];
-        setDiag(5, 'Sin invitaciones pendientes.');
         if (diagWrap) {
-          diagWrap.innerHTML = `
-            <div style="color: #10b981; font-weight: 700; font-size: 0.75rem;">✓ SIN INVITACIONES EN BD</div>
-            <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 4px;">Mail verificado: <strong>${currentAuthUser.email}</strong></div>
-          `;
+          diagWrap.style.display = 'none';
+          diagWrap.innerHTML = '';
         }
       }
     } catch (inviteErr) {
       console.error("Error al procesar invitaciones pendientes:", inviteErr);
       if (diagWrap) {
-        diagWrap.innerHTML = `
-          <div style="color: #f59e0b; font-weight: 700; font-size: 0.75rem;">⚠️ ERROR DE CONSULTA</div>
-          <div style="font-size: 0.62rem; color: #cbd5e1; margin-top: 4px;">${inviteErr.message || JSON.stringify(inviteErr)}</div>
-        `;
+        diagWrap.style.display = 'none';
+        diagWrap.innerHTML = '';
       }
     }
 
@@ -3948,11 +3943,6 @@ window.addEventListener('focus', () => {
   }
 });
 
-// Intervalo de verificación en segundo plano cada 30 segundos
-setInterval(() => {
-  if (currentAuthUser && window.TocaDB?.isConfigured() && !impersonatedClientId) {
-    syncUserPlanFromProfile();
-  }
-}, 30000);
+// Verificación en segundo plano desactivada para evitar borrar los inputs del usuario mientras escribe
 
 

@@ -429,6 +429,25 @@
           wsDirect._isPending = (info.status === 'Pendiente');
           wsDirect._memberId = info.memberId;
           list.push(wsDirect);
+
+          // Cargar también todos los demás espacios pertenecientes al mismo propietario invitado
+          if (wsDirect.owner_id && wsDirect.owner_id !== user.id) {
+            const { data: siblingWorkspaces } = await client
+              .from('workspaces')
+              .select('*')
+              .eq('owner_id', wsDirect.owner_id);
+
+            if (siblingWorkspaces && siblingWorkspaces.length > 0) {
+              siblingWorkspaces.forEach(sw => {
+                if (!list.some(w => String(w.id) === String(sw.id))) {
+                  sw._role = info.role || 'Colaborador';
+                  sw._status = 'Activo';
+                  sw._isPending = false;
+                  list.push(sw);
+                }
+              });
+            }
+          }
         } else {
           list.push({
             id: wsId,

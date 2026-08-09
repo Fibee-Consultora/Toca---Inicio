@@ -1923,7 +1923,14 @@ function renderEstadisticasTab() {
   const container = document.getElementById('tab-estadisticas');
   if (!container) return;
 
-  if (currentActivePlan === 'Gratuito') {
+  const isInvitedWS = businessProfile && (
+    (businessProfile.owner_id && currentAuthUser && businessProfile.owner_id !== currentAuthUser.id) ||
+    (businessProfile._role && businessProfile._role !== 'Propietario') ||
+    (businessProfile._memberId)
+  );
+  const isPaidWS = currentActivePlan !== 'Gratuito' || isInvitedWS;
+
+  if (!isPaidWS) {
     container.innerHTML = `
       <div style="position: relative; width: 100%; min-height: 500px; padding: 20px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 16px;">
         <!-- Blurred background simulation of statistics -->
