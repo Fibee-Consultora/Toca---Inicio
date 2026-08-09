@@ -732,21 +732,28 @@
     const cleanEmail = (email || '').trim().toLowerCase();
 
     try {
-      if (cleanEmail) {
-        await client.from('workspace_members').delete().ilike('invite_email', cleanEmail);
-        await client.from('workspace_team').delete().ilike('email', cleanEmail);
-      }
-      if (userId) {
-        await client.from('workspace_members').delete().eq('user_id', userId);
-        await client.from('workspace_team').delete().eq('user_id', userId);
+      const { error: rpcErr } = await client.rpc('admin_hard_delete_user', {
+        target_user_id: userId || null,
+        target_email: cleanEmail || null
+      });
 
-        const { data: ownedWs } = await client.from('workspaces').select('id').eq('owner_id', userId);
-        if (ownedWs && ownedWs.length > 0) {
-          const wsIds = ownedWs.map(w => w.id);
-          await client.from('contacts').delete().in('workspace_id', wsIds);
+      if (rpcErr) {
+        console.warn("admin_hard_delete_user RPC warning, fallback to direct query:", rpcErr);
+        if (cleanEmail) {
+          await client.from('workspace_members').delete().ilike('invite_email', cleanEmail);
+          await client.from('workspace_team').delete().ilike('email', cleanEmail);
         }
-        await client.from('workspaces').delete().eq('owner_id', userId);
-        await client.from('profiles').delete().eq('id', userId);
+        if (userId) {
+          await client.from('workspace_members').delete().eq('user_id', userId);
+          await client.from('workspace_team').delete().eq('user_id', userId);
+          const { data: ownedWs } = await client.from('workspaces').select('id').eq('owner_id', userId);
+          if (ownedWs && ownedWs.length > 0) {
+            const wsIds = ownedWs.map(w => w.id);
+            await client.from('contacts').delete().in('workspace_id', wsIds);
+          }
+          await client.from('workspaces').delete().eq('owner_id', userId);
+          await client.from('profiles').delete().eq('id', userId);
+        }
       }
     } catch (err) {
       console.warn("hardDeleteUser warning:", err);
