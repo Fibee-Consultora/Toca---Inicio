@@ -2426,23 +2426,23 @@ function loginLocalSimulation() {
   showToast("Sesión iniciada en modo demostración local.");
 }
 
+function clearTocaLocalStorageCache() {
+  try {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('toca_')) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (e) {
+    console.warn("Error clearing local cache:", e);
+  }
+}
+
 async function logout() {
   const userToSignOut = currentAuthUser;
   
-  // 1. Limpiar localStorage y estado UI de inmediato (Síncrono)
-  localStorage.removeItem('toca_is_logged_in');
-  localStorage.removeItem('toca_business_config_modal_shown');
-  localStorage.removeItem('toca_current_active_plan');
-  localStorage.removeItem('toca_user_profile_name');
-  localStorage.removeItem('toca_extra_agents');
-  localStorage.removeItem('toca_extra_packs');
-  
-  if (userToSignOut) {
-    localStorage.removeItem(`toca_user_${userToSignOut.id}`);
-    localStorage.removeItem(`toca_businesses_${userToSignOut.id}`);
-    localStorage.removeItem(`toca_current_business_id_${userToSignOut.id}`);
-    localStorage.removeItem(`toca_team_agents_${userToSignOut.id}`);
-  }
+  // 1. Limpiar todo el caché local de inmediato
+  clearTocaLocalStorageCache();
   
   currentActivePlan = 'Gratuito';
   currentUserProfileName = 'Sin nombre';
@@ -3936,13 +3936,6 @@ window.addEventListener("toca_open_contact", (e) => {
 window.addEventListener("message", (e) => {
   if (e.data && e.data.source === "toca-extension" && e.data.action === "openContact") {
     handleOpenContact(e.data.detail);
-  }
-});
-
-// Escuchar focus de pestaña para verificar si la cuenta sigue activa/existente
-window.addEventListener('focus', () => {
-  if (currentAuthUser && window.TocaDB?.isConfigured() && !impersonatedClientId) {
-    syncUserPlanFromProfile();
   }
 });
 
