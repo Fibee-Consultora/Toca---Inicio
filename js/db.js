@@ -377,20 +377,28 @@
     let list = ownedData || [];
 
     if (user) {
+      const email = user.email ? user.email.toLowerCase() : '';
       const { data: memberData } = await client
         .from('workspace_members')
-        .select('workspace_id, role, status, workspaces(*)')
-        .or(`user_id.eq.${user.id},invite_email.eq.${user.email}`)
+        .select('workspace_id, role, status')
+        .or(`user_id.eq.${user.id},invite_email.ilike.${email}`)
         .eq('status', 'Activo');
 
       if (memberData && memberData.length > 0) {
-        memberData.forEach(m => {
-          if (m.workspaces && !list.some(w => String(w.id) === String(m.workspaces.id))) {
-            const ws = m.workspaces;
-            ws._role = m.role;
-            list.push(ws);
+        for (const m of memberData) {
+          if (m.workspace_id && !list.some(w => String(w.id) === String(m.workspace_id))) {
+            const { data: wsDirect } = await client
+              .from('workspaces')
+              .select('*')
+              .eq('id', m.workspace_id)
+              .maybeSingle();
+
+            if (wsDirect) {
+              wsDirect._role = m.role;
+              list.push(wsDirect);
+            }
           }
-        });
+        }
       }
     }
 
