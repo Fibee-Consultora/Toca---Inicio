@@ -494,10 +494,31 @@
 
   async function inviteTeamMember(invitation) {
     const client = getClient();
+    let wsId = invitation.workspaceId;
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!wsId || !uuidRegex.test(String(wsId))) {
+      const { data: userRes } = await client.auth.getUser();
+      if (userRes?.user) {
+        const { data: wsList } = await client
+          .from('workspaces')
+          .select('id')
+          .eq('owner_id', userRes.user.id)
+          .limit(1);
+        if (wsList && wsList.length > 0) {
+          wsId = wsList[0].id;
+        }
+      }
+    }
+
+    if (!wsId || !uuidRegex.test(String(wsId))) {
+      throw new Error("No se encontró un espacio de trabajo válido (UUID) para registrar la invitación.");
+    }
+
     const { data: teamData, error: teamError } = await client
       .from('workspace_team')
       .insert({
-        workspace_id: invitation.workspaceId,
+        workspace_id: wsId,
         name: invitation.name,
         email: invitation.email,
         role: invitation.role,
@@ -510,7 +531,7 @@
     const { error: memberError } = await client
       .from('workspace_members')
       .insert({
-        workspace_id: invitation.workspaceId,
+        workspace_id: wsId,
         user_id: null,
         invite_email: invitation.email,
         role: invitation.role,

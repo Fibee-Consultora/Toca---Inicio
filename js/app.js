@@ -2869,17 +2869,24 @@ function submitAgentInvitation() {
   // Add to global state
   if (dbReady) {
     showToast("Enviando invitación...");
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let targetWsId = currentBusinessId;
+    if (!targetWsId || !uuidRegex.test(String(targetWsId))) {
+      const realBiz = (businesses || []).find(b => uuidRegex.test(String(b.id)));
+      if (realBiz) targetWsId = realBiz.id;
+    }
+
     window.TocaDB.inviteTeamMember({
-      workspaceId: currentBusinessId,
+      workspaceId: targetWsId,
       name: name,
       email: email,
       role: role,
-      invitedBy: currentAuthUser.id
+      invitedBy: currentAuthUser ? currentAuthUser.id : null
     }).then(() => {
       showToast(`✉️ Invitación registrada. Indícale que se registre con: ${email}`);
       nameInput.value = "";
       emailInput.value = "";
-      return window.TocaDB.loadTeamMembers(currentBusinessId);
+      return window.TocaDB.loadTeamMembers(targetWsId);
     }).then((members) => {
       teamAgents = members.map(m => ({
         name: m.name,
