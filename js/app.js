@@ -3133,12 +3133,34 @@ function populateBusinessSwitchers() {
       </button>
     `;
   });
+
+  if (window.pendingWorkspaceInvitations && window.pendingWorkspaceInvitations.length > 0) {
+    menuHtml += `
+      <div style="border-top: 1px solid rgba(255,255,255,0.12); margin-top: 6px; padding-top: 6px;">
+        <div style="font-size: 0.65rem; color: #f59e0b; font-weight: 700; text-transform: uppercase; padding: 4px 12px; letter-spacing: 0.04em;">📬 Invitación Pendiente</div>
+        ${window.pendingWorkspaceInvitations.map(inv => {
+          const wsName = (inv.workspaces && inv.workspaces.name) || 'Nuevo Espacio de Trabajo';
+          return `
+            <div style="padding: 8px 12px; background: rgba(245, 158, 11, 0.08); border-radius: 6px; margin: 4px 6px;">
+              <div style="font-size: 0.78rem; color: #ffffff; font-weight: 700;">${wsName}</div>
+              <div style="font-size: 0.65rem; color: #cbd5e1; margin-bottom: 6px;">Rol: ${inv.role || 'Colaborador'}</div>
+              <div style="display: flex; gap: 6px;">
+                <button onclick="acceptUserInvitation('${inv.id}')" style="background: #FFCC06; color: #0a0a0a; border: none; font-weight: 700; font-size: 0.72rem; padding: 5px 8px; border-radius: 6px; cursor: pointer; flex: 1;">✓ Aceptar</button>
+                <button onclick="rejectUserInvitation('${inv.id}')" style="background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.4); font-weight: 600; font-size: 0.72rem; padding: 5px 8px; border-radius: 6px; cursor: pointer; flex: 1;">✕ Rechazar</button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
   
   if (switcherMenu) {
     switcherMenu.innerHTML = menuHtml;
   }
   if (triggerBtn) {
-    triggerBtn.disabled = (businesses.length <= 1);
+    triggerBtn.disabled = false;
+    triggerBtn.style.cursor = 'pointer';
   }
   
   // 2. Populate native select in modal configuration
@@ -3154,7 +3176,7 @@ function populateBusinessSwitchers() {
   if (modalSelect) {
     modalSelect.innerHTML = optionsHtml;
     modalSelect.value = currentBusinessId;
-    modalSelect.disabled = (businesses.length <= 1);
+    modalSelect.disabled = false;
   }
 }
 
