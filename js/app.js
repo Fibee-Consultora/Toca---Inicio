@@ -109,23 +109,24 @@ async function syncWorkspacesFromSupabase(user) {
   try {
     let ws = await window.TocaDB.loadWorkspaces();
     
-    // Si la BD devuelve vacío pero localmente ya tenemos un negocio con id tipo UUID,
-    // evitamos insertar un duplicado (es un error de carrera por RLS/sesión no lista).
-    const hasLocalUuid = businesses.some(b => isNaN(b.id));
+    // Si la BD devuelve vacío pero localmente ya tenemos un negocio perteneciente a ESTE usuario con UUID,
+    // evitamos insertar un duplicado.
+    const hasLocalUuid = businesses.some(b => isNaN(b.id) && b.owner_id && user && String(b.owner_id).toLowerCase() === String(user.id).toLowerCase());
     
     if (ws.length === 0) {
       if (hasLocalUuid) {
-        console.warn("syncWorkspacesFromSupabase: La BD retornó 0 marcas pero localmente hay una marca con UUID. Saltando inserción para evitar duplicados.");
-        ws = businesses;
-      } else {
-        const localBiz = (businesses && businesses.length > 0) ? businesses[0] : null;
+        console.warn("syncWorkspacesFromSupabase: La BD retornó 0 marcas pero localmente hay una marca del usuario con UUID.");
+        ws = businesses.filter(b => b.owner_id && user && String(b.owner_id).toLowerCase() === String(user.id).toLowerCase());
+      }
+      
+      if (!ws || ws.length === 0) {
         const newWs = await window.TocaDB.insertWorkspace({
-          name: (localBiz && localBiz.name) ? localBiz.name : 'Mi Negocio',
-          sector: (localBiz && localBiz.sector) ? localBiz.sector : 'Otro',
-          description: (localBiz && localBiz.description) ? localBiz.description : '',
-          tone: (localBiz && localBiz.tone) ? localBiz.tone : 'Amigable',
-          promotion: (localBiz && localBiz.promotion) ? localBiz.promotion : '',
-          timezone: (localBiz && localBiz.timezone) ? localBiz.timezone : 'America/Lima',
+          name: 'Mi Negocio',
+          sector: 'Otro',
+          description: '',
+          tone: 'Amigable',
+          promotion: '',
+          timezone: 'America/Lima',
           owner_id: user.id
         });
         ws = [newWs];
@@ -134,7 +135,7 @@ async function syncWorkspacesFromSupabase(user) {
     
     // Mapear campos de BD a campos locales
     businesses = ws.map(w => {
-      const isOwner = Boolean(!w.owner_id || (user && w.owner_id === user.id));
+      const isOwner = Boolean(!w.owner_id || (user && String(w.owner_id).toLowerCase() === String(user.id).toLowerCase()));
       return {
         id: w.id, // UUID string
         name: w.name || 'Mi Negocio',
